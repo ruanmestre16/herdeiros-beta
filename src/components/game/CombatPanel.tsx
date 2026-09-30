@@ -73,15 +73,15 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     if (option.pfCost) setResources(attacker, null, attacker.pf - option.pfCost);
     const results = areaTargets.map(t => { const hit = r.total >= t.esquiva; return { id: t.id, name: t.name, esquiva: t.esquiva, hit, crit: r.d20 === 20 && r.total > t.esquiva }; });
     setPending(null); setArea({ attackerId: attacker.id, option, dice, d20: r.d20, total: r.total, crit: r.d20 === 20, results });
-    addRoll({ expression: `${hc}d20${hc > 1 ? ' (maior)' : ''} + ${attrValue}`, dice: r.dice ?? [r.d20], modifier: attrValue, total: r.total, source: `${attacker.name} → todos (${mode === 'half' ? 'metade' : 'dano total'})`, crit: r.d20 === 20 });
-    log([`${attacker.name} ataca TODOS os inimigos (${option.label}, ${mode === 'half' ? 'metade do dano' : 'dano total'}): total ${r.total} → ${results.map(x => `${x.name} (Esq ${x.esquiva}): ${x.hit ? (x.crit ? 'CRÍTICO' : 'acertou') : 'esquivou'}`).join('; ')}`]);
+    addRoll({ expression: `${hc}d20${hc > 1 ? ' (maior)' : ''} + ${attrValue}`, dice: r.dice ?? [r.d20], modifier: attrValue, total: r.total, source: `${attacker.name} → ${selected.map(s => s.name).join(', ')} (${areaMode === 'half' ? 'metade' : 'dano total'})`, crit: r.d20 === 20 });
+    log([`${attacker.name} ataca ${selected.map(s => s.name).join(', ')} (${option.label}, ${areaMode === 'half' ? 'metade do dano' : 'dano total'}): total ${r.total} → ${results.map(x => `${x.name} (Esq ${x.esquiva}): ${x.hit ? (x.crit ? 'CRÍTICO' : 'acertou') : 'esquivou'}`).join('; ')}`]);
   }
   function rollAreaDamage() {
     if (!area || area.damage) return;
     const a = combatants.find(c => c.id === area.attackerId); if (!a) return;
     const bonus = (area.option.damageAttr ? a[area.option.damageAttr] : 0) + area.option.karma;
     const d = damageRoll(area.dice, bonus, area.results.some(x => x.crit));
-    const applied = mode === 'half' ? Math.floor(d.total / 2) : d.total;
+    const applied = areaMode === 'half' ? Math.floor(d.total / 2) : d.total;
     const lines: string[] = [];
     area.results.filter(x => x.hit).forEach(x => { const t = combatants.find(c => c.id === x.id); if (!t) return; const block = useBlock ? t.bloqueio : 0; const final = Math.max(0, applied - block); const pv = Math.max(0, t.pv - final); setResources(t, pv, null); lines.push(`${t.name}: ${applied} − Bloqueio ${block} = ${final} → ${pv} PV${pv === 0 ? ' (AGONIA)' : ''}`); });
     setArea({ ...area, damage: { raw: d.total, applied, lines } });
