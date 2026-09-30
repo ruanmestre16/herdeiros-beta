@@ -47,9 +47,9 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   const [attackerId, setAttackerId] = useState('');
   const [optionId, setOptionId] = useState('desarmado_leve');
   const [diceChoice, setDiceChoice] = useState('');
+  const [targetId, setTargetId] = useState('');
   const [useBlock, setUseBlock] = useState(true);
-  const [selectedIds, setSelectedIds] = useState<string[]>([]);
-  const [areaMode, setAreaMode] = useState<'full' | 'half'>('full');
+  const [mode, setMode] = useState<'single' | 'full' | 'half'>('single');
   const [area, setArea] = useState<null | { attackerId: string; option: AttackOption; dice: string; d20: number; total: number; crit: boolean; results: { id: string; name: string; esquiva: number; hit: boolean; crit: boolean }[]; damage?: { raw: number; applied: number; lines: string[] } }>(null);
   const [pending, setPending] = useState<null | { attackerId: string; targetId: string; option: AttackOption; dice: string; d20: number; total: number; esquiva: number; hit: boolean; crit: boolean; damage?: { raw: number; dice: number[]; bonus: number; block: number; final: number } }>(null);
 
@@ -58,14 +58,9 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   const option = options.find(o => o.id === optionId) ?? options[0];
   const dice = option && option.dice.includes(diceChoice) ? diceChoice : option?.dice[0] ?? '';
   const targets = combatants.filter(c => c.id !== attacker?.id);
-  const selected = targets.filter(c => selectedIds.includes(c.id));
-  const target = selected[0] ?? targets[0];
-  const areaTargets = selected.length > 1 ? selected : [];
+  const target = targets.find(c => c.id === targetId) ?? targets[0];
 
-  function toggleTarget(id: string) {
-    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
-    setPending(null); setArea(null);
-  }
+  const areaTargets = attacker ? combatants.filter(c => c.id !== attacker.id && c.kind !== attacker.kind) : [];
   function rollAreaAttack() {
     if (!attacker || !option || !areaTargets.length || option.pfCost > attacker.pf) return;
     const attrValue = attacker[option.hitAttr]; const hc = option.hitCount ?? Math.max(1, attrValue);
@@ -73,20 +68,20 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     if (option.pfCost) setResources(attacker, null, attacker.pf - option.pfCost);
     const results = areaTargets.map(t => { const hit = r.total >= t.esquiva; return { id: t.id, name: t.name, esquiva: t.esquiva, hit, crit: r.d20 === 20 && r.total > t.esquiva }; });
     setPending(null); setArea({ attackerId: attacker.id, option, dice, d20: r.d20, total: r.total, crit: r.d20 === 20, results });
-    addRoll({ expression: `${hc}d20${hc > 1 ? ' (maior)' : ''} + ${attrValue}`, dice: r.dice ?? [r.d20], modifier: attrValue, total: r.total, source: `${attacker.name} → ${selected.map(s => s.name).join(', ')} (${areaMode === 'half' ? 'metade' : 'dano total'})`, crit: r.d20 === 20 });
-    log([`${attacker.name} ataca ${selected.map(s => s.name).join(', ')} (${option.label}, ${areaMode === 'half' ? 'metade do dano' : 'dano total'}): total ${r.total} → ${results.map(x => `${x.name} (Esq ${x.esquiva}): ${x.hit ? (x.crit ? 'CRÍTICO' : 'acertou') : 'esquivou'}`).join('; ')}`]);
+    addRoll({ expression: `${hc}d20${hc > 1 ? ' (maior)' : ''} + ${attrValue}`, dice: r.dice ?? [r.d20], modifier: attrValue, total: r.total, source: `${attacker.name} → todos (${mode === 'half' ? 'metade' : 'dano total'})`, crit: r.d20 === 20 });
+    log([`${attacker.name} ataca TODOS os inimigos (${option.label}, ${mode === 'half' ? 'metade do dano' : 'dano total'}): total ${r.total} → ${results.map(x => `${x.name} (Esq ${x.esquiva}): ${x.hit ? (x.crit ? 'CRÍTICO' : 'acertou') : 'esquivou'}`).join('; ')}`]);
   }
   function rollAreaDamage() {
     if (!area || area.damage) return;
     const a = combatants.find(c => c.id === area.attackerId); if (!a) return;
     const bonus = (area.option.damageAttr ? a[area.option.damageAttr] : 0) + area.option.karma;
     const d = damageRoll(area.dice, bonus, area.results.some(x => x.crit));
-    const applied = areaMode === 'half' ? Math.floor(d.total / 2) : d.total;
+    const applied = mode === 'half' ? Math.floor(d.total / 2) : d.total;
     const lines: string[] = [];
     area.results.filter(x => x.hit).forEach(x => { const t = combatants.find(c => c.id === x.id); if (!t) return; const block = useBlock ? t.bloqueio : 0; const final = Math.max(0, applied - block); const pv = Math.max(0, t.pv - final); setResources(t, pv, null); lines.push(`${t.name}: ${applied} − Bloqueio ${block} = ${final} → ${pv} PV${pv === 0 ? ' (AGONIA)' : ''}`); });
     setArea({ ...area, damage: { raw: d.total, applied, lines } });
-    addRoll({ expression: d.expression, dice: d.dice, modifier: bonus, total: d.total, source: `Dano em área${areaMode === 'half' ? ' (metade)' : ''}` });
-    log([`Dano em área: ${d.expression} = ${d.total}${areaMode === 'half' ? ` → metade ${applied}` : ''}. ${lines.join('; ')}`]);
+    addRoll({ expression: d.expression, dice: d.dice, modifier: bonus, total: d.total, source: `Dano em área${mode === 'half' ? ' (metade)' : ''}` });
+    log([`Dano em área: ${d.expression} = ${d.total}${mode === 'half' ? ` → metade ${applied}` : ''}. ${lines.join('; ')}`]);
   }
 
   const log = (lines: string[]) => saveCampaign({ ...campaign, log: [...lines.reverse(), ...campaign.log] });
@@ -127,13 +122,13 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   return <div className="combat-layout">
     <div className="stack">
       <section className="game-panel"><div className="panel-head"><h3>Ordem de iniciativa</h3><span className="field-kicker">RODADA {campaign.round}</span></div>
-        <div className="combat-list">{combatants.map((c, i) => { const selectable = c.id !== attacker.id; const isSelected = selectable && selectedIds.includes(c.id); return <div key={c.id} className={`combatant ${current?.id === c.id ? 'current' : ''} ${selectable ? 'selectable' : ''} ${isSelected ? 'selected-target' : ''}`} onClick={selectable ? () => toggleTarget(c.id) : undefined} title={selectable ? 'Clique para selecionar/desselecionar como alvo' : undefined}>
+        <div className="combat-list">{combatants.map((c, i) => <div key={c.id} className={`combatant ${current?.id === c.id ? 'current' : ''}`}>
           <span className="combatant-number">{c.initiative ?? '—'}</span>
           <span className="combatant-icon">{c.kind === 'npc' ? <Skull /> : <Users />}</span>
           <span className="flex-1"><strong>{c.name}</strong><small>{c.pv} / {c.pvMax} PV · <span className="text-flux">{c.pf} / {c.pfMax} PF</span> · Esq {c.esquiva} · RD {c.bloqueio}{c.pv === 0 ? ' · AGONIA' : ''}</small></span>
-          {c.npc ? <Button variant="ghost" size="icon" title="Rolar iniciativa" aria-label={`Rolar iniciativa de ${c.name}`} onClick={e => { e.stopPropagation(); rollNpcInitiative(c.npc!); }}><Dices /></Button> : <span className="field-kicker">{c.initiative === null ? 'AGUARDANDO FICHA' : 'DA FICHA'}</span>}
+          {c.npc ? <Button variant="ghost" size="icon" title="Rolar iniciativa" aria-label={`Rolar iniciativa de ${c.name}`} onClick={() => rollNpcInitiative(c.npc!)}><Dices /></Button> : <span className="field-kicker">{c.initiative === null ? 'AGUARDANDO FICHA' : 'DA FICHA'}</span>}
           <span className="sr-only">{i}</span>
-        </div>; })}{!combatants.length && <p className="empty-copy">Os jogadores entram pela Mesa escolhendo sua ficha. Adicione NPCs para o combate.</p>}</div>
+        </div>)}{!combatants.length && <p className="empty-copy">Os jogadores entram pela Mesa escolhendo sua ficha. Adicione NPCs para o combate.</p>}</div>
         <div className="combat-controls">
           <Button disabled={!combatants.length} onClick={() => saveCampaign({ ...campaign, combat_active: !campaign.combat_active, round: 1, turn_index: 0, log: [`${campaign.combat_active ? 'Combate encerrado' : 'Combate iniciado'} — ${new Date().toLocaleTimeString('pt-BR')}`, ...campaign.log] })}>{campaign.combat_active ? 'Encerrar combate' : 'Iniciar combate'}</Button>
           <Button variant="outline" disabled={!campaign.combat_active} onClick={() => { const next = campaign.turn_index + 1; setAttackerId(''); setPending(null); saveCampaign({ ...campaign, turn_index: next % Math.max(1, combatants.length), round: next >= combatants.length ? campaign.round + 1 : campaign.round, log: [`Turno de ${combatants[next % Math.max(1, combatants.length)]?.name ?? '—'}`, ...campaign.log] }); }}>Próximo turno <ArrowRight /></Button>
@@ -144,28 +139,23 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
       <section className="game-panel"><div className="panel-head"><h3>Ação de ataque</h3><Crosshair size={15} /></div>
         {attacker && target ? <div className="field-stack">
           <div className="input-grid">
-            <label className="field"><span className="field-label">ATACANTE</span><select value={attacker.id} onChange={e => { setAttackerId(e.target.value); setOptionId('desarmado_leve'); setPending(null); setSelectedIds([]); setArea(null); }}>{combatants.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-          </div>
-          <div className="field"><span className="field-label">ALVOS — CLIQUE PARA SELECIONAR</span>
-            <div className="target-chips">
-              {targets.map(c => { const isSel = selectedIds.includes(c.id); return <button key={c.id} type="button" aria-pressed={isSel} className={`target-chip ${isSel ? 'chip-selected' : ''}`} onClick={() => toggleTarget(c.id)}>{c.name} <small>Esq {c.esquiva} · RD {c.bloqueio}</small></button>; })}
-            </div>
+            <label className="field"><span className="field-label">ATACANTE</span><select value={attacker.id} onChange={e => { setAttackerId(e.target.value); setOptionId('desarmado_leve'); setPending(null); }}>{combatants.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+            <label className="field"><span className="field-label">ALVO</span><select value={target.id} onChange={e => { setTargetId(e.target.value); setPending(null); }}>{targets.map(c => <option key={c.id} value={c.id}>{c.name} (Esq {c.esquiva})</option>)}</select></label>
           </div>
           <label className="field"><span className="field-label">ATAQUE</span><select value={option?.id} onChange={e => { setOptionId(e.target.value); setDiceChoice(''); setPending(null); }}>{options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select></label>
           {option && option.dice.length > 1 && <label className="field"><span className="field-label">DADOS DE DANO (LIMITE DA TABELA)</span><select value={dice} onChange={e => setDiceChoice(e.target.value)}>{option.dice.map(d => <option key={d}>{d}</option>)}</select></label>}
-          {option && <p className="weapon-summary">Acerto: <strong>{option.hitCount ?? Math.max(1, attacker[option.hitAttr])}d20{(option.hitCount ?? attacker[option.hitAttr]) > 1 ? ' (maior)' : ''} + {ATTR_LABEL[option.hitAttr]} ({attacker[option.hitAttr]})</strong> vs Esquiva <strong>{selected.length > 1 ? 'de cada alvo' : target.esquiva}</strong> · Dano <strong>{dice}{option.damageAttr ? ` + ${ATTR_LABEL[option.damageAttr]} (${attacker[option.damageAttr]})` : ''}</strong>{option.karma ? <strong className="text-karma"> + {option.karma} Karma</strong> : null}{option.pfCost ? <> · Custo <strong className="text-flux">{option.pfCost} PF</strong> (tem <span className="text-flux">{attacker.pf}</span>)</> : null}</p>}
-          <label className="flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={useBlock} onChange={e => setUseBlock(e.target.checked)} /> Aplicar Bloqueio/RD de cada alvo</label>
-          {selected.length === 0 && <p className="empty-copy">Selecione pelo menos um alvo — clique no nome acima ou no combatente na lista de iniciativa.</p>}
-          {selected.length > 1 && <label className="field"><span className="field-label">DANO EM ÁREA ({selected.length} ALVOS)</span><select value={areaMode} onChange={e => { setAreaMode(e.target.value as 'full' | 'half'); setArea(null); }}><option value="full">Dano total para cada alvo</option><option value="half">Metade do dano para cada alvo</option></select></label>}
-          {selected.length > 1 ? <>
+          {option && <p className="weapon-summary">Acerto: <strong>{option.hitCount ?? Math.max(1, attacker[option.hitAttr])}d20{(option.hitCount ?? attacker[option.hitAttr]) > 1 ? ' (maior)' : ''} + {ATTR_LABEL[option.hitAttr]} ({attacker[option.hitAttr]})</strong> vs Esquiva <strong>{target.esquiva}</strong> · Dano <strong>{dice}{option.damageAttr ? ` + ${ATTR_LABEL[option.damageAttr]} (${attacker[option.damageAttr]})` : ''}</strong>{option.karma ? <strong className="text-karma"> + {option.karma} Karma</strong> : null}{option.pfCost ? <> · Custo <strong className="text-flux">{option.pfCost} PF</strong> (tem <span className="text-flux">{attacker.pf}</span>)</> : null}</p>}
+          <label className="flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={useBlock} onChange={e => setUseBlock(e.target.checked)} /> Aplicar Bloqueio/RD do alvo ({target.bloqueio})</label>
+          <label className="field"><span className="field-label">MODO DE ATAQUE</span><select value={mode} onChange={e => { setMode(e.target.value as 'single' | 'full' | 'half'); setPending(null); setArea(null); }}><option value="single">Um alvo</option><option value="full">Todos os inimigos · dano total</option><option value="half">Todos os inimigos · metade do dano</option></select></label>
+          {mode !== 'single' ? <>
           <div className="flex flex-wrap gap-2">
-            <Button disabled={!option || option.pfCost > attacker.pf || !areaTargets.length} onClick={rollAreaAttack}><Swords /> Atacar {selected.length} alvos</Button>
+            <Button disabled={!option || option.pfCost > attacker.pf || !areaTargets.length} onClick={rollAreaAttack}><Swords /> Atacar todos ({areaTargets.length})</Button>
             <Button variant="outline" disabled={!area?.results.some(x => x.hit) || !!area?.damage} onClick={rollAreaDamage}><Dices /> Rolar dano em área</Button>
           </div>
           {area && <div className={`combat-banner ${area.results.some(x => x.hit) ? 'banner-hit' : 'banner-miss'}`}>
             <strong>Acerto {area.total} (d20 {area.d20})</strong>
             {area.results.map(x => <span key={x.id}>{x.name} · Esq {x.esquiva} → {x.hit ? (x.crit ? 'CRÍTICO' : 'ACERTOU') : 'ESQUIVOU'}</span>)}
-            {area.damage && <span><Shield size={12} className="inline" /> Dano {area.damage.raw}{areaMode === 'half' ? ` → metade ${area.damage.applied}` : ''}: {area.damage.lines.join(' · ')}</span>}
+            {area.damage && <span><Shield size={12} className="inline" /> Dano {area.damage.raw}{mode === 'half' ? ` → metade ${area.damage.applied}` : ''}: {area.damage.lines.join(' · ')}</span>}
           </div>}
           </> : <>
           <div className="flex flex-wrap gap-2">
