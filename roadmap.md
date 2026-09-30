@@ -15,3 +15,4 @@
 - [x] Mestre vê quem está na mesa, ajusta PV direto e edita a ficha completa de qualquer jogador.
 - [x] Item Âncora Sentimental: reduz a DP de testes de Karma em até 4.
 - [x] Forçar o Fluxo em roxo (família do Karma).
+- [ ] Modelo de ficha Agente do Consórcio com Tecnologia e Núcleo.
