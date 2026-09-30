@@ -30,7 +30,7 @@ function TabBar<T extends string>({ tabs, active, onSelect }: { tabs: readonly T
 
 export function GameApp() {
  const data=useGameData();
- const [area,setArea]=useState<Area>('jogador'); const [sheetTab,setSheetTab]=useState<SheetTab>('Geral'); const [sheetId,setSheetId]=useState<string|null>(null); const [campaignId,setCampaignId]=useState<string|null>(null); const [masterTab,setMasterTab]=useState('NPCs e inimigos'); const [mobileNav,setMobileNav]=useState(false); const [authOpen,setAuthOpen]=useState(false);
+ const [area,setArea]=useState<Area>('jogador'); const [sheetTab,setSheetTab]=useState<SheetTab>('Geral'); const [sheetId,setSheetIdRaw]=useState<string|null>(null); const setSheetId=(id:string|null)=>{setSheetIdRaw(id); try{ if(id)sessionStorage.setItem('herdeiros-sheet',id); else sessionStorage.removeItem('herdeiros-sheet'); }catch{/* ignore */}}; const [campaignId,setCampaignId]=useState<string|null>(null); const [masterTab,setMasterTab]=useState('NPCs e inimigos'); const [mobileNav,setMobileNav]=useState(false); const [authOpen,setAuthOpen]=useState(false);
  const [roomPassword,setRoomPassword]=useState(''); const [passwordFeedback,setPasswordFeedback]=useState(''); const [joinCode,setJoinCode]=useState(''); const [joinPassword,setJoinPassword]=useState(''); const [joinFeedback,setJoinFeedback]=useState(''); 
  const [rolls,setRolls]=useState<{id:string; expression:string; dice:number[]; modifier:number; total:number; source?:string|undefined; crit?:boolean}[]>([]);
  const allSheetsEarly=[...data.characters,...data.partyCharacters.filter(c=>!data.characters.some(own=>own.id===c.id))]; const character=allSheetsEarly.find(c=>c.id===sheetId) ?? data.characters[0]; const campaign=data.campaigns.find(c=>c.id===campaignId) ?? data.campaigns[0]; const isMaster=!!data.userId && !!campaign && ('master_id' in campaign) && campaign.master_id===data.userId; const campaignNpcs=data.npcs.filter(n=>!('campaign_id' in n) || n.campaign_id===campaign?.id);
@@ -47,6 +47,7 @@ export function GameApp() {
  useEffect(()=>{ const token=new URLSearchParams(window.location.search).get('convite'); if(!token||!data.ready)return; if(!data.userId){setAuthOpen(true);return;} void data.joinInvite(token).then(id=>{ if(id){setCampaignId(id);setArea('mesa');setInviteMsg('Você entrou na mesa pelo convite!');window.history.replaceState({},'','/mesa');} });
   // eslint-disable-next-line react-hooks/exhaustive-deps
  },[data.ready,data.userId]);
+ useEffect(()=>{ try{ const saved=sessionStorage.getItem('herdeiros-sheet'); if(saved)setSheetIdRaw(saved); }catch{/* ignore */} },[]);
  useEffect(()=>{ const path=window.location.pathname; if(path.includes('mestre'))setArea('mestre'); else if(path.includes('mesa'))setArea('mesa'); else if(path.includes('rolador'))setArea('rolador'); else if(path.includes('regras'))setArea('regras'); },[]);
  function go(next:Area) { setArea(next); setMobileNav(false); window.history.replaceState({},'',next==='jogador'?'/':`/${next}`); window.scrollTo({top:0,behavior:'smooth'}); }
  function throwDice(expression:string,source?:string) { const result=roll(expression); if(result) { const entry={...result,id:crypto.randomUUID(),source}; setRolls(prev=>[entry,...prev].slice(0,40)); return result; } return null; }
