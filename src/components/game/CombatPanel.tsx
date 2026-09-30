@@ -159,13 +159,13 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
           {selected.length > 1 && <label className="field"><span className="field-label">DANO EM ÁREA ({selected.length} ALVOS)</span><select value={areaMode} onChange={e => { setAreaMode(e.target.value as 'full' | 'half'); setArea(null); }}><option value="full">Dano total para cada alvo</option><option value="half">Metade do dano para cada alvo</option></select></label>}
           {selected.length > 1 ? <>
           <div className="flex flex-wrap gap-2">
-            <Button disabled={!option || option.pfCost > attacker.pf || !areaTargets.length} onClick={rollAreaAttack}><Swords /> Atacar todos ({areaTargets.length})</Button>
+            <Button disabled={!option || option.pfCost > attacker.pf || !areaTargets.length} onClick={rollAreaAttack}><Swords /> Atacar {selected.length} alvos</Button>
             <Button variant="outline" disabled={!area?.results.some(x => x.hit) || !!area?.damage} onClick={rollAreaDamage}><Dices /> Rolar dano em área</Button>
           </div>
           {area && <div className={`combat-banner ${area.results.some(x => x.hit) ? 'banner-hit' : 'banner-miss'}`}>
             <strong>Acerto {area.total} (d20 {area.d20})</strong>
             {area.results.map(x => <span key={x.id}>{x.name} · Esq {x.esquiva} → {x.hit ? (x.crit ? 'CRÍTICO' : 'ACERTOU') : 'ESQUIVOU'}</span>)}
-            {area.damage && <span><Shield size={12} className="inline" /> Dano {area.damage.raw}{mode === 'half' ? ` → metade ${area.damage.applied}` : ''}: {area.damage.lines.join(' · ')}</span>}
+            {area.damage && <span><Shield size={12} className="inline" /> Dano {area.damage.raw}{areaMode === 'half' ? ` → metade ${area.damage.applied}` : ''}: {area.damage.lines.join(' · ')}</span>}
           </div>}
           </> : <>
           <div className="flex flex-wrap gap-2">
