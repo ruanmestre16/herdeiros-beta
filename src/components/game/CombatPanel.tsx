@@ -47,9 +47,9 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   const [attackerId, setAttackerId] = useState('');
   const [optionId, setOptionId] = useState('desarmado_leve');
   const [diceChoice, setDiceChoice] = useState('');
-  const [targetId, setTargetId] = useState('');
   const [useBlock, setUseBlock] = useState(true);
-  const [mode, setMode] = useState<'single' | 'full' | 'half'>('single');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [areaMode, setAreaMode] = useState<'full' | 'half'>('full');
   const [area, setArea] = useState<null | { attackerId: string; option: AttackOption; dice: string; d20: number; total: number; crit: boolean; results: { id: string; name: string; esquiva: number; hit: boolean; crit: boolean }[]; damage?: { raw: number; applied: number; lines: string[] } }>(null);
   const [pending, setPending] = useState<null | { attackerId: string; targetId: string; option: AttackOption; dice: string; d20: number; total: number; esquiva: number; hit: boolean; crit: boolean; damage?: { raw: number; dice: number[]; bonus: number; block: number; final: number } }>(null);
 
@@ -58,9 +58,14 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   const option = options.find(o => o.id === optionId) ?? options[0];
   const dice = option && option.dice.includes(diceChoice) ? diceChoice : option?.dice[0] ?? '';
   const targets = combatants.filter(c => c.id !== attacker?.id);
-  const target = targets.find(c => c.id === targetId) ?? targets[0];
+  const selected = targets.filter(c => selectedIds.includes(c.id));
+  const target = selected[0] ?? targets[0];
+  const areaTargets = selected.length > 1 ? selected : [];
 
-  const areaTargets = attacker ? combatants.filter(c => c.id !== attacker.id && c.kind !== attacker.kind) : [];
+  function toggleTarget(id: string) {
+    setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
+    setPending(null); setArea(null);
+  }
   function rollAreaAttack() {
     if (!attacker || !option || !areaTargets.length || option.pfCost > attacker.pf) return;
     const attrValue = attacker[option.hitAttr]; const hc = option.hitCount ?? Math.max(1, attrValue);
