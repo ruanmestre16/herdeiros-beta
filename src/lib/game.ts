@@ -1,5 +1,6 @@
 export type Character = {
   id: string; name: string; lineage: string; stage: string; concept: string; weapon: string;
+  sheet_model: 'herdeiro' | 'agente_consorcio';
   corpo: number; mente: number; espirito: number; pv_current: number; pv_max: number;
   pf_current: number; pf_max: number; karma: number; gs: number; exhaustion: number;
   sync: { name: string; level: number }[]; nomenclatures: Nomenclature[];
@@ -12,7 +13,7 @@ export type Npc = { id: string; name: string; kind: string; hidden: boolean; pv_
 export type Campaign = { id: string; name: string; code: string; scene: string; round: number; turn_index: number; combat_active: boolean; log: string[] };
 export const dieFor = (n: number) => [0, 4, 6, 8, 10, 12][Math.max(1, Math.min(5, n))];
 export const derived = (corpo: number) => ({ pv: [0,25,32,42,52,60][corpo] ?? 25, esquiva: [0,10,12,14,15,16][corpo] ?? 10, bloqueio: [0,3,5,7,10,12][corpo] ?? 3, deslocamento: [0,9,9,12,12,15][corpo] ?? 9 });
-export const makeCharacter = (): Character => ({ id: crypto.randomUUID(), name: 'Novo Herdeiro', lineage: 'Humano', stage: 'Libertado', concept: '', weapon: '', corpo: 1, mente: 1, espirito: 1, pv_current: 25, pv_max: 25, pf_current: 0, pf_max: 20, karma: 0, gs: 1, exhaustion: 0, sync: [], nomenclatures: [], inventory: [], story: '', abilities: [], weapon_type: '', weapon_dice: '', initiative: null });
+export const makeCharacter = (): Character => ({ id: crypto.randomUUID(), name: 'Novo Herdeiro', sheet_model: 'herdeiro', lineage: 'Humano', stage: 'Libertado', concept: '', weapon: '', corpo: 1, mente: 1, espirito: 1, pv_current: 25, pv_max: 25, pf_current: 0, pf_max: 20, karma: 0, gs: 1, exhaustion: 0, sync: [], nomenclatures: [], inventory: [], story: '', abilities: [], weapon_type: '', weapon_dice: '', initiative: null });
 export const makeNpc = (): Npc => ({ id: crypto.randomUUID(), name: 'Novo inimigo', kind: 'inimigo', hidden: true, pv_current: 25, pv_max: 25, pf_current: 0, pf_max: 20, corpo: 1, mente: 1, espirito: 1, esquiva: 10, bloqueio: 3, notes: '', initiative: null });
 export const makeCampaign = (): Campaign => ({ id: crypto.randomUUID(), name: 'A primeira travessia', code: 'DM3JUT', scene: 'O limiar', round: 1, turn_index: 0, combat_active: false, log: [] });
 export function roll(expression: string) {
@@ -47,6 +48,13 @@ export function cappedNomenclatureDice(kind: NomenclatureKind | undefined, dice:
 
 export type Attr = 'corpo' | 'mente' | 'espirito';
 export const ATTR_LABEL: Record<Attr, string> = { corpo: 'CORPO', mente: 'MENTE', espirito: 'ESPÍRITO' };
+export const isConsortiumAgent = (c: Pick<Character, 'sheet_model'>) => c.sheet_model === 'agente_consorcio';
+export const attrLabelFor = (attr: Attr, c?: Pick<Character, 'sheet_model'>) => attr === 'espirito' && c && isConsortiumAgent(c) ? 'TECNOLOGIA' : ATTR_LABEL[attr];
+export const sheetTerms = (c: Pick<Character, 'sheet_model'>) => isConsortiumAgent(c) ? {
+  model: 'Agente do Consórcio', spirit: 'Tecnologia', flux: 'Estabilidade de Núcleo', karma: 'Destruição de Núcleo', force: 'Destruir o Núcleo', stable: 'NÚCLEO ESTÁVEL', mid: 'NÚCLEO INSTÁVEL', high: 'COLAPSO DE NÚCLEO', bonus: 'Destruição',
+} : {
+  model: 'Herdeiro', spirit: 'Espírito', flux: 'Pontos de Fluxo', karma: 'Karma', force: 'Forçar o Fluxo', stable: 'KARMA ESTÁVEL', mid: 'MARCAS DE GAKI', high: 'MODO BERSERKER', bonus: 'Karma',
+};
 /** Humanos: arma formada pela vontade, ataque baseado em MENTE. Demais linhagens usam CORPO. */
 export const weaponAttrFor = (lineage: string): Attr => lineage === 'Humano' ? 'mente' : 'corpo';
 
@@ -69,7 +77,7 @@ export function damageRoll(dice: string, bonus: number, crit: boolean) {
 /** Bônus de dano do Karma: 50% = +3, 70% = +5 em todo ataque. */
 export function karmaDamageBonus(c: Pick<Character, 'karma' | 'mente' | 'espirito'>) { const st = karmaStage(c.karma, karmaMaximum(c.mente, c.espirito)); return st === 'berserker' ? 5 : st === 'gaki' ? 3 : 0; }
 export function initiativeRoll(corpo: number) { const dice = rollDice(Math.max(1, corpo), 20); return { dice, total: Math.max(...dice) + corpo }; }
-export function normalizeCharacter(c: Partial<Character> & { id: string }): Character { return { ...makeCharacter(), ...c, abilities: Array.isArray(c.abilities) ? c.abilities : [], sync: Array.isArray(c.sync) ? c.sync : [], nomenclatures: Array.isArray(c.nomenclatures) ? c.nomenclatures : [], inventory: Array.isArray(c.inventory) ? c.inventory : [], weapon_type: c.weapon_type ?? '', weapon_dice: c.weapon_dice ?? '', initiative: c.initiative ?? null } as Character; }
+export function normalizeCharacter(c: Partial<Character> & { id: string }): Character { return { ...makeCharacter(), ...c, sheet_model: c.sheet_model === 'agente_consorcio' ? 'agente_consorcio' : 'herdeiro', abilities: Array.isArray(c.abilities) ? c.abilities : [], sync: Array.isArray(c.sync) ? c.sync : [], nomenclatures: Array.isArray(c.nomenclatures) ? c.nomenclatures : [], inventory: Array.isArray(c.inventory) ? c.inventory : [], weapon_type: c.weapon_type ?? '', weapon_dice: c.weapon_dice ?? '', initiative: c.initiative ?? null } as Character; }
 
 /* ---------- Absorver PF ---------- */
 /** Faixa definida pelo MAIOR d20: 1–7 → 1/3, 8–14 → metade, 15–19 → valor cheio, 20 → dobro. */
