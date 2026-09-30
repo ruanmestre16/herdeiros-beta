@@ -15,4 +15,3 @@
 - The campaign master may edit any member sheet (RLS `is_master_of_sheet`); members read all table sheets/campaign/visible NPCs, and non-master UI is wrapped in a disabled fieldset. Why: players see everything, only the master edits.
 - Invites use `campaigns.invite_token` + `join_campaign_invite` RPC via `/mesa?convite=`. Why: one-click Google entry without a password.
 - Sheet notes (Anotações) are stored inside the existing `story` column after a marker (splitStory/joinStory in src/lib/game.ts), so no database change is needed and the original backend keeps working.
-- Sheet identity variants are stored in `sheets.sheet_model`; `herdeiro` and `agente_consorcio` share mechanics while UI labels and accents change. Why: preserves one rules engine and syncs the chosen model online.
