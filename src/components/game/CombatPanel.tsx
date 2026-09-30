@@ -144,8 +144,12 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
       <section className="game-panel"><div className="panel-head"><h3>Ação de ataque</h3><Crosshair size={15} /></div>
         {attacker && target ? <div className="field-stack">
           <div className="input-grid">
-            <label className="field"><span className="field-label">ATACANTE</span><select value={attacker.id} onChange={e => { setAttackerId(e.target.value); setOptionId('desarmado_leve'); setPending(null); }}>{combatants.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-            <label className="field"><span className="field-label">ALVO</span><select value={target.id} onChange={e => { setTargetId(e.target.value); setPending(null); }}>{targets.map(c => <option key={c.id} value={c.id}>{c.name} (Esq {c.esquiva})</option>)}</select></label>
+            <label className="field"><span className="field-label">ATACANTE</span><select value={attacker.id} onChange={e => { setAttackerId(e.target.value); setOptionId('desarmado_leve'); setPending(null); setSelectedIds([]); setArea(null); }}>{combatants.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+          </div>
+          <div className="field"><span className="field-label">ALVOS — CLIQUE PARA SELECIONAR</span>
+            <div className="target-chips">
+              {targets.map(c => { const isSel = selectedIds.includes(c.id); return <button key={c.id} type="button" aria-pressed={isSel} className={`target-chip ${isSel ? 'chip-selected' : ''}`} onClick={() => toggleTarget(c.id)}>{c.name} <small>Esq {c.esquiva} · RD {c.bloqueio}</small></button>; })}
+            </div>
           </div>
           <label className="field"><span className="field-label">ATAQUE</span><select value={option?.id} onChange={e => { setOptionId(e.target.value); setDiceChoice(''); setPending(null); }}>{options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select></label>
           {option && option.dice.length > 1 && <label className="field"><span className="field-label">DADOS DE DANO (LIMITE DA TABELA)</span><select value={dice} onChange={e => setDiceChoice(e.target.value)}>{option.dice.map(d => <option key={d}>{d}</option>)}</select></label>}
