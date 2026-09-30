@@ -85,8 +85,8 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     const lines: string[] = [];
     area.results.filter(x => x.hit).forEach(x => { const t = combatants.find(c => c.id === x.id); if (!t) return; const block = useBlock ? t.bloqueio : 0; const final = Math.max(0, applied - block); const pv = Math.max(0, t.pv - final); setResources(t, pv, null); lines.push(`${t.name}: ${applied} − Bloqueio ${block} = ${final} → ${pv} PV${pv === 0 ? ' (AGONIA)' : ''}`); });
     setArea({ ...area, damage: { raw: d.total, applied, lines } });
-    addRoll({ expression: d.expression, dice: d.dice, modifier: bonus, total: d.total, source: `Dano em área${mode === 'half' ? ' (metade)' : ''}` });
-    log([`Dano em área: ${d.expression} = ${d.total}${mode === 'half' ? ` → metade ${applied}` : ''}. ${lines.join('; ')}`]);
+    addRoll({ expression: d.expression, dice: d.dice, modifier: bonus, total: d.total, source: `Dano em área${areaMode === 'half' ? ' (metade)' : ''}` });
+    log([`Dano em área: ${d.expression} = ${d.total}${areaMode === 'half' ? ` → metade ${applied}` : ''}. ${lines.join('; ')}`]);
   }
 
   const log = (lines: string[]) => saveCampaign({ ...campaign, log: [...lines.reverse(), ...campaign.log] });
@@ -127,13 +127,13 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   return <div className="combat-layout">
     <div className="stack">
       <section className="game-panel"><div className="panel-head"><h3>Ordem de iniciativa</h3><span className="field-kicker">RODADA {campaign.round}</span></div>
-        <div className="combat-list">{combatants.map((c, i) => <div key={c.id} className={`combatant ${current?.id === c.id ? 'current' : ''}`}>
+        <div className="combat-list">{combatants.map((c, i) => { const selectable = c.id !== attacker.id; const isSelected = selectable && selectedIds.includes(c.id); return <div key={c.id} className={`combatant ${current?.id === c.id ? 'current' : ''} ${selectable ? 'selectable' : ''} ${isSelected ? 'selected-target' : ''}`} onClick={selectable ? () => toggleTarget(c.id) : undefined} title={selectable ? 'Clique para selecionar/desselecionar como alvo' : undefined}>
           <span className="combatant-number">{c.initiative ?? '—'}</span>
           <span className="combatant-icon">{c.kind === 'npc' ? <Skull /> : <Users />}</span>
           <span className="flex-1"><strong>{c.name}</strong><small>{c.pv} / {c.pvMax} PV · <span className="text-flux">{c.pf} / {c.pfMax} PF</span> · Esq {c.esquiva} · RD {c.bloqueio}{c.pv === 0 ? ' · AGONIA' : ''}</small></span>
-          {c.npc ? <Button variant="ghost" size="icon" title="Rolar iniciativa" aria-label={`Rolar iniciativa de ${c.name}`} onClick={() => rollNpcInitiative(c.npc!)}><Dices /></Button> : <span className="field-kicker">{c.initiative === null ? 'AGUARDANDO FICHA' : 'DA FICHA'}</span>}
+          {c.npc ? <Button variant="ghost" size="icon" title="Rolar iniciativa" aria-label={`Rolar iniciativa de ${c.name}`} onClick={e => { e.stopPropagation(); rollNpcInitiative(c.npc!); }}><Dices /></Button> : <span className="field-kicker">{c.initiative === null ? 'AGUARDANDO FICHA' : 'DA FICHA'}</span>}
           <span className="sr-only">{i}</span>
-        </div>)}{!combatants.length && <p className="empty-copy">Os jogadores entram pela Mesa escolhendo sua ficha. Adicione NPCs para o combate.</p>}</div>
+        </div>; })}{!combatants.length && <p className="empty-copy">Os jogadores entram pela Mesa escolhendo sua ficha. Adicione NPCs para o combate.</p>}</div>
         <div className="combat-controls">
           <Button disabled={!combatants.length} onClick={() => saveCampaign({ ...campaign, combat_active: !campaign.combat_active, round: 1, turn_index: 0, log: [`${campaign.combat_active ? 'Combate encerrado' : 'Combate iniciado'} — ${new Date().toLocaleTimeString('pt-BR')}`, ...campaign.log] })}>{campaign.combat_active ? 'Encerrar combate' : 'Iniciar combate'}</Button>
           <Button variant="outline" disabled={!campaign.combat_active} onClick={() => { const next = campaign.turn_index + 1; setAttackerId(''); setPending(null); saveCampaign({ ...campaign, turn_index: next % Math.max(1, combatants.length), round: next >= combatants.length ? campaign.round + 1 : campaign.round, log: [`Turno de ${combatants[next % Math.max(1, combatants.length)]?.name ?? '—'}`, ...campaign.log] }); }}>Próximo turno <ArrowRight /></Button>
