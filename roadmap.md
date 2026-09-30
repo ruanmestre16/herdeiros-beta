@@ -1,0 +1,17 @@
+- [x] Examinar imagens, PDF, repositório e páginas públicas de referência.
+- [x] Preparar armazenamento seguro para fichas, mesas e NPCs.
+- [x] Construir fichas, mesa, rolador e consulta de regras com controles funcionais.
+- [x] Verificar aparência e interações no navegador (fluxos públicos e demonstração; duas contas online aguardam teste real).
+- [x] Nome de perfil editável na conta e visível no canto superior direito.
+- [x] Mesas online com código e senha, entrada de jogadores autenticados e atualização ao vivo.
+- [x] Karma máximo calculado pelos atributos e estados Marcas de Gaki / Berserker em 50% / 70%.
+- [x] Passiva do Gaki (absorver Fluxo 1d4 PV por alvo + Teste de Mente/Karma).
+- [x] Arma de Vínculo humana com dano da tabela (Mente, crítico dobra dados).
+- [x] Sincronia — Nível abaixo de GS; Nova Nomenclatura (Direta/Parcial/Completa); Habilidades só nome + descrição.
+- [x] Combate jogável na Visão do Mestre: iniciativa vinda das fichas, ataque vs Esquiva, dano − Bloqueio, PV/PF atualizados, críticos e crônica.
+- [x] Tabela de dano das armas nas Regras.
+- [x] Login com Google em um clique e convite por link para a mesa.
+- [x] Jogadores veem tudo da mesa (fichas, combate, cena, crônica); só o Mestre edita.
+- [x] Mestre vê quem está na mesa, ajusta PV direto e edita a ficha completa de qualquer jogador.
+- [x] Item Âncora Sentimental: reduz a DP de testes de Karma em até 4.
+- [x] Forçar o Fluxo em roxo (família do Karma).
