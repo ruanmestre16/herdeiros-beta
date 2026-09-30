@@ -45,8 +45,8 @@ export const NOMENCLATURE_RANGES: Record<NomenclatureKind, number[]> = { Direta:
 export const NOMENCLATURE_LABEL: Record<NomenclatureKind, string> = { Direta: 'Nomeação Direta · 1d8 a 2d8', Parcial: 'Recitação Parcial · 3d8 a 5d8', Completa: 'Recitação Completa · 6d8' };
 export function cappedNomenclatureDice(kind: NomenclatureKind | undefined, dice: number | undefined) { const r = NOMENCLATURE_RANGES[kind ?? 'Direta']; return r.includes(dice ?? 0) ? dice! : r[0]!; }
 
-export type Attr = 'corpo' | 'mente' | 'espirito';
-export const ATTR_LABEL: Record<Attr, string> = { corpo: 'CORPO', mente: 'MENTE', espirito: 'ESPÍRITO' };
+export type Attr = 'corpo' | 'mente' | 'espirito' | 'tecnologia';
+export const ATTR_LABEL: Record<Attr, string> = { corpo: 'CORPO', mente: 'MENTE', espirito: 'ESPÍRITO', tecnologia: 'TECNOLOGIA' };
 /** Humanos: arma formada pela vontade, ataque baseado em MENTE. Demais linhagens usam CORPO. */
 export const weaponAttrFor = (lineage: string): Attr => lineage === 'Humano' ? 'mente' : 'corpo';
 
