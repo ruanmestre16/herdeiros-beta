@@ -3,7 +3,7 @@ import { Dices, Plus, Skull, Sparkles, Swords, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Stepper } from './Controls';
 import {
-  ATTR_LABEL, NOMENCLATURE_LABEL, NOMENCLATURE_RANGES, WEAPONS, attackRoll, multiAttackRoll, absorbPf, cappedNomenclatureDice, cappedWeaponDice,
+  NOMENCLATURE_LABEL, NOMENCLATURE_RANGES, WEAPONS, attackRoll, multiAttackRoll, absorbPf, cappedNomenclatureDice, cappedWeaponDice,
   damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, isTechAgent, absorbActionLabel, attrLabelFor,
   type Attr, type Character, type NomenclatureKind,
 } from '@/lib/game';
@@ -100,13 +100,13 @@ export function GakiPassive({ character, update, addRoll }: { character: Charact
   </div>;
 }
 
-/** 1.2 Arma: escolha de Corpo/Mente para o acerto; dano permanece limitado pela tabela. */
+/** 1.2 Arma: escolha de qualquer atributo para o acerto; dano permanece limitado pela tabela. */
 export function WeaponPanel({ character, update, addRoll }: { character: Character; update: Update; addRoll: AddRoll }) {
   const [last, setLast] = useState<{ d20: number; total: number; crit: boolean } | null>(null);
   const [dmg, setDmg] = useState<{ total: number; dice: number[]; bonus: number; crit: boolean } | null>(null);
   const [hitAttr, setHitAttr] = useState<Attr>(character.lineage === 'Humano' ? 'mente' : 'corpo');
   const type = weaponByKey(character.weapon_type);
-  const dice = type ? cappedWeaponDice(type.key, character.weapon_dice)! : '';
+  const dice = type ? cappedWeaponDice(type.key, character.weapon_dice) ?? '' : '';
   const hitCount = Math.max(1, character[hitAttr]);
   const damageAttr = type?.attr === 'corpo' ? 'corpo' : type?.attr === 'atributo' ? hitAttr : null;
   const bonus = (damageAttr ? character[damageAttr] : 0) + karmaDamageBonus(character);
@@ -120,16 +120,15 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
         {(type?.dice ?? []).map(d => <option key={d}>{d}</option>)}
       </select></Field>
       <Field label="ATACAR COM"><select value={hitAttr} onChange={e => { setHitAttr(e.target.value as Attr); setLast(null); setDmg(null); }}>
-        <option value="mente">Mente ({character.mente}d20)</option>
-        <option value="corpo">Corpo ({character.corpo}d20)</option>
+        {(['mente', 'corpo', 'espirito'] as const).map(attr => <option key={attr} value={attr}>{attrLabelFor(attr, character.lineage)} ({character[attr]}d20)</option>)}
       </select></Field>
     </div>
-    {type && <p className="weapon-summary">Ataque <strong>{hitCount}d20{hitCount > 1 ? ' (maior)' : ''} + {ATTR_LABEL[hitAttr]} ({character[hitAttr]})</strong> · Dano <strong>{dice}{damageAttr ? ` + ${ATTR_LABEL[damageAttr]} (${character[damageAttr]})` : ''}</strong>{karmaDamageBonus(character) ? <strong className="text-karma"> + {karmaDamageBonus(character)} Karma</strong> : null}<br /><span>{type.note}</span></p>}
+    {type && <p className="weapon-summary">Ataque <strong>{hitCount}d20{hitCount > 1 ? ' (maior)' : ''} + {attrLabelFor(hitAttr, character.lineage)} ({character[hitAttr]})</strong> · Dano <strong>{dice}{damageAttr ? ` + ${attrLabelFor(damageAttr, character.lineage)} (${character[damageAttr]})` : ''}</strong>{karmaDamageBonus(character) ? <strong className="text-karma"> + {karmaDamageBonus(character)} Karma</strong> : null}<br /><span>{type.note}</span></p>}
     <div className="quick-actions mt-3">
       <Button variant="outline" disabled={!type} onClick={() => {
         const r = multiAttackRoll(hitCount, character[hitAttr]); setLast({ d20: r.d20, total: r.total, crit: r.crit }); setDmg(null);
         addRoll({ expression: `${hitCount}d20${hitCount > 1 ? ' (maior)' : ''} + ${character[hitAttr]}`, dice: r.dice, modifier: character[hitAttr], total: r.total, source: `Ataque com arma${r.crit ? ' — CRÍTICO' : ''}`, crit: r.crit });
-      }}><Swords /> Atacar ({hitCount}d20 + {ATTR_LABEL[hitAttr]})</Button>
+      }}><Swords /> Atacar ({hitCount}d20 + {attrLabelFor(hitAttr, character.lineage)})</Button>
       <Button variant="outline" disabled={!type || !last} onClick={() => {
         const d = damageRoll(dice, bonus, !!last?.crit); setDmg({ total: d.total, dice: d.dice, bonus, crit: !!last?.crit });
         addRoll({ expression: d.expression, dice: d.dice, modifier: bonus, total: d.total, source: `Dano da arma${last?.crit ? ' — CRÍTICO (dados dobrados)' : ''}`, crit: !!last?.crit });
