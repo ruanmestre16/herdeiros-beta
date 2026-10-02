@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Stepper } from './Controls';
 import {
   ATTR_LABEL, NOMENCLATURE_LABEL, NOMENCLATURE_RANGES, WEAPONS, attackRoll, multiAttackRoll, absorbPf, cappedNomenclatureDice, cappedWeaponDice,
-  damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey,
+  damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, isTechAgent, absorbActionLabel, attrLabelFor,
   type Attr, type Character, type NomenclatureKind,
 } from '@/lib/game';
 
@@ -210,10 +210,10 @@ export function AbsorbPfAction({ character, update, addRoll }: { character: Char
     <Button variant="outline" onClick={() => {
       const r = absorbPf(character.espirito); setRes(r); setOpen(true);
       update({ pf_current: Math.min(character.pf_max, character.pf_current + r.total) });
-      addRoll({ expression: `${r.count}d20 (soma ${r.sum}, maior ${r.highest}) + ${r.espirito}`, dice: r.dice, modifier: r.espirito, total: r.total, source: `Absorver PF${r.crit ? ' — CRÍTICO' : ''}`, crit: r.crit });
-    }} className="action-flux"><Sparkles /> Absorver PF</Button>
+      addRoll({ expression: `${r.count}d20 (soma ${r.sum}, maior ${r.highest}) + ${r.espirito}`, dice: r.dice, modifier: r.espirito, total: r.total, source: `${absorbActionLabel(character.lineage)}${r.crit ? ' — CRÍTICO' : ''}`, crit: r.crit });
+    }} className={isTechAgent(character.lineage)?"action-nucleo-power":"action-flux"}><Sparkles /> {absorbActionLabel(character.lineage)}</Button>
     {open && res && <div className="game-panel flux-result" style={{ gridColumn: '1 / -1' }}>
-      <div className="panel-head"><h3>Absorver PF · {res.count}d20 (Espírito {res.espirito})</h3><Button size="sm" variant="ghost" onClick={() => setOpen(false)}>Fechar</Button></div>
+      <div className="panel-head"><h3>{absorbActionLabel(character.lineage)} · {res.count}d20 ({isTechAgent(character.lineage)?"Tecnologia":"Espírito"} {res.espirito})</h3><Button size="sm" variant="ghost" onClick={() => setOpen(false)}>Fechar</Button></div>
       <p className="text-sm">Dados: <strong>{res.dice.join(' + ')}</strong> = soma <strong>{res.sum}</strong></p>
       <p className="text-sm mt-2">Maior dado: <strong>{res.highest}</strong> → faixa <strong>{res.band}</strong>{res.crit ? ' · CRÍTICO!' : ''}</p>
       <p className="text-sm mt-2">Aplicado à soma inteira: <strong>{res.diceTotal} PF</strong></p>
