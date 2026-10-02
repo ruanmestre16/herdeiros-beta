@@ -45,8 +45,14 @@ export const NOMENCLATURE_RANGES: Record<NomenclatureKind, number[]> = { Direta:
 export const NOMENCLATURE_LABEL: Record<NomenclatureKind, string> = { Direta: 'Nomeação Direta · 1d8 a 2d8', Parcial: 'Recitação Parcial · 3d8 a 5d8', Completa: 'Recitação Completa · 6d8' };
 export function cappedNomenclatureDice(kind: NomenclatureKind | undefined, dice: number | undefined) { const r = NOMENCLATURE_RANGES[kind ?? 'Direta']; return r.includes(dice ?? 0) ? dice! : r[0]!; }
 
-export type Attr = 'corpo' | 'mente' | 'espirito' | 'tecnologia';
-export const ATTR_LABEL: Record<Attr, string> = { corpo: 'CORPO', mente: 'MENTE', espirito: 'ESPÍRITO', tecnologia: 'TECNOLOGIA' };
+export type Attr = 'corpo' | 'mente' | 'espirito';
+export const ATTR_LABEL: Record<Attr, string> = { corpo: 'CORPO', mente: 'MENTE', espirito: 'ESPÍRITO' };
+/** Agente Tecnológico usa o campo espirito como Tecnologia (mesmo valor no banco). */
+export const isTechAgent = (lineage: string) => lineage === 'Agente Tecnológico';
+export const attrLabelFor = (attr: Attr, lineage?: string) => {
+  if (lineage && isTechAgent(lineage) && attr === 'espirito') return 'TECNOLOGIA';
+  return ATTR_LABEL[attr];
+};
 /** Humanos: arma formada pela vontade, ataque baseado em MENTE. Demais linhagens usam CORPO. */
 export const weaponAttrFor = (lineage: string): Attr => lineage === 'Humano' ? 'mente' : 'corpo';
 
@@ -68,6 +74,26 @@ export function damageRoll(dice: string, bonus: number, crit: boolean) {
 }
 /** Bônus de dano do Karma: 50% = +3, 70% = +5 em todo ataque. */
 export function karmaDamageBonus(c: Pick<Character, 'karma' | 'mente' | 'espirito'>) { const st = karmaStage(c.karma, karmaMaximum(c.mente, c.espirito)); return st === 'berserker' ? 5 : st === 'gaki' ? 3 : 0; }
+/** Rótulos da barra de Karma / Destruição de Núcleo conforme linhagem e estágio. */
+export function resourceStageLabel(lineage: string, stage: ReturnType<typeof karmaStage>) {
+  if (isTechAgent(lineage)) {
+    if (stage === 'berserker') return 'AUTODESTRUIÇÃO IMINENTE';
+    if (stage === 'gaki') return 'NÚCLEO INSTÁVEL (50%)';
+    return 'NÚCLEO ESTÁVEL';
+  }
+  if (stage === 'berserker') return 'MODO BERSERKER';
+  if (stage === 'gaki') return 'MARCAS DE GAKI';
+  return 'KARMA ESTÁVEL';
+}
+export function resourceBarLabel(lineage: string) {
+  return isTechAgent(lineage) ? 'DESTRUIÇÃO DE NÚCLEO' : 'KARMA';
+}
+export function forceActionLabel(lineage: string) {
+  return isTechAgent(lineage) ? 'Forçar Núcleo' : 'Forçar o Fluxo';
+}
+export function absorbActionLabel(lineage: string) {
+  return isTechAgent(lineage) ? 'Poder do Núcleo' : 'Absorver PF';
+}
 export function initiativeRoll(corpo: number) { const dice = rollDice(Math.max(1, corpo), 20); return { dice, total: Math.max(...dice) + corpo }; }
 export function normalizeCharacter(c: Partial<Character> & { id: string }): Character { return { ...makeCharacter(), ...c, abilities: Array.isArray(c.abilities) ? c.abilities : [], sync: Array.isArray(c.sync) ? c.sync : [], nomenclatures: Array.isArray(c.nomenclatures) ? c.nomenclatures : [], inventory: Array.isArray(c.inventory) ? c.inventory : [], weapon_type: c.weapon_type ?? '', weapon_dice: c.weapon_dice ?? '', initiative: c.initiative ?? null } as Character; }
 
