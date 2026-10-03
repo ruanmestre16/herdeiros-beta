@@ -37,11 +37,12 @@ function optionsFor(c: Combatant): AttackOption[] {
   return opts;
 }
 
-export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, updateSheet, addRoll }: {
+export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, updateSheet, addRoll, setPcInitiative }: {
   campaign: Campaign; party: Character[]; npcs: Npc[];
   saveCampaign: (c: Campaign) => void; saveNpc: (n: Npc) => void;
   updateSheet: (id: string, pv: number | null, pf: number | null, clearInitiative?: boolean) => void;
   addRoll: (r: RollEntry) => void;
+  setPcInitiative?: (id: string, total: number) => void;
 }) {
   const combatants = useMemo(() => toCombatants(party, npcs), [party, npcs]);
   const current = campaign.combat_active && combatants.length ? combatants[campaign.turn_index % combatants.length] : undefined;
@@ -144,6 +145,11 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     addRoll({ expression: `${n.corpo}d20 (maior) + ${n.corpo}`, dice: r.dice, modifier: n.corpo, total: r.total, source: `Iniciativa: ${n.name}` });
   }
 
+    function rollPcInitiative(c: Combatant) {
+    const r = initiativeRoll(c.corpo);
+    setPcInitiative?.(c.id, r.total);
+    addRoll({ expression: `${c.corpo}d20 (maior) + ${c.corpo}`, dice: r.dice, modifier: c.corpo, total: r.total, source: `Iniciativa: ${c.name}` });
+  }
   return <div className="combat-layout">
     <div className="stack">
       <section className="game-panel"><div className="panel-head"><h3>Ordem de iniciativa</h3><span className="field-kicker">RODADA {campaign.round}</span></div>
@@ -151,8 +157,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
           <span className="combatant-number">{c.initiative ?? '—'}</span>
           <span className="combatant-icon">{c.kind === 'npc' ? <Skull /> : <Users />}</span>
           <span className="flex-1"><strong>{c.name}</strong><small>{c.pv} / {c.pvMax} PV · <span className="text-flux">{c.pf} / {c.pfMax} PF</span> · Esq {c.esquiva} · RD {c.bloqueio}{c.pv === 0 ? ' · AGONIA' : ''}</small></span>
-          {c.npc ? <Button variant="ghost" size="icon" title="Rolar iniciativa" aria-label={`Rolar iniciativa de ${c.name}`} onClick={() => rollNpcInitiative(c.npc!)}><Dices /></Button> : <span className="field-kicker">{c.initiative === null ? 'AGUARDANDO FICHA' : 'DA FICHA'}</span>}
-          <span className="sr-only">{i}</span>
+          <Button variant="outline" size="sm" title="Rolar iniciativa" aria-label={`Rolar iniciativa de ${c.name}`} onClick={() => c.npc ? rollNpcInitiative(c.npc) : rollPcInitiative(c)}><Dices /> Iniciativa</Button>          <span className="sr-only">{i}</span>
         </div>)}{!combatants.length && <p className="empty-copy">Os jogadores entram pela Mesa escolhendo sua ficha. Adicione NPCs para o combate.</p>}</div>
         <div className="combat-controls">
           <Button disabled={!combatants.length} onClick={() => saveCampaign({ ...campaign, combat_active: !campaign.combat_active, round: 1, turn_index: 0, log: [`${campaign.combat_active ? 'Combate encerrado' : 'Combate iniciado'} — ${new Date().toLocaleTimeString('pt-BR')}`, ...campaign.log] })}>{campaign.combat_active ? 'Encerrar combate' : 'Iniciar combate'}</Button>
