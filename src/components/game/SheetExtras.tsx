@@ -3,7 +3,7 @@ import { Dices, Plus, Skull, Sparkles, Swords, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Stepper } from './Controls';
 import {
-  NOMENCLATURE_LABEL, NOMENCLATURE_RANGES, WEAPONS, attackRoll, multiAttackRoll, absorbPf, cappedNomenclatureDice, cappedWeaponDice,
+  NOMENCLATURE_RANGES, WEAPONS, attackRoll, multiAttackRoll, absorbPf, cappedNomenclatureDice, cappedWeaponDice, nomenclatureLabel, nomenclatureLevelLabel,
   damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, isTechAgent, absorbActionLabel, attrLabelFor,
   type Attr, type Character, type NomenclatureKind,
 } from '@/lib/game';
@@ -144,42 +144,42 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
   const [draft, setDraft] = useState<{ name: string; cost: number; kind: NomenclatureKind; dice: number } | null>(null);
   const [result, setResult] = useState<{ name: string; attack: number; d20: number; crit: boolean; damage?: number; dice?: number[] } | null>(null);
   return <div className="single-section">
-    <div className="section-heading"><div className="flex items-center gap-3"><span className="section-number">01</span><h2>Nomenclaturas</h2></div><Button size="sm" onClick={() => setDraft({ name: '', cost: 0, kind: 'Direta', dice: 1 })}><Plus /> Nova Nomenclatura</Button></div>
+    <div className="section-heading"><div className="flex items-center gap-3"><span className="section-number">01</span><h2>{nomenclatureLabel(character.lineage, true)}</h2></div><Button size="sm" onClick={() => setDraft({ name: '', cost: 0, kind: 'Direta', dice: 1 })}><Plus /> Nova {nomenclatureLabel(character.lineage)}</Button></div>
     {draft && <div className="game-panel mb-5">
-      <div className="panel-head"><h3>Nova Nomenclatura</h3></div>
+      <div className="panel-head"><h3>Nova {nomenclatureLabel(character.lineage)}</h3></div>
       <div className="field-stack">
         <Field label="NOME DA TÉCNICA"><input value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} placeholder="Nome da técnica" /></Field>
         <div className="input-grid">
           <Stepper label="CUSTO DE PF" value={draft.cost} max={999} tone="flux" onChange={cost => setDraft({ ...draft, cost })} />
-          <Field label="TIPO DE NOMENCLATURA"><select value={draft.kind} onChange={e => { const kind = e.target.value as NomenclatureKind; setDraft({ ...draft, kind, dice: NOMENCLATURE_RANGES[kind][0]! }); }}>
-            {(Object.keys(NOMENCLATURE_RANGES) as NomenclatureKind[]).map(k => <option key={k} value={k}>{NOMENCLATURE_LABEL[k]}</option>)}
+          <Field label={`TIPO DE ${nomenclatureLabel(character.lineage).toUpperCase()}`}><select value={draft.kind} onChange={e => { const kind = e.target.value as NomenclatureKind; setDraft({ ...draft, kind, dice: NOMENCLATURE_RANGES[kind][0]! }); }}>
+            {(Object.keys(NOMENCLATURE_RANGES) as NomenclatureKind[]).map(k => <option key={k} value={k}>{nomenclatureLevelLabel(character.lineage, k)}</option>)}
           </select></Field>
         </div>
         <Field label="DANO"><select value={draft.dice} onChange={e => setDraft({ ...draft, dice: Number(e.target.value) })}>{NOMENCLATURE_RANGES[draft.kind].map(n => <option key={n} value={n}>{n}d8</option>)}</select></Field>
         <div className="flex gap-2"><Button disabled={!draft.name.trim()} onClick={() => { update({ nomenclatures: [...character.nomenclatures, { name: draft.name.trim(), cost: draft.cost, kind: draft.kind, dice: cappedNomenclatureDice(draft.kind, draft.dice) }] }); setDraft(null); }}><Plus /> Salvar técnica</Button><Button variant="ghost" onClick={() => setDraft(null)}>Cancelar</Button></div>
       </div>
     </div>}
-    {result && <div className={`combat-banner mb-5 ${result.crit ? 'banner-crit' : 'banner-neutral'}`}><strong>{result.crit ? `CRÍTICO! ${result.name}` : `${result.name}: ataque ${result.attack}`}</strong><span>d20 = {result.d20} + ESPÍRITO{result.damage !== undefined ? ` · dano ${result.damage} (${result.dice?.join(' + ')})${result.crit ? ' — dados dobrados' : ''}` : ''}</span></div>}
+    {result && <div className={`combat-banner mb-5 ${result.crit ? 'banner-crit' : 'banner-neutral'}`}><strong>{result.crit ? `CRÍTICO! ${result.name}` : `${result.name}: ataque ${result.attack}`}</strong><span>d20 = {result.d20} + {attrLabelFor('espirito', character.lineage)}{result.damage !== undefined ? ` · dano ${result.damage} (${result.dice?.join(' + ')})${result.crit ? ' — dados dobrados' : ''}` : ''}</span></div>}
     <div className="item-list">{character.nomenclatures.map((item, i) => {
       const kind = item.kind ?? 'Direta'; const n = cappedNomenclatureDice(kind, item.dice);
       return <div className="editable-row" key={i}>
-        <div className="nomen-head"><strong>{item.name}</strong><span>{kind} · {n}d8 · <span className="text-flux">{item.cost} PF</span></span></div>
+        <div className="nomen-head"><strong>{item.name}</strong><span>{nomenclatureLevelLabel(character.lineage, kind)} · dano {n}d8 · <span className="text-flux">{item.cost} PF</span></span></div>
         {item.effect && <p className="empty-copy">{item.effect}</p>}
         <div className="row-actions">
           <Button size="sm" variant="outline" disabled={character.pf_current < item.cost} onClick={() => {
             const r = attackRoll(character.espirito); update({ pf_current: character.pf_current - item.cost });
             setResult({ name: item.name, attack: r.total, d20: r.d20, crit: r.crit });
-            addRoll({ expression: `1d20 + ${character.espirito}`, dice: [r.d20], modifier: character.espirito, total: r.total, source: `${item.name} — acerto${r.crit ? ' CRÍTICO' : ''}`, crit: r.crit });
+            addRoll({ expression: `1d20 + ${character.espirito}`, dice: [r.d20], modifier: character.espirito, total: r.total, source: `${nomenclatureLabel(character.lineage)} · ${item.name} — ${nomenclatureLevelLabel(character.lineage, kind)} · acerto${r.crit ? ' CRÍTICO' : ''}`, crit: r.crit });
           }} className="action-flux"><Sparkles /> Usar ({item.cost} PF)</Button>
           <Button size="sm" variant="outline" disabled={!result || result.name !== item.name || result.damage !== undefined} onClick={() => {
             if (!result) return; const d = damageRoll(`${n}d8`, karmaDamageBonus(character), result.crit);
             setResult({ ...result, damage: d.total, dice: d.dice });
-            addRoll({ expression: d.expression, dice: d.dice, modifier: d.bonus, total: d.total, source: `${item.name} — dano${result.crit ? ' CRÍTICO' : ''}`, crit: result.crit });
+            addRoll({ expression: d.expression, dice: d.dice, modifier: d.bonus, total: d.total, source: `${nomenclatureLabel(character.lineage)} · ${item.name} — ${nomenclatureLevelLabel(character.lineage, kind)} · dano${result.crit ? ' CRÍTICO' : ''}`, crit: result.crit });
           }}><Dices /> Rolar dano</Button>
           <Button size="icon" variant="ghost" title="Excluir técnica" aria-label="Excluir técnica" onClick={() => update({ nomenclatures: character.nomenclatures.filter((_, j) => j !== i) })}><Trash2 /></Button>
         </div>
       </div>;
-    })}{!character.nomenclatures.length && <p className="empty-copy">Ainda não há nomenclaturas nesta ficha.</p>}</div>
+    })}{!character.nomenclatures.length && <p className="empty-copy">Ainda não há {nomenclatureLabel(character.lineage, true).toLowerCase()} nesta ficha.</p>}</div>
   </div>;
 }
 
