@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { makeCampaign, makeCharacter, makeNpc, normalizeCharacter, type Campaign, type Character, type Npc } from '@/lib/game';
 
+// Changes to this hook's state layout require a fresh page, not preserved hook slots.
+if (import.meta.hot) import.meta.hot.accept(() => window.location.reload());
+
 
 type LiveRow = { id: string; [key: string]: unknown };
 const upsertRow = <T extends { id: string }>(rows: T[], row: T) => {
