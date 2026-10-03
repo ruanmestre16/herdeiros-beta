@@ -134,7 +134,7 @@ export function useGameData() {
           if(event.eventType==='DELETE'){setNpcs(prev=>prev.filter(n=>n.id!==id));continue;}
           const row=event.new as Npc;
           const recent=recentNpcs.current.get(id);
-          if(recent && recent.until>Date.now() && Object.keys(recent.row).every(key=>JSON.stringify((row as unknown as Record<string,unknown>)[key])===JSON.stringify((recent.row as unknown as Record<string,unknown>)[key]))))continue;
+          if(recent && recent.until>Date.now() && Object.keys(recent.row).every(key=>JSON.stringify((row as unknown as Record<string,unknown>)[key])===JSON.stringify((recent.row as unknown as Record<string,unknown>)[key])))continue;
           if(recent && recent.until<=Date.now())recentNpcs.current.delete(id);
           setNpcs(prev=>upsertRow(prev,row));
         }
