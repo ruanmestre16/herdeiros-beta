@@ -64,6 +64,7 @@ export function useGameData() {
       if (!character) return;
       sheetDrafts.current.delete(id);
       const { user_id: _owner, created_at: _created, ...patch } = character as Character & { user_id?: string; created_at?: string };
+      recentSheets.current.set(id, { row: character, until: Date.now() + 3000 });
       const { error: err } = await supabase.from('sheets').update(patch as never).eq('id', id);
       if (err) { setError(err.message); recentSheets.current.delete(id); }
       else recentSheets.current.set(id, { row: character, until: Date.now() + 1500 });
@@ -120,7 +121,7 @@ export function useGameData() {
           const row=normalizeCharacter(event.new as Character);
           const draft=sheetDrafts.current.get(id);
           const recent=recentSheets.current.get(id);
-          if(draft || (recent && recent.until>Date.now() && JSON.stringify(row)===JSON.stringify(recent.row)))continue;
+          if(draft || (recent && recent.until>Date.now() && Object.keys(recent.row).every(key=>JSON.stringify((row as unknown as Record<string,unknown>)[key])===JSON.stringify((recent.row as unknown as Record<string,unknown>)[key]))))continue;
           if(recent && recent.until<=Date.now())recentSheets.current.delete(id);
           const own=charactersRef.current.some(c=>c.id===id);
           const party=partyRef.current.some(c=>c.id===id);
@@ -133,7 +134,7 @@ export function useGameData() {
           if(event.eventType==='DELETE'){setNpcs(prev=>prev.filter(n=>n.id!==id));continue;}
           const row=event.new as Npc;
           const recent=recentNpcs.current.get(id);
-          if(recent && recent.until>Date.now() && JSON.stringify(row)===JSON.stringify(recent.row))continue;
+          if(recent && recent.until>Date.now() && Object.keys(recent.row).every(key=>JSON.stringify((row as unknown as Record<string,unknown>)[key])===JSON.stringify((recent.row as unknown as Record<string,unknown>)[key]))))continue;
           if(recent && recent.until<=Date.now())recentNpcs.current.delete(id);
           setNpcs(prev=>upsertRow(prev,row));
         }
