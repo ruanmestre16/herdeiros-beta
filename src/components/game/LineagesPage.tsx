@@ -54,7 +54,7 @@ const LINEAGES: Lineage[] = [
 ];
 
 export function LineagesPage() {
-  const [sel, setSel] = useState(LINEAGES[0].key);
+  const [sel, setSel] = useState('arcadianos');
   const l = LINEAGES.find(x => x.key === sel)!;
   return <>
     <div className="page-heading standalone"><div><span className="eyebrow subtle">CÓDICE / LINHAGENS</span><h1>As linhagens de <em>Arcádia.</em></h1><p className="muted-copy">Modos distintos de existir diante do Fluxo. Toque em uma linhagem para ler.</p></div></div>
