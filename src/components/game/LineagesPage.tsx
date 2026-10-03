@@ -16,7 +16,7 @@ const LINEAGES: Lineage[] = [
       { title: 'Armas de Ego', text: ['Algumas Casas nascem com Armas de Ego passadas de geração em geração. Outros Arcadianos forjam a própria arma — a Arma de Vontade —, moldada pela mente durante o despertar (correntes, foices, arcos...), mantendo a essência elemental. Com o tempo, ela também ganha um ego.', 'A Arma Verdadeira é o estado em que o Ego assume forma física independente: luta ao lado do Herdeiro como aliado autônomo, um segundo cérebro de combate que permite reações em dobro e suporte tático imediato.'] },
     ],
     stages: [
-      { name: 'Senshi', subtitle: 'O Iniciante', text: 'Foco no CORPO para estabilizar o Fluxo no plano físico. A Arma de Ego desperta, mas é silenciosa, agindo apenas como catalisador elemental básico.', passive: 'Ao ter êxito em um acerto, recupera 2 PF.' },
+      { name: 'Senshi', subtitle: 'O Iniciante', text: 'Foco no ESPIRITO para estabilizar o Fluxo no plano físico. A Arma de Ego desperta, mas é silenciosa, agindo apenas como catalisador elemental básico.', passive: 'Ao ter êxito em um acerto, recupera 2 PF.' },
       { name: 'Shoji / Harmonia', subtitle: 'O Veterano', text: 'Foco em MENTE e ESPÍRITO. Surge o Eco da arma: o Ego revela personalidade e objetivos próprios. Em conflito ético ou fraqueza, a arma pode tentar uma Possessão — o usuário precisa vencer um duelo mental para não perder o controle do próprio corpo.', passive: 'Ao ter êxito em um acerto, recupera 4 PF.' },
       { name: 'Narande', subtitle: 'A Integração Final', text: 'Sincronização Total. A Arma de Ego deixa de ser instrumento e se torna uma entidade física autônoma — a Arma Verdadeira.', passive: 'Ao ter êxito em um acerto, recupera 8 PF.' },
     ],
