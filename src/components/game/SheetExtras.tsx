@@ -139,15 +139,56 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
   </div>;
 }
 
+type ParsedTechnique = { name: string; cost: number; kind: NomenclatureKind; dice: number; critDice?: number; effect: string };
+
+/** Lê o texto no formato: " DIRETA — 2 PF" / nome / recitação / "Dano: 1d8 a 2d8". */
+function parseNomenclatureText(text: string): ParsedTechnique[] {
+  const kinds: Record<string, NomenclatureKind> = { direta: 'Direta', parcial: 'Parcial', completa: 'Completa' };
+  const out: ParsedTechnique[] = [];
+  let cur: ParsedTechnique | null = null;
+  let needName = false;
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    const head = line.match(/^\W*(direta|parcial|completa)\b\D*(\d+)\s*PF/i);
+    if (head) {
+      const kind = kinds[head[1]!.toLowerCase()]!;
+      cur = { name: '', cost: Number(head[2]), kind, dice: NOMENCLATURE_RANGES[kind][0]!, effect: '' };
+      out.push(cur);
+      needName = true;
+      continue;
+    }
+    if (!cur) continue;
+    const dano = line.match(/^dano\s*:?\s*(\d+)\s*d\s*8(?:\s*(?:a|at[eé]|-|–)\s*(\d+)\s*d\s*8)?/i);
+    if (dano) { cur.dice = Number(dano[1]); if (dano[2]) cur.critDice = Number(dano[2]); continue; }
+    if (needName) { cur.name = line; needName = false; continue; }
+    cur.effect = cur.effect ? `${cur.effect}\n${line}` : line;
+  }
+  return out.filter(p => p.name);
+}
+
 /** 1.4 Nomenclaturas: nome, custo de PF, tipo e dano dentro da faixa da regra. */
 export function NomenclaturesTab({ character, update, addRoll }: { character: Character; update: Update; addRoll: AddRoll }) {
   const [draft, setDraft] = useState<{ name: string; cost: number; kind: NomenclatureKind; dice: number } | null>(null);
-  const [result, setResult] = useState<{ name: string; attack: number; d20: number; crit: boolean; damage?: number; dice?: number[] } | null>(null);
+  const [pasteText, setPasteText] = useState('');
+  const [result, setResult] = useState<{ name: string; attack: number; d20: number; crit: boolean; hitDice: number[]; count: number; damage?: number; dice?: number[] } | null>(null);
+  const parsed = draft ? parseNomenclatureText(pasteText) : [];
+  const closeDraft = () => { setDraft(null); setPasteText(''); };
   return <div className="single-section">
     <div className="section-heading"><div className="flex items-center gap-3"><span className="section-number">01</span><h2>{nomenclatureLabel(character.lineage, true)}</h2></div><Button size="sm" onClick={() => setDraft({ name: '', cost: 0, kind: 'Direta', dice: 1 })}><Plus /> Nova {nomenclatureLabel(character.lineage)}</Button></div>
     {draft && <div className="game-panel mb-5">
       <div className="panel-head"><h3>Nova {nomenclatureLabel(character.lineage)}</h3></div>
       <div className="field-stack">
+        <Field label="COLE O TEXTO COMPLETO (DIRETA, PARCIAL E COMPLETA)">
+          <textarea rows={10} value={pasteText} onChange={e => setPasteText(e.target.value)} placeholder={'⚡ DIRETA — 2 PF\nNOME DA TÉCNICA\ntexto...\nDano: 1d8 a 2d8\n🌘 PARCIAL — 5 PF\n...'} />
+        </Field>
+        {pasteText.trim() && <p className="empty-copy">{parsed.length
+          ? `Reconhecido: ${parsed.map(p => `${p.kind} · ${p.name} · ${p.cost} PF · ${cappedNomenclatureDice(p.kind, p.dice)}d8${p.critDice ? ` (crítico ${cappedNomenclatureDice(p.kind, p.critDice)}d8)` : ' (crítico: dados ×2)'}`).join('  |  ')}`
+          : 'Nada reconhecido ainda. Confira se cada versão começa com uma linha como "DIRETA — 2 PF".'}</p>}
+        {parsed.length > 0 && <div className="flex gap-2"><Button onClick={() => {
+          update({ nomenclatures: [...character.nomenclatures, ...parsed.map(p => ({ name: p.name, cost: p.cost, kind: p.kind, dice: cappedNomenclatureDice(p.kind, p.dice), ...(p.critDice ? { critDice: cappedNomenclatureDice(p.kind, p.critDice) } : {}), ...(p.effect ? { effect: p.effect } : {}) }))] });
+          closeDraft();
+        }}><Plus /> Salvar {parsed.length} {parsed.length > 1 ? 'versões' : 'versão'} do texto</Button></div>}
         <Field label="NOME DA TÉCNICA"><input value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} placeholder="Nome da técnica" /></Field>
         <div className="input-grid">
           <Stepper label="CUSTO DE PF" value={draft.cost} max={999} tone="flux" onChange={cost => setDraft({ ...draft, cost })} />
@@ -156,23 +197,28 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
           </select></Field>
         </div>
         <Field label="DANO"><select value={draft.dice} onChange={e => setDraft({ ...draft, dice: Number(e.target.value) })}>{NOMENCLATURE_RANGES[draft.kind].map(n => <option key={n} value={n}>{n}d8</option>)}</select></Field>
-        <div className="flex gap-2"><Button disabled={!draft.name.trim()} onClick={() => { update({ nomenclatures: [...character.nomenclatures, { name: draft.name.trim(), cost: draft.cost, kind: draft.kind, dice: cappedNomenclatureDice(draft.kind, draft.dice) }] }); setDraft(null); }}><Plus /> Salvar técnica</Button><Button variant="ghost" onClick={() => setDraft(null)}>Cancelar</Button></div>
+        <div className="flex gap-2"><Button disabled={!draft.name.trim()} onClick={() => { update({ nomenclatures: [...character.nomenclatures, { name: draft.name.trim(), cost: draft.cost, kind: draft.kind, dice: cappedNomenclatureDice(draft.kind, draft.dice) }] }); closeDraft(); }}><Plus /> Salvar técnica</Button><Button variant="ghost" onClick={closeDraft}>Cancelar</Button></div>
       </div>
     </div>}
-    {result && <div className={`combat-banner mb-5 ${result.crit ? 'banner-crit' : 'banner-neutral'}`}><strong>{result.crit ? `CRÍTICO! ${result.name}` : `${result.name}: ataque ${result.attack}`}</strong><span>d20 = {result.d20} + {attrLabelFor('espirito', character.lineage)}{result.damage !== undefined ? ` · dano ${result.damage} (${result.dice?.join(' + ')})${result.crit ? ' — dados dobrados' : ''}` : ''}</span></div>}
+    {result && <div className={`combat-banner mb-5 ${result.crit ? 'banner-crit' : 'banner-neutral'}`}><strong>{result.crit ? `CRÍTICO! ${result.name}` : `${result.name}: ataque ${result.attack}`}</strong><span>{result.count}d20 [{result.hitDice.join(', ')}]{result.count > 1 ? ` → maior ${result.d20}` : ''} + {attrLabelFor('espirito', character.lineage)} ({character.espirito}) = {result.attack}{result.damage !== undefined ? ` · dano ${result.damage} (${result.dice?.join(' + ')})${result.crit ? ' — crítico' : ''}` : ''}</span></div>}
     <div className="item-list">{character.nomenclatures.map((item, i) => {
       const kind = item.kind ?? 'Direta'; const n = cappedNomenclatureDice(kind, item.dice);
+      const critN = (item as typeof item & { critDice?: number }).critDice;
       return <div className="editable-row" key={i}>
-        <div className="nomen-head"><strong>{item.name}</strong><span>{nomenclatureLevelLabel(character.lineage, kind)} · dano {n}d8 · <span className="text-flux">{item.cost} PF</span></span></div>
-        {item.effect && <p className="empty-copy">{item.effect}</p>}
+        <div className="nomen-head"><strong>{item.name}</strong><span>{nomenclatureLevelLabel(character.lineage, kind)} · dano {n}d8{critN ? ` (crítico ${critN}d8)` : ` (crítico ${n * 2}d8)`} · <span className="text-flux">{item.cost} PF</span></span></div>
+        {item.effect && <p className="empty-copy" style={{ whiteSpace: 'pre-line' }}>{item.effect}</p>}
         <div className="row-actions">
           <Button size="sm" variant="outline" disabled={character.pf_current < item.cost} onClick={() => {
-            const r = attackRoll(character.espirito); update({ pf_current: character.pf_current - item.cost });
-            setResult({ name: item.name, attack: r.total, d20: r.d20, crit: r.crit });
-            addRoll({ expression: `1d20 + ${character.espirito}`, dice: [r.d20], modifier: character.espirito, total: r.total, source: `${nomenclatureLabel(character.lineage)} · ${item.name} — ${nomenclatureLevelLabel(character.lineage, kind)} · acerto${r.crit ? ' CRÍTICO' : ''}`, crit: r.crit });
+            const count = Math.max(1, character.espirito);
+            const r = multiAttackRoll(count, character.espirito); update({ pf_current: character.pf_current - item.cost });
+            setResult({ name: item.name, attack: r.total, d20: r.d20, crit: r.crit, hitDice: r.dice, count });
+            addRoll({ expression: `${count}d20${count > 1 ? ' (maior)' : ''} + ${character.espirito}`, dice: r.dice, modifier: character.espirito, total: r.total, source: `${nomenclatureLabel(character.lineage)} · ${item.name} — ${nomenclatureLevelLabel(character.lineage, kind)} · acerto${r.crit ? ' CRÍTICO' : ''}`, crit: r.crit });
           }} className="action-flux"><Sparkles /> Usar ({item.cost} PF)</Button>
           <Button size="sm" variant="outline" disabled={!result || result.name !== item.name || result.damage !== undefined} onClick={() => {
-            if (!result) return; const d = damageRoll(`${n}d8`, karmaDamageBonus(character), result.crit);
+            if (!result) return;
+            const d = result.crit && critN
+              ? damageRoll(`${cappedNomenclatureDice(kind, critN)}d8`, karmaDamageBonus(character), false)
+              : damageRoll(`${n}d8`, karmaDamageBonus(character), result.crit);
             setResult({ ...result, damage: d.total, dice: d.dice });
             addRoll({ expression: d.expression, dice: d.dice, modifier: d.bonus, total: d.total, source: `${nomenclatureLabel(character.lineage)} · ${item.name} — ${nomenclatureLevelLabel(character.lineage, kind)} · dano${result.crit ? ' CRÍTICO' : ''}`, crit: result.crit });
           }}><Dices /> Rolar dano</Button>
@@ -182,7 +228,6 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
     })}{!character.nomenclatures.length && <p className="empty-copy">Ainda não há {nomenclatureLabel(character.lineage, true).toLowerCase()} nesta ficha.</p>}</div>
   </div>;
 }
-
 /** 1.5 Habilidades: apenas nome e descrição. */
 export function AbilitiesTab({ character, update }: { character: Character; update: Update }) {
   const [draft, setDraft] = useState<{ name: string; description: string } | null>(null);
