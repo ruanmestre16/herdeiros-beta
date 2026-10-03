@@ -45,7 +45,7 @@ export function KarmaTest({ character, addRoll, initialDp = 10 }: { character: C
         const r = rollDice(1, dieFor(character.mente) ?? 4)[0]!; const success = r >= finalDp;
         setResult({ roll: r, dp: finalDp, success });
         addRoll({ expression: `1d${dieFor(character.mente)}`, dice: [r], modifier: 0, total: r, source: `Teste de Karma (DP ${finalDp}${anchor && useAnchor ? `, Âncora −${reduction}` : ''}) — ${success ? 'sucesso' : 'falha'}` });
-      }}><Dices /> Rolar teste (1d{dieFor(character.mente)} vs DP {finalDp})</Button>
+      }}><Dices />Rolar teste (1d4 vs DT 6)</Button>
     </div>
     {anchor ? <div className="anchor-row">
       <label className="anchor-toggle"><input type="checkbox" checked={useAnchor} onChange={e => setUseAnchor(e.target.checked)} /> Usar <strong className="text-karma">{ANCHOR_NAME}</strong></label>
