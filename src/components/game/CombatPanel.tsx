@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { ArrowRight, Crosshair, Dices, RotateCcw, Shield, Skull, Swords, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  ATTR_LABEL, WEAPONS, attackRoll, multiAttackRoll, humanAttackDice, cappedNomenclatureDice, cappedWeaponDice, damageRoll, derived, initiativeRoll,
+  ATTR_LABEL, WEAPONS, attackRoll, multiAttackRoll, humanAttackDice, cappedNomenclatureDice, cappedWeaponDice, damageRoll, derived, initiativeRoll, nomenclatureLabel, nomenclatureLevelLabel,
   karmaDamageBonus, weaponAttrFor, weaponByKey, type Attr, type Campaign, type Character, type Npc,
 } from '@/lib/game';
 import type { RollEntry } from './SheetExtras';
@@ -29,7 +29,7 @@ function optionsFor(c: Combatant): AttackOption[] {
   if (c.pc) {
     const w = weaponByKey(c.pc.weapon_type);
     if (w && w.attr !== 'corpo') { const attr = weaponAttrFor(c.pc.lineage); const human = c.pc.lineage === 'Humano'; const hc = human ? humanAttackDice(c.pc.mente) : 1; opts.push({ id: 'arma', label: `Arma · ${c.pc.weapon || w.label} (${human ? `ataque ${hc}d20 + MENTE · dano ` : ''}${cappedWeaponDice(w.key, c.pc.weapon_dice)}${w.attr && !human ? ` + ${ATTR_LABEL[attr]}` : ''})`, hitAttr: attr, dice: [cappedWeaponDice(w.key, c.pc.weapon_dice)!], damageAttr: w.attr && !human ? attr : null, pfCost: 0, karma, nomenclature: false, hitCount: hc }); }
-    c.pc.nomenclatures.forEach((n, i) => { const dice = cappedNomenclatureDice(n.kind, n.dice); opts.push({ id: `nom-${i}`, label: `Nomenclatura · ${n.name} (${dice}d8 · ${n.cost} PF)`, hitAttr: 'espirito', dice: [`${dice}d8`], damageAttr: null, pfCost: n.cost, karma, nomenclature: true }); });
+    c.pc.nomenclatures.forEach((n, i) => { const dice = cappedNomenclatureDice(n.kind, n.dice); opts.push({ id: `nom-${i}`, label: `${nomenclatureLabel(c.pc.lineage)} · ${n.name} · ${nomenclatureLevelLabel(c.pc.lineage, n.kind)} (dano ${dice}d8 · ${n.cost} PF)`, hitAttr: 'espirito', dice: [`${dice}d8`], damageAttr: null, pfCost: n.cost, karma, nomenclature: true }); });
   } else {
     WEAPONS.filter(w => w.attr !== 'corpo').forEach(w => opts.push({ id: `npc-${w.key}`, label: `Arma · ${w.label} (${w.dice.join(' a ')}${w.attr ? ' + CORPO' : ''})`, hitAttr: 'corpo', dice: w.dice, damageAttr: w.attr ? 'corpo' : null, pfCost: 0, karma: 0, nomenclature: false }));
   }

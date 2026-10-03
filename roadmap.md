@@ -16,3 +16,4 @@
 - [x] Item Âncora Sentimental: reduz a DP de testes de Karma em até 4.
 - [x] Forçar o Fluxo em roxo (família do Karma).
 - [x] Agrupar eventos ao vivo, aplicar fichas e NPCs diretamente e salvar fichas após pausa na edição.
+- [x] Adaptar rótulos de nomenclaturas e níveis do Agente Tecnológico sem alterar valores, custos ou regras de dano.
