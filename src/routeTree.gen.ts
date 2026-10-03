@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as LinhagensRouteImport } from './routes/linhagens'
 import { Route as MesaRouteImport } from './routes/mesa'
 import { Route as MestreRouteImport } from './routes/mestre'
 import { Route as RegrasRouteImport } from './routes/regras'
@@ -18,6 +19,11 @@ import { Route as RoladorRouteImport } from './routes/rolador'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LinhagensRoute = LinhagensRouteImport.update({
+  id: '/linhagens',
+  path: '/linhagens',
   getParentRoute: () => rootRouteImport,
 } as any)
 const MesaRoute = MesaRouteImport.update({
@@ -43,6 +49,7 @@ const RoladorRoute = RoladorRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/linhagens': typeof LinhagensRoute
   '/mesa': typeof MesaRoute
   '/mestre': typeof MestreRoute
   '/regras': typeof RegrasRoute
@@ -50,6 +57,7 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/linhagens': typeof LinhagensRoute
   '/mesa': typeof MesaRoute
   '/mestre': typeof MestreRoute
   '/regras': typeof RegrasRoute
@@ -58,6 +66,7 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/linhagens': typeof LinhagensRoute
   '/mesa': typeof MesaRoute
   '/mestre': typeof MestreRoute
   '/regras': typeof RegrasRoute
@@ -65,14 +74,22 @@ export interface FileRoutesById {
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/mesa' | '/mestre' | '/regras' | '/rolador'
+  fullPaths: '/' | '/linhagens' | '/mesa' | '/mestre' | '/regras' | '/rolador'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/mesa' | '/mestre' | '/regras' | '/rolador'
-  id: '__root__' | '/' | '/mesa' | '/mestre' | '/regras' | '/rolador'
+  to: '/' | '/linhagens' | '/mesa' | '/mestre' | '/regras' | '/rolador'
+  id:
+    | '__root__'
+    | '/'
+    | '/linhagens'
+    | '/mesa'
+    | '/mestre'
+    | '/regras'
+    | '/rolador'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LinhagensRoute: typeof LinhagensRoute
   MesaRoute: typeof MesaRoute
   MestreRoute: typeof MestreRoute
   RegrasRoute: typeof RegrasRoute
@@ -86,6 +103,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/linhagens': {
+      id: '/linhagens'
+      path: '/linhagens'
+      fullPath: '/linhagens'
+      preLoaderRoute: typeof LinhagensRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/mesa': {
@@ -121,6 +145,7 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LinhagensRoute: LinhagensRoute,
   MesaRoute: MesaRoute,
   MestreRoute: MestreRoute,
   RegrasRoute: RegrasRoute,
