@@ -2,6 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { makeCampaign, makeCharacter, makeNpc, normalizeCharacter, type Campaign, type Character, type Npc } from '@/lib/game';
 
+// Hook order can change during editing; preserve no stale hook slots from Fast Refresh.
+if (import.meta.hot) {
+  import.meta.hot.dispose(() => {
+    if (typeof window !== 'undefined') window.location.reload();
+  });
+}
+
 type LiveRow = { id: string; [key: string]: unknown };
 const upsertRow = <T extends { id: string }>(rows: T[], row: T) => {
   const index = rows.findIndex(item => item.id === row.id);
