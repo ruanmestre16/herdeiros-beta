@@ -28,8 +28,10 @@ export function useGameData() {
   const recentNpcs = useRef(new Map<string, { row: Npc; until: number }>());
   const charactersRef = useRef(characters);
   const partyRef = useRef(partyCharacters);
+  const membershipsRef = useRef(memberships);
   charactersRef.current = characters;
   partyRef.current = partyCharacters;
+  membershipsRef.current = memberships;
   useEffect(() => {
     try {
       const raw = window.localStorage.getItem('herdeiros-demo-v1');
@@ -50,7 +52,7 @@ export function useGameData() {
   const load = useCallback(async (id: string) => {
     const [sheets, rooms, enemies, memberRows, profile] = await Promise.all([supabase.from('sheets').select('*').eq('user_id', id).order('created_at'), supabase.from('campaigns').select('*').order('created_at'), supabase.from('npcs').select('*').order('created_at'), supabase.from('campaign_members').select('*'),supabase.from('profiles').select('display_name').eq('id',id).maybeSingle()]);
     if (sheets.error || rooms.error || enemies.error || memberRows.error) setError(sheets.error?.message || rooms.error?.message || enemies.error?.message || memberRows.error?.message || 'Não foi possível carregar os dados.');
-    else { const preserveDrafts=(rows:Character[])=>rows.map(row=>sheetDrafts.current.get(row.id) ?? (recentSheets.current.get(row.id)?.until ?? 0)>Date.now()?recentSheets.current.get(row.id)?.row ?? row:row); setCharacters(preserveDrafts(((sheets.data ?? []) as unknown as Character[]).map(normalizeCharacter))); setCampaigns((rooms.data ?? []) as unknown as Campaign[]); setNpcs(((enemies.data ?? []) as unknown as Npc[]).map(row=>(recentNpcs.current.get(row.id)?.until ?? 0)>Date.now()?recentNpcs.current.get(row.id)?.row ?? row:row)); setMemberships((memberRows.data ?? []) as {campaign_id:string;user_id:string;character_id:string|null}[]); const memberIds=(memberRows.data??[]).map(m=>m.character_id).filter((value):value is string=>!!value); if(memberIds.length){ const party=await supabase.from('sheets').select('*').in('id',memberIds); if(party.error)setError(party.error.message); else setPartyCharacters(preserveDrafts(((party.data??[]) as unknown as Character[]).map(normalizeCharacter))); }else setPartyCharacters([]); setProfileName(profile.data?.display_name || ''); { const ids=[...new Set([...(memberRows.data??[]).map(m=>m.user_id),...(rooms.data??[]).map(r=>r.master_id)])]; if(ids.length){ const pr=await supabase.from('profiles').select('id,display_name').in('id',ids); setMemberProfiles(Object.fromEntries((pr.data??[]).map(p=>[p.id,p.display_name]))); } } setError(''); }
+    else { const preserveDrafts=(rows:Character[])=>rows.map(row=>{const draft=sheetDrafts.current.get(row.id);if(draft)return draft;const recent=recentSheets.current.get(row.id);return recent&&recent.until>Date.now()?recent.row:row;}); setCharacters(preserveDrafts(((sheets.data ?? []) as unknown as Character[]).map(normalizeCharacter))); setCampaigns((rooms.data ?? []) as unknown as Campaign[]); setNpcs(((enemies.data ?? []) as unknown as Npc[]).map(row=>{const recent=recentNpcs.current.get(row.id);return recent&&recent.until>Date.now()?recent.row:row;})); setMemberships((memberRows.data ?? []) as {campaign_id:string;user_id:string;character_id:string|null}[]); const memberIds=(memberRows.data??[]).map(m=>m.character_id).filter((value):value is string=>!!value); if(memberIds.length){ const party=await supabase.from('sheets').select('*').in('id',memberIds); if(party.error)setError(party.error.message); else setPartyCharacters(preserveDrafts(((party.data??[]) as unknown as Character[]).map(normalizeCharacter))); }else setPartyCharacters([]); setProfileName(profile.data?.display_name || ''); { const ids=[...new Set([...(memberRows.data??[]).map(m=>m.user_id),...(rooms.data??[]).map(r=>r.master_id)])]; if(ids.length){ const pr=await supabase.from('profiles').select('id,display_name').in('id',ids); setMemberProfiles(Object.fromEntries((pr.data??[]).map(p=>[p.id,p.display_name]))); } } setError(''); }
     setReady(true);
   }, []);
   useEffect(() => { let active = true; supabase.auth.getUser().then(async ({ data }) => { if (!active) return; const id = data.user?.id ?? null; setUserId(id); if (id) { const name=data.user?.user_metadata?.['display_name']; if(typeof name==='string'&&name.trim()) await supabase.from('profiles').upsert({id,display_name:name.trim().slice(0,60)},{onConflict:'id',ignoreDuplicates:true}); if(active)void load(id); }else setReady(true); }); const {data:{subscription}}=supabase.auth.onAuthStateChange((event)=>{if(event==='SIGNED_IN'||event==='SIGNED_OUT'||event==='USER_UPDATED')void supabase.auth.getUser().then(({data})=>{if(!active)return; const next=data.user?.id??null;setUserId(next);if(next)void load(next);else {setMemberships([]);setPartyCharacters([]);setReady(true)};});}); return () => { active = false; subscription.unsubscribe(); }; }, [load]);
@@ -123,8 +125,8 @@ export function useGameData() {
           const recent=recentSheets.current.get(id);
           if(draft || (recent && recent.until>Date.now() && Object.keys(recent.row).every(key=>JSON.stringify((row as unknown as Record<string,unknown>)[key])===JSON.stringify((recent.row as unknown as Record<string,unknown>)[key]))))continue;
           if(recent && recent.until<=Date.now())recentSheets.current.delete(id);
-          const own=charactersRef.current.some(c=>c.id===id);
-          const party=partyRef.current.some(c=>c.id===id);
+          const own=charactersRef.current.some(c=>c.id===id) || event.new.user_id===userId;
+          const party=partyRef.current.some(c=>c.id===id) || membershipsRef.current.some(m=>m.character_id===id);
           if(own)setCharacters(prev=>upsertRow(prev,row));
           if(party)setPartyCharacters(prev=>upsertRow(prev,row));
         }
@@ -149,7 +151,11 @@ export function useGameData() {
       .subscribe();
     return ()=>{if(timer)clearTimeout(timer);void supabase.removeChannel(channel)};
   },[userId,hasTable,load]);
-  useEffect(()=>()=>{for(const timer of sheetTimers.current.values())clearTimeout(timer); for(const id of sheetDrafts.current.keys())void flushSheet(id);},[flushSheet]);
+  useEffect(()=>{
+    const flushPending=()=>{for(const id of sheetDrafts.current.keys())void flushSheet(id);};
+    window.addEventListener('pagehide',flushPending);
+    return ()=>{window.removeEventListener('pagehide',flushPending);for(const timer of sheetTimers.current.values())clearTimeout(timer);flushPending();};
+  },[flushSheet]);
   /** Atualiza PV/PF (e limpa iniciativa) de uma ficha a partir do combate. Fichas de outros jogadores passam pela função segura do Mestre. */
   async function updateSheetResources(id: string, pv: number | null, pf: number | null, clearInitiative = false) {
     const own = charactersRef.current.find(c => c.id === id);
