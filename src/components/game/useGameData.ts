@@ -125,7 +125,7 @@ export function useGameData() {
           const recent=recentSheets.current.get(id);
           if(draft || (recent && recent.until>Date.now() && Object.keys(recent.row).every(key=>JSON.stringify((row as unknown as Record<string,unknown>)[key])===JSON.stringify((recent.row as unknown as Record<string,unknown>)[key]))))continue;
           if(recent && recent.until<=Date.now())recentSheets.current.delete(id);
-          const own=charactersRef.current.some(c=>c.id===id) || event.new.user_id===userId;
+          const own=charactersRef.current.some(c=>c.id===id) || event.new['user_id']===userId;
           const party=partyRef.current.some(c=>c.id===id) || membershipsRef.current.some(m=>m.character_id===id);
           if(own)setCharacters(prev=>upsertRow(prev,row));
           if(party)setPartyCharacters(prev=>upsertRow(prev,row));
