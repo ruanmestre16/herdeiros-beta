@@ -129,3 +129,33 @@ export function multiAttackRoll(count: number, attrValue: number, esquiva?: numb
 export const NOTES_MARK = '\n\n<<<ANOTACOES>>>\n';
 export function splitStory(story: string) { const i = story.indexOf(NOTES_MARK); return i < 0 ? { story, notes: '' } : { story: story.slice(0, i), notes: story.slice(i + NOTES_MARK.length) }; }
 export function joinStory(story: string, notes: string) { return notes ? `${story}${NOTES_MARK}${notes}` : story; }
+
+/* ---------- Estágios de linhagem e passivas ---------- */
+export type LineageStage = { name: string; passive: string; desc: string };
+export const LINEAGE_STAGES: Record<string, LineageStage[]> = {
+  'Arcadiano': [
+    { name: 'Senshi', passive: 'Despertar do Ego', desc: 'Ao acertar um ataque, recupera 2 PF. A Arma de Ego desperta como catalisador elemental.' },
+    { name: 'Shoji', passive: 'Ressonância Elemental', desc: 'Ao acertar um ataque, recupera 4 PF. Conexão profunda com a arma; risco de possessão se o foco vacilar.' },
+    { name: 'Narande', passive: 'Ego Supremo', desc: 'Ao acertar um ataque, recupera 8 PF. A Arma Verdadeira age como um segundo cérebro.' },
+  ],
+  'Humano': [
+    { name: 'Libertado', passive: 'Leitura do Fluxo', desc: 'Ao ler parcialmente o Fluxo de um alvo, recebe +3 de Dano e +3 de Bloqueio contra ele.' },
+    { name: 'Moldador / Arquiteto', passive: 'Manipulação Direta', desc: 'Ao ler o Fluxo de um alvo, recebe +5 de Dano e +5 de Bloqueio contra ele.' },
+    { name: 'Mestre / Domínio', passive: 'Soberania Humana', desc: 'Ao ler o Fluxo de um alvo, recebe +8 de Dano e +8 de Bloqueio contra ele.' },
+  ],
+  'Gaki': [
+    { name: 'Senciente', passive: 'Fome de Karma', desc: 'Drena 4 PV do alvo. Teste de Mente para resistir aos impulsos do Karma.' },
+    { name: 'Inteligente', passive: 'Comando das Sombras', desc: 'Drena 7 PV do alvo e comanda Gakis inferiores próximos.' },
+    { name: 'Velho', passive: 'Mimetismo Predatório', desc: 'Drena 12 PV do alvo. Metamorfose e camuflagem completa entre humanos.' },
+  ],
+  'Agente Tecnológico': [
+    { name: 'Libertado Forçado', passive: 'Olho Tecnológico — Varredura', desc: 'Analisa o Fluxo de habilidades vistas: +3 de Bloqueio contra uma habilidade já vista. Se ela se repetir, ganha +1 de Bloqueio na próxima rodada.' },
+    { name: 'Moldador de Energia', passive: 'Olho Tecnológico — Predição', desc: '+4 de Bloqueio contra uma habilidade já vista. Se ela se repetir, ganha +2 de Bloqueio contra ela.' },
+    { name: 'Tecnologia Mestra', passive: 'Olho Tecnológico — Anulação', desc: '+6 de Bloqueio contra uma habilidade já vista. Se ela se repetir, pode fazer um teste de TECNOLOGIA para anular a habilidade.' },
+  ],
+};
+export function stageIndexFor(lineage: string, stage: string) {
+  const list = LINEAGE_STAGES[lineage] ?? [];
+  const i = list.findIndex(s => stage && (stage.toLowerCase().startsWith(s.name.toLowerCase().split(' ')[0]!) ));
+  return i < 0 ? 0 : i;
+}

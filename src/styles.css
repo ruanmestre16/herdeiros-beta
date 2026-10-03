@@ -295,3 +295,15 @@ html{scroll-behavior:smooth}body{font-family:'DM Sans',sans-serif;background:#10
 .meter-nucleo-group .field-kicker,
 .meter-nucleo-group .font-medium { color: var(--nucleo-bright); }
 .meter-nucleo-group .meter-track { background: oklch(0.2 0.03 240); }
+
+/* Pulso suave dos estados de recurso */
+.app-shell .karma-alert.karma-normal { animation: karma-stable-pulse 2.6s ease-in-out infinite alternate; }
+.app-shell .karma-alert.karma-normal.nucleo-normal { animation: nucleo-stable-pulse 2.2s ease-in-out infinite alternate; }
+@keyframes karma-stable-pulse { from { box-shadow: 0 0 0 transparent; } to { box-shadow: 0 0 14px oklch(0.75 0.13 200 / .45), inset 0 0 18px oklch(0.75 0.13 200 / .18); } }
+@keyframes nucleo-stable-pulse { from { box-shadow: 0 0 0 transparent; } to { box-shadow: 0 0 16px oklch(0.75 0.2 235 / .6), inset 0 0 20px oklch(0.75 0.2 235 / .25); } }
+.action-force-nucleo { animation: nucleo-stable-pulse 2.2s ease-in-out infinite alternate; }
+.action-force-karma { animation: karma-stable-pulse 2.6s ease-in-out infinite alternate; }
+.passive strong { display:block; margin:4px 0 2px; letter-spacing:.06em; }
+.passive-tech { border-color: oklch(0.75 0.2 235 / .6) !important; animation: nucleo-stable-pulse 2.4s ease-in-out infinite alternate; }
+.passive-tech strong { color: oklch(0.8 0.18 230); }
+@media (prefers-reduced-motion: reduce) { .app-shell .karma-alert.karma-normal, .action-force-nucleo, .action-force-karma, .passive-tech { animation: none; } }
