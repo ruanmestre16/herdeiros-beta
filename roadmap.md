@@ -18,3 +18,4 @@
 - [x] Agrupar eventos ao vivo, aplicar fichas e NPCs diretamente e salvar fichas após pausa na edição.
 - [x] Adaptar rótulos de nomenclaturas e níveis do Agente Tecnológico sem alterar valores, custos ou regras de dano.
 - [x] Separar armas e nomenclaturas na ação de ataque, mantendo custo, crítico e combate em área.
+- [x] Ajustar a navegação da ficha, os controles de combate e os campos para uso no celular.
