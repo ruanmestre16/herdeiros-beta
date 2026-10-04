@@ -332,6 +332,10 @@ html{scroll-behavior:smooth}body{font-family:'DM Sans',sans-serif;background:#10
   .tabbar .tab { flex: 0 0 auto; min-height: 44px; scroll-margin-inline: 20px; }
   .main-nav.nav-open { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .main-nav .nav-item { min-width: 0; justify-content: flex-start; }
+  .section-heading { flex-wrap: wrap; }
+  .section-heading > div:first-child { min-width: 0; }
+  .section-heading h2 { overflow-wrap: anywhere; }
+  .section-heading > button, .section-heading > div:not(:first-child) { max-width: 100%; min-height: 40px; white-space: normal; }
   .field input, .field select, .field textarea, .campaign-picker select, .event-composer input { font-size: 16px; }
   .input-grid { grid-template-columns: minmax(0, 1fr); }
   .input-grid > *, .quick-actions > *, .combat-controls > * { min-width: 0; }
