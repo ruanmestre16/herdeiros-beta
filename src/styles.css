@@ -353,3 +353,37 @@ html{scroll-behavior:smooth}body{font-family:'DM Sans',sans-serif;background:#10
   .combat-banner, .weapon-summary, .log-entry { overflow-wrap: anywhere; }
   .kill-call h1 { overflow-wrap: anywhere; }
 }
+
+/* ===== Correção mobile: ficha esticada / cortada =====
+   Causa: colunas "1fr" (= minmax(auto,1fr)) crescem até o tamanho mínimo do
+   conteúdo (selects, inputs, lista de fichas com largura fixa). Com
+   `.app-shell{overflow-x:clip}` o excesso é cortado e não dá para rolar.
+   Solução: toda coluna de grid pode encolher (minmax(0,1fr)) e os itens
+   podem ter min-width:0. */
+.workspace-layout, .two-col, .dice-layout, .overview-strip, .editable-fields, .inventory-row,
+.npc-list, .combat-layout, .rules-layout, .attributes-grid, .step-grid, .defense-row,
+.session-metrics, .input-grid, .resource-grid, .npc-identity, .npc-stats, .rule-table > div {
+  min-width: 0;
+}
+.stack, .two-col > *, .dice-layout > *, .workspace-layout > *, .sidebar, .sheet-list,
+.field, .field-stack, .game-panel, .stepper, .attribute { min-width: 0; max-width: 100%; }
+.input-grid, .resource-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+.attributes-grid, .step-grid, .defense-row, .session-metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.field select, .field input, .field textarea { min-width: 0; max-width: 100%; }
+
+@media (max-width: 1050px) {
+  .workspace-layout { grid-template-columns: 210px minmax(0, 1fr); }
+}
+@media (max-width: 850px) {
+  .workspace-layout { grid-template-columns: minmax(0, 1fr); }
+  .sheet-list { max-width: 100%; overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+  .npc-list, .combat-layout, .rules-layout { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 620px) {
+  .two-col, .dice-layout, .overview-strip, .editable-fields, .inventory-row,
+  .npc-list, .combat-layout, .rules-layout { grid-template-columns: minmax(0, 1fr); }
+  .npc-stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .npc-identity { grid-template-columns: minmax(0, 1fr); }
+  .rule-table > div { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .attribute > span { letter-spacing: .06em; }
+}
