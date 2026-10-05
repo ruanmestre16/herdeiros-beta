@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Stepper } from './Controls';
 import {
   NOMENCLATURE_RANGES, WEAPONS, attackRoll, absorbPf, cappedNomenclatureDice, cappedWeaponDice, nomenclatureLabel, nomenclatureLevelLabel,
-  damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, isTechAgent, isHuman, absorbActionLabel, attrLabelFor,
+  damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, isTechAgent, isHuman, absorbActionLabel, attrLabelFor, sheetState, withSheetState,
   type Attr, type Character, type NomenclatureKind,
 } from '@/lib/game';
 
@@ -230,8 +230,13 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
   </div>;
 }
 /** 1.5 Habilidades: apenas nome e descrição. */
-export function AbilitiesTab({ character, update }: { character: Character; update: Update }) {
+export function AbilitiesTab({ character, update, addRoll }: { character: Character; update: Update; addRoll?: AddRoll }) {
   const [draft, setDraft] = useState<{ name: string; description: string } | null>(null);
+  const [scar, setScar] = useState<{name:string;description:string;benefit:string;scarType:string}|null>(null);
+  const [dt, setDt] = useState(10);
+  const [pair, setPair] = useState<'espirito'|'corpo'>('espirito');
+  const [mode, setMode] = useState('Padrão');
+  const [test, setTest] = useState('');
   return <div className="single-section">
     <div className="section-heading"><div className="flex items-center gap-3"><span className="section-number">02</span><h2>Habilidades</h2></div><Button size="sm" onClick={() => setDraft({ name: '', description: '' })}><Plus /> Nova Habilidade</Button></div>
     {draft && <div className="game-panel mb-5"><div className="panel-head"><h3>Nova Habilidade</h3></div><div className="field-stack">
@@ -239,11 +244,16 @@ export function AbilitiesTab({ character, update }: { character: Character; upda
       <Field label="O QUE A HABILIDADE FAZ"><textarea rows={4} value={draft.description} onChange={e => setDraft({ ...draft, description: e.target.value })} /></Field>
       <div className="flex gap-2"><Button disabled={!draft.name.trim()} onClick={() => { update({ abilities: [...character.abilities, { name: draft.name.trim(), description: draft.description.trim() }] }); setDraft(null); }}><Plus /> Salvar habilidade</Button><Button variant="ghost" onClick={() => setDraft(null)}>Cancelar</Button></div>
     </div></div>}
-    <div className="item-list">{character.abilities.map((a, i) => <div className="editable-row" key={i}>
+    <div className="input-grid mb-4"><Field label="TESTE DE HABILIDADE"><select value={pair} onChange={e=>setPair(e.target.value as 'espirito'|'corpo')}><option value="espirito">MENTE + {attrLabelFor('espirito',character.lineage)}</option><option value="corpo">MENTE + CORPO</option></select></Field><Stepper label="DT DO MESTRE" value={dt} min={1} max={100} onChange={setDt}/><Field label="MODO"><select value={mode} onChange={e=>setMode(e.target.value)}><option>Padrão</option><option>Tempo Dedicado</option><option>Com Pressa</option></select></Field></div>
+    {test&&<p role="status" className="combat-banner mb-4">{test}</p>}
+    <div className="item-list">{character.abilities.map((a, i) => a.kind ? null : <div className="editable-row" key={i}>
       <Field label="NOME"><input value={a.name} onChange={e => update({ abilities: character.abilities.map((n, j) => j === i ? { ...n, name: e.target.value } : n) })} /></Field>
       <Field label="DESCRIÇÃO"><textarea rows={3} value={a.description} onChange={e => update({ abilities: character.abilities.map((n, j) => j === i ? { ...n, description: e.target.value } : n) })} /></Field>
-      <div className="row-actions"><Button size="icon" variant="ghost" title="Excluir habilidade" aria-label="Excluir habilidade" onClick={() => update({ abilities: character.abilities.filter((_, j) => j !== i) })}><Trash2 /></Button></div>
-    </div>)}{!character.abilities.length && <p className="empty-copy">Nenhuma habilidade registrada.</p>}</div>
+      <div className="row-actions"><Button size="sm" variant="outline" onClick={()=>{const dice=[...rollDice(character.mente,dieFor(character.mente)??4),...rollDice(character[pair],dieFor(character[pair])??4)];const total=dice.reduce((x,y)=>x+y,0);const margin=total-dt;setTest(`${a.name} · ${mode}: ${total} vs DT ${dt} — ${margin>=0?'sucesso':'falha'} · Rastro Residual ${margin>=5?'mínimo':margin>=0?'reduzido':'intenso'}.${mode==='Com Pressa'&&margin<0?' Risco ou narração do Mestre.':''}`);addRoll?.({expression:`${character.mente}d${dieFor(character.mente)} + ${character[pair]}d${dieFor(character[pair])}`,dice,modifier:0,total,source:`${a.name} · ${mode} vs DT ${dt}`});}}><Dices/> Usar</Button><Button size="icon" variant="ghost" title="Excluir habilidade" aria-label="Excluir habilidade" onClick={() => update({ abilities: character.abilities.filter((_, j) => j !== i) })}><Trash2 /></Button></div>
+    </div>)}{!character.abilities.some(a=>!a.kind) && <p className="empty-copy">Nenhuma habilidade registrada.</p>}</div>
+    <div className="section-heading mt-8"><h2>Cicatrizes do Fluxo</h2><Button size="sm" onClick={()=>setScar({name:'',description:'',benefit:'',scarType:'Física'})}><Plus/> Nova cicatriz</Button></div>
+    {scar&&<div className="field-stack mb-4"><Field label="TIPO"><select value={scar.scarType} onChange={e=>setScar({...scar,scarType:e.target.value})}>{['Física','Mental','Espiritual','Existencial'].map(t=><option key={t}>{t}</option>)}</select></Field><Field label="NOME"><input value={scar.name} onChange={e=>setScar({...scar,name:e.target.value})}/></Field><Field label="BENEFÍCIO"><input value={scar.benefit} onChange={e=>setScar({...scar,benefit:e.target.value})}/></Field><Field label="LIMITE / RISCO"><textarea value={scar.description} onChange={e=>setScar({...scar,description:e.target.value})}/></Field><Button disabled={!scar.name.trim()} onClick={()=>{update({abilities:[...character.abilities,{kind:'scar',...scar}]});setScar(null)}}>Salvar cicatriz</Button></div>}
+    <div className="item-list">{character.abilities.map((a,i)=>a.kind==='scar'?<div className="editable-row" key={i}><strong>{a.scarType} · {a.name}</strong><p>Benefício: {a.benefit}</p><p>Limite / risco: {a.description}</p><Button size="icon" variant="ghost" title="Excluir cicatriz" aria-label="Excluir cicatriz" onClick={()=>update({abilities:character.abilities.filter((_,j)=>j!==i)})}><Trash2/></Button></div>:null)}</div>
   </div>;
 }
 
@@ -251,10 +261,16 @@ export function AbilitiesTab({ character, update }: { character: Character; upda
 export function AbsorbPfAction({ character, update, addRoll }: { character: Character; update: Update; addRoll: AddRoll }) {
   const [res, setRes] = useState<ReturnType<typeof absorbPf> | null>(null);
   const [open, setOpen] = useState(false);
+  const [choice,setChoice]=useState<'Partilhar'|'Manter'>('Manter');
+  const [target,setTarget]=useState('');
+  const [dt,setDt]=useState(10);
+  const [outcome,setOutcome]=useState('');
+  const state=sheetState(character);
   return <>
     <Button variant="outline" onClick={() => {
       const r = absorbPf(character.espirito); setRes(r); setOpen(true);
-      update({ pf_current: Math.min(character.pf_max, character.pf_current + r.total) });
+       const capacity=character.espirito*20;
+       update({ pf_current: Math.min(capacity, character.pf_current + r.total), abilities: withSheetState(character,{excess:Math.max(0,character.pf_current+r.total-capacity),rounds:0}) });
       addRoll({ expression: `${r.count}d20 (soma ${r.sum}, maior ${r.highest}) + ${r.espirito}`, dice: r.dice, modifier: r.espirito, total: r.total, source: `${absorbActionLabel(character.lineage)}${r.crit ? ' — CRÍTICO' : ''}`, crit: r.crit });
     }} className={isTechAgent(character.lineage)?"action-nucleo-power":"action-flux"}><Sparkles /> {absorbActionLabel(character.lineage)}</Button>
     {open && res && <div className="game-panel flux-result" style={{ gridColumn: '1 / -1' }}>
@@ -263,7 +279,8 @@ export function AbsorbPfAction({ character, update, addRoll }: { character: Char
       <p className="text-sm mt-2">Maior dado: <strong>{res.highest}</strong> → faixa <strong>{res.band}</strong>{res.crit ? ' · CRÍTICO!' : ''}</p>
       <p className="text-sm mt-2">Aplicado à soma inteira: <strong>{res.diceTotal} PF</strong></p>
       <p className="text-sm mt-3">PF dos dados: <strong>{res.diceTotal}</strong> + Espírito: <strong>{res.espirito}</strong> = <strong>{res.total} PF absorvidos</strong>{res.crit ? ' · houve crítico (20)' : ''}</p>
-      <p className="muted-copy text-xs mt-1">PF atual atualizado automaticamente (limitado ao PF máximo).</p>
+       <p className="muted-copy text-xs mt-1">PF atual limitado a {character.espirito*20} (Espírito × 20). Excedente: {state.excess} PF.</p>
     </div>}
+    {state.excess>0&&<div className="game-panel flux-result col-span-full"><strong>{state.excess} PF excedentes {state.rounds>0?`· ${state.rounds} rodadas restantes`:''}</strong><div className="field-stack mt-3"><Field label="DESTINO"><select value={choice} onChange={e=>setChoice(e.target.value as 'Partilhar'|'Manter')}><option>Manter</option><option>Partilhar</option></select></Field>{choice==='Partilhar'?<><Field label="ALVO COM SINCRONIA 2+"><select value={target} onChange={e=>setTarget(e.target.value)}><option value="">Escolher alvo</option>{character.sync.filter(s=>s.level>=2).map(s=><option key={s.name} value={s.name}>{s.name}</option>)}</select></Field><Button disabled={!target} onClick={()=>{setOutcome(`Ande até ${target} e gaste uma ação padrão: transfira ${state.excess} PF (limite do alvo conferido pelo Mestre).`);update({abilities:withSheetState(character,{excess:0,rounds:0})})}}>Partilhar PF</Button></>:<><Button onClick={()=>{const rounds=rollDice(1,4)[0]??1;update({abilities:withSheetState(character,{rounds})});setOutcome(`${rounds} rodadas para usar ou desperdiçar os PF excedentes.`)}}><Dices/> Rolar 1d4 rodadas</Button><Button disabled={!state.rounds} onClick={()=>{setOutcome(`Expele ${state.excess} PF. Ação padrão: efeito positivo ou negativo a critério do Mestre.`);update({abilities:withSheetState(character,{excess:0,rounds:0})})}}>Expelir Fluxo</Button><Stepper label="DT DO MESTRE" value={dt} min={1} max={40} onChange={setDt}/><Button disabled={!state.rounds||!character.nomenclatures.length} onClick={()=>{const dice=rollDice(1,dieFor(character.espirito)??4);const success=(dice[0]??0)>=dt;setOutcome(`Teste de Espírito ${dice[0]} vs DT ${dt}: ${success?'PF somados à Nomenclatura':'falha; PF gastos sem efeito'}.`);update({abilities:withSheetState(character,{excess:0,rounds:0})})}}>Somar à Nomenclatura</Button></>}</div>{outcome&&<p role="status">{outcome}</p>}</div>}
   </>;
 }

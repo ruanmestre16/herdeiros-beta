@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { ArrowRight, Crosshair, Dices, RotateCcw, Shield, Skull, Swords, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  ATTR_LABEL, WEAPONS, attackRoll, cappedNomenclatureDice, cappedWeaponDice, damageRoll, derived, initiativeRoll, nomenclatureLabel, nomenclatureLevelLabel, attrLabelFor,
+  ATTR_LABEL, WEAPONS, attackRoll, cappedNomenclatureDice, cappedWeaponDice, damageRoll, derived, dieFor, rollDice, initiativeRoll, nomenclatureLabel, nomenclatureLevelLabel, attrLabelFor,
   karmaDamageBonus, weaponAttrFor, weaponByKey, isHuman, type Attr, type Campaign, type Character, type Npc,
 } from '@/lib/game';
 import type { RollEntry } from './SheetExtras';
@@ -13,6 +13,7 @@ type Combatant = {
   pc?: Character; npc?: Npc;
 };
 type AttackOption = { id: string; label: string; hitAttr: Attr; dice: string[]; damageAttr: Attr | null; pfCost: number; karma: number; nomenclature: boolean };
+type Reaction = 'esquivar' | 'bloquear' | 'contra-atacar' | 'parcial' | 'fluxo';
 
 function toCombatants(party: Character[], npcs: Npc[]): Combatant[] {
   const pcs = party.map<Combatant>(c => { const d = derived(c.corpo); return { id: c.id, kind: 'pc', name: c.name, pv: c.pv_current, pvMax: c.pv_max, pf: c.pf_current, pfMax: c.pf_max, corpo: c.corpo, mente: c.mente, espirito: c.espirito, esquiva: d.esquiva, bloqueio: d.bloqueio, initiative: c.initiative, pc: c }; });
@@ -50,10 +51,13 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   const [optionId, setOptionId] = useState('desarmado_leve');
   const [diceChoice, setDiceChoice] = useState('');
   const [targetId, setTargetId] = useState('');
-  const [useBlock, setUseBlock] = useState(true);
+  const [reactions, setReactions] = useState<Record<string, number>>({});
+  const [fluxUsed, setFluxUsed] = useState<Record<string, boolean>>({});
+  const [lostAction, setLostAction] = useState<Record<string, boolean>>({});
+  const [chosenReaction, setChosenReaction] = useState<Reaction>('esquivar');
   const [mode, setMode] = useState<'single' | 'full' | 'half'>('single');
   const [area, setArea] = useState<null | { attackerId: string; option: AttackOption; dice: string; d20: number; attrValue: number; total: number; crit: boolean; results: { id: string; name: string; esquiva: number; hit: boolean; crit: boolean }[]; damage?: { raw: number; applied: number; lines: string[] } }>(null);
-  const [pending, setPending] = useState<null | { attackerId: string; targetId: string; option: AttackOption; dice: string; d20: number; attrValue: number; total: number; esquiva: number; hit: boolean; crit: boolean; damage?: { raw: number; dice: number[]; bonus: number; block: number; final: number } }>(null);
+  const [pending, setPending] = useState<null | { attackerId: string; targetId: string; option: AttackOption; dice: string; d20: number; attrValue: number; total: number; esquiva: number; hit: boolean; crit: boolean; reaction: Reaction; defense: number; counterDamage?: number; damage?: { raw: number; dice: number[]; bonus: number; block: number; final: number } }>(null);
 
   const attacker = combatants.find(c => c.id === (attackerId || current?.id)) ?? combatants[0];
   const options = attacker ? optionsFor(attacker) : [];
@@ -68,6 +72,14 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   const lineage = attacker?.pc?.lineage ?? '';
   const skillName = nomenclatureLabel(lineage);
   const selectedSkill = option?.nomenclature ? attacker?.pc?.nomenclatures[Number(option.id.slice(4))] : undefined;
+  const reactionAvailable = (c: Combatant) => reactions[c.id] !== campaign.round;
+  function selectReaction(c: Combatant, reaction: Reaction, nomenclature: boolean) {
+    if (!reactionAvailable(c) || ((reaction === 'parcial' || reaction === 'fluxo') && !nomenclature) || (reaction === 'fluxo' && fluxUsed[c.id])) return null;
+    setReactions(prev => ({...prev,[c.id]:campaign.round}));
+    setFluxUsed(prev => ({...prev,[c.id]:reaction==='fluxo'}));
+    if (reaction==='fluxo') setLostAction(prev=>({...prev,[c.id]:true}));
+    return reaction;
+  }
   function selectOption(id: string) {
     setOptionId(id); setDiceChoice(''); setPending(null); setArea(null);
   }
@@ -84,7 +96,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     </div>;
   }
   function rollAreaAttack() {
-    if (!attacker || !option || !areaTargets.length || option.pfCost > attacker.pf) return;
+    if (!attacker || !option || !areaTargets.length || option.pfCost > attacker.pf || lostAction[attacker.id]) return;
     const attrValue = attacker[option.hitAttr]; const r = attackRoll(attrValue);
     if (option.pfCost) setResources(attacker, null, attacker.pf - option.pfCost);
     const results = areaTargets.map(t => { const hit = r.total >= t.esquiva; return { id: t.id, name: t.name, esquiva: t.esquiva, hit, crit: r.d20 === 20 && r.total > t.esquiva }; });
@@ -100,7 +112,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     const d = damageRoll(area.dice, bonus, area.results.some(x => x.crit));
     const applied = mode === 'half' ? Math.floor(d.total / 2) : d.total;
     const lines: string[] = [];
-    area.results.filter(x => x.hit).forEach(x => { const t = combatants.find(c => c.id === x.id); if (!t) return; const block = useBlock ? t.bloqueio : 0; const final = Math.max(0, applied - block); const pv = Math.max(0, t.pv - final); setResources(t, pv, null); lines.push(`${t.name}: ${applied} − Bloqueio ${block} = ${final} → ${pv} PV${pv === 0 ? ' (AGONIA)' : ''}`); });
+    area.results.filter(x => x.hit).forEach(x => { const t = combatants.find(c => c.id === x.id); if (!t) return; const final = applied; const pv = Math.max(0, t.pv - final); setResources(t, pv, null); lines.push(`${t.name}: ${applied} = ${final} → ${pv} PV${pv === 0 ? ' (AGONIA)' : ''}`); });
     setArea({ ...area, damage: { raw: d.total, applied, lines } });
     addRoll({ expression: d.expression, dice: d.dice, modifier: bonus, total: d.total, source: `Dano em área${mode === 'half' ? ' (metade)' : ''}` });
     log([`Dano em área${area.crit ? ' CRÍTICO! (dados dobrados)' : ''}: ${d.expression} = ${d.total}${mode === 'half' ? ` → metade ${applied}` : ''}. ${lines.join('; ')}`]);
@@ -113,14 +125,18 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   }
 
   function rollAttack() {
-    if (!attacker || !target || !option) return;
+    if (!attacker || !target || !option || lostAction[attacker.id]) return;
     if (option.pfCost > attacker.pf) return;
+    const reaction = selectReaction(target, chosenReaction, option.nomenclature);
+    if (!reaction) return;
     const attrValue = attacker[option.hitAttr];
     const r = attackRoll(attrValue, target.esquiva);
+    const defense = reaction==='fluxo' ? Math.max(...rollDice(Math.max(1,target.espirito),20)) : target.esquiva;
+    const hit = reaction==='bloquear' || reaction==='parcial' || reaction==='contra-atacar' || r.total>=defense;
     if (option.pfCost) setResources(attacker, null, attacker.pf - option.pfCost);
-    setPending({ attackerId: attacker.id, targetId: target.id, option, dice, d20: r.d20, attrValue, total: r.total, esquiva: target.esquiva, hit: !!r.hit, crit: r.crit });
+    setPending({ attackerId: attacker.id, targetId: target.id, option, dice, d20: r.d20, attrValue, total: r.total, esquiva: target.esquiva, hit, crit: r.crit, reaction, defense });
     addRoll({ expression: `1d20 + ${attrValue}`, dice: [r.d20], modifier: attrValue, total: r.total, source: `${attacker.name} → ${target.name}${r.crit ? ' — CRÍTICO' : ''}`, crit: r.crit });
-    log([`${attacker.name} ataca ${target.name} (${option.label}${option.pfCost ? `, −${option.pfCost} PF` : ''}): d20 [${r.d20}] + ${attrLabelFor(option.hitAttr, lineage)} ${attrValue} = ${r.total} vs Esquiva ${target.esquiva} → ${r.hit ? (r.crit ? 'CRÍTICO! ATAQUE ACERTOU' : 'ATAQUE ACERTOU') : 'ALVO ESQUIVOU'}`]);
+    log([`${attacker.name} ataca ${target.name} (${option.label}${option.pfCost ? `, −${option.pfCost} PF` : ''}): d20 [${r.d20}] + ${attrLabelFor(option.hitAttr, lineage)} ${attrValue} = ${r.total}; reação: ${reaction} (defesa ${defense}) → ${hit ? (r.crit ? 'CRÍTICO! ATAQUE ACERTOU' : 'ATAQUE ACERTOU') : 'ALVO ESQUIVOU'}`]);
   }
 
   function rollDamage() {
@@ -129,8 +145,13 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     if (!a || !t) return;
     const bonus = (pending.option.damageAttr ? a[pending.option.damageAttr] : 0) + pending.option.karma;
     const d = damageRoll(pending.dice, bonus, pending.crit);
-    const block = useBlock ? t.bloqueio : 0; const final = Math.max(0, d.total - block); const pv = Math.max(0, t.pv - final);
-    setPending({ ...pending, damage: { raw: d.total, dice: d.dice, bonus, block, final } });
+    const counterOption = optionsFor(t).find(o=>!o.nomenclature);
+    const counterDamage = pending.reaction==='contra-atacar' && counterOption ? damageRoll(counterOption.dice[0]??'1d6', t[counterOption.damageAttr??'corpo'], false).total : 0;
+    const counterWins = counterDamage > d.total;
+    const block = pending.reaction==='bloquear' ? t.bloqueio : pending.reaction==='parcial' ? (rollDice(1,dieFor(t.espirito)??4)[0]??0)+t.bloqueio : 0;
+    const final = counterWins ? 0 : Math.max(0, d.total - block); const pv = Math.max(0, t.pv - final);
+    if(counterWins){const counter=attackRoll(t.mente,a.esquiva);if(counter.hit){const free=damageRoll('1d6',t.corpo,counter.crit);setResources(a,Math.max(0,a.pv-free.total),null);log([`${t.name} contra-ataca: dano ${counterDamage} > ${d.total}; ataque grátis corpo a corpo 1d20 + MENTE = ${counter.total}, dano ${free.total} em ${a.name}.`]);}else log([`${t.name} vence a disputa de dano (${counterDamage} > ${d.total}), mas o contra-ataque erra (${counter.total} vs ${a.esquiva}).`]);}
+    setPending({ ...pending, counterDamage, damage: { raw: d.total, dice: d.dice, bonus, block, final } });
     setResources(t, pv, null);
     addRoll({ expression: d.expression, dice: d.dice, modifier: bonus, total: d.total, source: `Dano em ${t.name}${pending.crit ? ' — CRÍTICO' : ''}`, crit: pending.crit });
     log([`Dano${pending.crit ? ' CRÍTICO! (dados dobrados)' : ''}: ${d.expression} = ${d.total} − Bloqueio ${block} = ${final}. ${t.name}: ${t.pv} → ${pv} PV${pv === 0 ? ' — entra em AGONIA' : ''}`]);
@@ -157,7 +178,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
         </div>)}{!combatants.length && <p className="empty-copy">Os jogadores entram pela Mesa escolhendo sua ficha. Adicione NPCs para o combate.</p>}</div>
         <div className="combat-controls">
           <Button disabled={!combatants.length} onClick={() => saveCampaign({ ...campaign, combat_active: !campaign.combat_active, round: 1, turn_index: 0, log: [`${campaign.combat_active ? 'Combate encerrado' : 'Combate iniciado'} — ${new Date().toLocaleTimeString('pt-BR')}`, ...campaign.log] })}>{campaign.combat_active ? 'Encerrar combate' : 'Iniciar combate'}</Button>
-          <Button variant="outline" disabled={!campaign.combat_active} onClick={() => { const next = campaign.turn_index + 1; setAttackerId(''); setPending(null); saveCampaign({ ...campaign, turn_index: next % Math.max(1, combatants.length), round: next >= combatants.length ? campaign.round + 1 : campaign.round, log: [`Turno de ${combatants[next % Math.max(1, combatants.length)]?.name ?? '—'}`, ...campaign.log] }); }}>Próximo turno <ArrowRight /></Button>
+           <Button variant="outline" disabled={!campaign.combat_active} onClick={() => { const next = campaign.turn_index + 1; const nextFighter=combatants[next % Math.max(1,combatants.length)]; if(nextFighter){setReactions(prev=>({...prev,[nextFighter.id]:0}));setLostAction(prev=>({...prev,[nextFighter.id]:false}));} setAttackerId(''); setPending(null); saveCampaign({ ...campaign, turn_index: next % Math.max(1, combatants.length), round: next >= combatants.length ? campaign.round + 1 : campaign.round, log: [`Turno de ${nextFighter?.name ?? '—'}${nextFighter&&lostAction[nextFighter.id]?' (ação padrão e movimento sacrificados)':''}`, ...campaign.log] }); }}>Próximo turno <ArrowRight /></Button>
           <Button variant="ghost" title="Limpar iniciativas para uma nova rolagem" onClick={() => { combatants.forEach(c => c.npc ? saveNpc({ ...c.npc, initiative: null }) : updateSheet(c.id, null, null, true)); }}><RotateCcw /> Limpar iniciativas</Button>
         </div>
       </section>
@@ -169,6 +190,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
             <label className="field"><span className="field-label">ALVO</span><select value={target.id} onChange={e => { setTargetId(e.target.value); setPending(null); setArea(null); }}>{targets.map(c => <option key={c.id} value={c.id}>{c.name} (Esq {c.esquiva})</option>)}</select></label>
           </div>
           <label className="field"><span className="field-label">MODO DE ATAQUE</span><select value={mode} onChange={e => { setMode(e.target.value as 'single' | 'full' | 'half'); setPending(null); setArea(null); }}><option value="single">Um alvo</option><option value="full">Todos os inimigos · dano total</option><option value="half">Todos os inimigos · metade do dano</option></select></label>
+           {mode==='single'&&<label className="field"><span className="field-label">REAÇÃO DE {target.name.toUpperCase()} {reactionAvailable(target)?'':'· USADA NESTA RODADA'}</span><select value={chosenReaction} onChange={e=>{setChosenReaction(e.target.value as Reaction);setPending(null)}} disabled={!reactionAvailable(target)}><option value="esquivar">Esquivar · Esquiva {target.esquiva}</option><option value="bloquear">Bloquear · reduz {target.bloqueio} do dano</option><option value="contra-atacar">Contra-atacar · disputa de dano</option>{option?.nomenclature&&<><option value="parcial">Bloqueio Parcial · dado de Espírito + Bloqueio</option><option value="fluxo" disabled={!!fluxUsed[target.id]}>Bloqueio de Fluxo · maior d20 de Espírito</option></>}</select></label>}
           <div className="grid grid-cols-1 gap-5 border-t border-border pt-4 sm:grid-cols-2">
             <div className="min-w-0"><h4 className="field-kicker mb-3">ARMAS</h4>
               <label className="field"><span className="field-label">ARMA</span><select aria-label="Arma de ataque" value={option && !option.nomenclature ? option.id : ''} onChange={e => selectOption(e.target.value)}><option value="" disabled>Selecionar arma</option>{weapons.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select></label>
@@ -181,7 +203,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
           </div>
           {option && option.dice.length > 1 && <label className="field"><span className="field-label">DADOS DE DANO (LIMITE DA TABELA)</span><select value={dice} onChange={e => { setDiceChoice(e.target.value); setPending(null); setArea(null); }}>{option.dice.map(d => <option key={d}>{d}</option>)}</select></label>}
           {option && <p className="weapon-summary">Acerto: <strong>1d20 + {attrLabelFor(option.hitAttr, lineage)} ({attacker[option.hitAttr]})</strong> vs Esquiva <strong>{target.esquiva}</strong> · Dano <strong>{dice}{option.damageAttr ? ` + ${attrLabelFor(option.damageAttr, lineage)} (${attacker[option.damageAttr]})` : ''}</strong>{option.karma ? <strong className="text-karma"> + {option.karma} Karma</strong> : null}{option.pfCost ? <> · Custo <strong className="text-flux">{option.pfCost} PF</strong> (tem <span className="text-flux">{attacker.pf}</span>)</> : null}</p>}
-          <label className="flex items-center gap-2 text-xs text-muted-foreground"><input type="checkbox" checked={useBlock} onChange={e => setUseBlock(e.target.checked)} /> Aplicar Bloqueio/RD do alvo ({target.bloqueio})</label>
+           {lostAction[attacker.id]&&<p className="empty-copy">{attacker.name} sacrificou a próxima ação padrão e o movimento ao usar Bloqueio de Fluxo.</p>}
           {mode !== 'single' ? <>
           {area && <div className={`combat-banner ${area.crit ? 'banner-crit' : area.results.some(x => x.hit) ? 'banner-hit' : 'banner-miss'}`}>
             <strong>{area.crit ? 'CRÍTICO! ' : ''}Acerto {area.total}</strong>
@@ -193,7 +215,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
           {pending && <div className={`combat-banner ${pending.crit ? 'banner-crit' : pending.hit ? 'banner-hit' : 'banner-miss'}`}>
             <strong>{pending.crit ? 'CRÍTICO! ATAQUE ACERTOU' : pending.hit ? 'ATAQUE ACERTOU' : 'ALVO ESQUIVOU'}</strong>
             <span>d20 [{pending.d20}] + {attrLabelFor(pending.option.hitAttr, combatants.find(c => c.id === pending.attackerId)?.pc?.lineage)} {pending.attrValue} = {pending.total} vs Esquiva {pending.esquiva}</span>
-            {pending.damage && <span><Shield size={12} className="inline" /> Dano {pending.damage.raw} ({pending.damage.dice.join(' + ')}{pending.damage.bonus ? ` + ${pending.damage.bonus}` : ''}) − Bloqueio {pending.damage.block} = <strong>{pending.damage.final}</strong></span>}
+             {pending.damage && <span><Shield size={12} className="inline" /> Dano {pending.damage.raw} ({pending.damage.dice.join(' + ')}{pending.damage.bonus ? ` + ${pending.damage.bonus}` : ''}) − Bloqueio {pending.damage.block} = <strong>{pending.damage.final}</strong>{pending.counterDamage!==undefined&&pending.reaction==='contra-atacar'?` · disputa: ${pending.counterDamage}`:''}</span>}
           </div>}
           </>}
         </div> : <p className="empty-copy">São necessários ao menos dois combatentes.</p>}
