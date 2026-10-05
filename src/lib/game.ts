@@ -11,7 +11,7 @@ export type Nomenclature = { name: string; cost: number; effect?: string; kind?:
 export type Npc = { id: string; name: string; kind: string; hidden: boolean; pv_current: number; pv_max: number; pf_current: number; pf_max: number; corpo: number; mente: number; espirito: number; esquiva: number; bloqueio: number; notes: string; initiative: number | null };
 export type Campaign = { id: string; name: string; code: string; scene: string; round: number; turn_index: number; combat_active: boolean; log: string[] };
 export const dieFor = (n: number) => [0, 4, 6, 8, 10, 12][Math.max(1, Math.min(5, n))];
-export const derived = (corpo: number) => ({ pv: [0,25,32,42,52,60][corpo] ?? 25, esquiva: [0,10,12,14,15,16][corpo] ?? 10, bloqueio: [0,3,5,7,10,12][corpo] ?? 3, deslocamento: [0,9,9,12,12,15][corpo] ?? 9 });
+export const derived = (corpo: number) => ({ pv: [0,25,32,42,52,60][corpo] ?? 25, esquiva: [0,10,12,14,15,16][corpo] ?? 10, bloqueio: [0,3,5,7,10,12][corpo] ?? 3, deslocamento: [0,7,9,12,12,15][corpo] ?? 7 });
 export const makeCharacter = (): Character => ({ id: crypto.randomUUID(), name: 'Novo Herdeiro', lineage: 'Humano', stage: 'Libertado', concept: '', weapon: '', corpo: 1, mente: 1, espirito: 1, pv_current: 25, pv_max: 25, pf_current: 0, pf_max: 20, karma: 0, gs: 1, exhaustion: 0, sync: [], nomenclatures: [], inventory: [], story: '', abilities: [], weapon_type: '', weapon_dice: '', initiative: null });
 export const makeNpc = (): Npc => ({ id: crypto.randomUUID(), name: 'Novo inimigo', kind: 'inimigo', hidden: true, pv_current: 25, pv_max: 25, pf_current: 0, pf_max: 20, corpo: 1, mente: 1, espirito: 1, esquiva: 10, bloqueio: 3, notes: '', initiative: null });
 export const makeCampaign = (): Campaign => ({ id: crypto.randomUUID(), name: 'A primeira travessia', code: 'DM3JUT', scene: 'O limiar', round: 1, turn_index: 0, combat_active: false, log: [] });
@@ -89,7 +89,7 @@ export function resourceStageLabel(lineage: string, stage: ReturnType<typeof kar
     return 'NÚCLEO ESTÁVEL';
   }
   if (stage === 'berserker') return 'MODO BERSERKER';
-  if (stage === 'gaki') return 'MARCAS DE GAKI';
+  if (stage === 'gaki') return 'DISTORÇÃO';
   return 'KARMA ESTÁVEL';
 }
 export function resourceBarLabel(lineage: string) {
@@ -123,15 +123,9 @@ export function absorbPf(espirito: number) {
   return { count, dice, sum, highest, band: band.band, crit: band.crit, diceTotal, espirito, total: diceTotal + espirito };
 }
 
-/* ---------- Arma de Vontade/História/Identidade (Humano) ---------- */
-/** Humano: ataque com MENTE d20 (Mente 1 = 1d20, 2 = 2d20...), usa o maior dado + MENTE. */
-export const humanAttackDice = (mente: number) => Math.max(1, mente);
-export function multiAttackRoll(count: number, attrValue: number, esquiva?: number) {
-  const dice = rollDice(Math.max(1, count), 20); const d20 = Math.max(...dice); const total = d20 + attrValue;
-  const hit = esquiva === undefined ? null : total >= esquiva;
-  const crit = d20 === 20 && (esquiva === undefined ? true : total > esquiva);
-  return { dice, d20, total, hit, crit };
-}
+/* ---------- Arma de Vínculo (Humano) ---------- */
+/** Humano: Arma de Vínculo. Ataque = 1d20 + MENTE; dano = dados da arma + MENTE (+ bônus de Karma). */
+export const isHuman = (lineage: string) => lineage === 'Humano';
 /** Notas livres guardadas junto à história da ficha (sem mudar o formato salvo). */
 export const NOTES_MARK = '\n\n<<<ANOTACOES>>>\n';
 export function splitStory(story: string) { const i = story.indexOf(NOTES_MARK); return i < 0 ? { story, notes: '' } : { story: story.slice(0, i), notes: story.slice(i + NOTES_MARK.length) }; }
@@ -165,4 +159,3 @@ export function stageIndexFor(lineage: string, stage: string) {
   const list = LINEAGE_STAGES[lineage] ?? [];
   const i = list.findIndex(s => stage && (stage.toLowerCase().startsWith(s.name.toLowerCase().split(' ')[0]!) ));
   return i < 0 ? 0 : i;
-}
