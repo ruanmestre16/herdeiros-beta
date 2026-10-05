@@ -159,3 +159,4 @@ export function stageIndexFor(lineage: string, stage: string) {
   const list = LINEAGE_STAGES[lineage] ?? [];
   const i = list.findIndex(s => stage && (stage.toLowerCase().startsWith(s.name.toLowerCase().split(' ')[0]!) ));
   return i < 0 ? 0 : i;
+}
