@@ -4,7 +4,7 @@
 - [x] Verificar aparência e interações no navegador (fluxos públicos e demonstração; duas contas online aguardam teste real).
 - [x] Nome de perfil editável na conta e visível no canto superior direito.
 - [x] Mesas online com código e senha, entrada de jogadores autenticados e atualização ao vivo.
-- [x] Karma máximo calculado pelos atributos e estados Marcas de Gaki / Berserker em 50% / 70%.
+- [x] Karma máximo calculado pelos atributos e estados Distorção / Berserker em 50% / 70%.
 - [x] Passiva do Gaki (absorver Fluxo 1d4 PV por alvo + Teste de Mente/Karma).
 - [x] Arma de Vínculo humana com dano da tabela (Mente, crítico dobra dados).
 - [x] Sincronia — Nível abaixo de GS; Nova Nomenclatura (Direta/Parcial/Completa); Habilidades só nome + descrição.
