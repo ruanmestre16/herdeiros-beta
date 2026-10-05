@@ -4,7 +4,7 @@ export type Character = {
   pf_current: number; pf_max: number; karma: number; gs: number; exhaustion: number;
   sync: { name: string; level: number }[]; nomenclatures: Nomenclature[];
   inventory: { name: string; quantity: number }[]; story: string;
-  abilities: { name: string; description: string }[]; weapon_type: string; weapon_dice: string; initiative: number | null;
+  abilities: { name: string; description: string; kind?: 'scar' | 'state'; scarType?: string; benefit?: string }[]; weapon_type: string; weapon_dice: string; initiative: number | null;
 };
 export type NomenclatureKind = 'Direta' | 'Parcial' | 'Completa';
 export type Nomenclature = { name: string; cost: number; effect?: string; kind?: NomenclatureKind; dice?: number };
@@ -25,7 +25,7 @@ export function roll(expression: string) {
 }
 
 export function karmaMaximum(mente:number,espirito:number){ return Math.max(1,Math.floor((mente*20)/2+(espirito*20)/4)); }
-export function karmaStage(value:number,max:number){const percent=value/Math.max(1,max)*100;return percent>=70?"berserker":percent>=50?"gaki":"normal";}
+export function karmaStage(value:number,max:number){const percent=value/Math.max(1,max)*100;return percent>=100?"consumido":percent>=70?"berserker":percent>=50?"gaki":"normal";}
 
 /* ---------- Tabelas do documento "Resumo de Mecânicas" (valores capados) ---------- */
 export type WeaponType = { key: string; label: string; dice: string[]; attr: 'corpo' | 'atributo' | null; note: string };
@@ -80,14 +80,16 @@ export function damageRoll(dice: string, bonus: number, crit: boolean) {
   return { dice: rolled, bonus, total: rolled.reduce((a, b) => a + b, 0) + bonus, expression: `${count}d${p.sides}${bonus ? ` + ${bonus}` : ''}` };
 }
 /** Bônus de dano do Karma: 50% = +3, 70% = +5 em todo ataque. */
-export function karmaDamageBonus(c: Pick<Character, 'karma' | 'mente' | 'espirito'>) { const st = karmaStage(c.karma, karmaMaximum(c.mente, c.espirito)); return st === 'berserker' ? 5 : st === 'gaki' ? 3 : 0; }
+export function karmaDamageBonus(c: Pick<Character, 'karma' | 'mente' | 'espirito'>) { const st = karmaStage(c.karma, karmaMaximum(c.mente, c.espirito)); return st === 'berserker' || st === 'consumido' ? 5 : st === 'gaki' ? 3 : 0; }
 /** Rótulos da barra de Karma / Destruição de Núcleo conforme linhagem e estágio. */
 export function resourceStageLabel(lineage: string, stage: ReturnType<typeof karmaStage>) {
   if (isTechAgent(lineage)) {
+    if (stage === 'consumido') return 'NÚCLEO CONSUMIDO';
     if (stage === 'berserker') return 'AUTODESTRUIÇÃO IMINENTE';
     if (stage === 'gaki') return 'NÚCLEO INSTÁVEL (50%)';
     return 'NÚCLEO ESTÁVEL';
   }
+  if (stage === 'consumido') return 'CONSUMIDO PELO KARMA';
   if (stage === 'berserker') return 'MODO BERSERKER';
   if (stage === 'gaki') return 'DISTORÇÃO';
   return 'KARMA ESTÁVEL';
@@ -103,6 +105,23 @@ export function absorbActionLabel(lineage: string) {
 }
 export function initiativeRoll(corpo: number) { const dice = rollDice(Math.max(1, corpo), 20); return { dice, total: Math.max(...dice) + corpo }; }
 export function normalizeCharacter(c: Partial<Character> & { id: string }): Character { return { ...makeCharacter(), ...c, abilities: Array.isArray(c.abilities) ? c.abilities : [], sync: Array.isArray(c.sync) ? c.sync : [], nomenclatures: Array.isArray(c.nomenclatures) ? c.nomenclatures : [], inventory: Array.isArray(c.inventory) ? c.inventory : [], weapon_type: c.weapon_type ?? '', weapon_dice: c.weapon_dice ?? '', initiative: c.initiative ?? null } as Character; }
+
+// Persistent rule state shares the existing JSON abilities field; no table changes.
+export type SheetState = { excess: number; rounds: number; agony: boolean; failures: number; stable: boolean; dead: boolean };
+export const emptySheetState: SheetState = { excess: 0, rounds: 0, agony: false, failures: 0, stable: false, dead: false };
+export function sheetState(c: Character): SheetState {
+  try { return { ...emptySheetState, ...JSON.parse(c.abilities.find(a => a.kind === 'state')?.description ?? '{}') } as SheetState; }
+  catch { return { ...emptySheetState }; }
+}
+export function withSheetState(c: Character, patch: Partial<SheetState>): Character['abilities'] {
+  return [...c.abilities.filter(a => a.kind !== 'state'), { kind: 'state', name: '__rule_state__', description: JSON.stringify({ ...sheetState(c), ...patch }) }];
+}
+export function attributeAllowed(c: Character, attr: Attr, value: number) {
+  const stage = stageIndexFor(c.lineage, c.stage);
+  const values = { corpo: c.corpo, mente: c.mente, espirito: c.espirito, [attr]: value };
+  const nums = Object.values(values);
+  return value >= c[attr] && value <= stage + 3 && nums.filter(n => n === stage + 3).length <= 1 && (stage !== 2 || nums.filter(n => n >= 4).length <= 2);
+}
 
 /* ---------- Absorver PF ---------- */
 /** Faixa definida pelo MAIOR d20: 1–7 → 1/3, 8–14 → metade, 15–19 → valor cheio, 20 → dobro. */
