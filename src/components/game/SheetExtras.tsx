@@ -3,8 +3,8 @@ import { Dices, Plus, Skull, Sparkles, Swords, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Stepper } from './Controls';
 import {
-  NOMENCLATURE_RANGES, WEAPONS, attackRoll, multiAttackRoll, absorbPf, cappedNomenclatureDice, cappedWeaponDice, nomenclatureLabel, nomenclatureLevelLabel,
-  damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, isTechAgent, absorbActionLabel, attrLabelFor,
+  NOMENCLATURE_RANGES, WEAPONS, attackRoll, absorbPf, cappedNomenclatureDice, cappedWeaponDice, nomenclatureLabel, nomenclatureLevelLabel,
+  damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, isTechAgent, isHuman, absorbActionLabel, attrLabelFor,
   type Attr, type Character, type NomenclatureKind,
 } from '@/lib/game';
 
@@ -104,11 +104,13 @@ export function GakiPassive({ character, update, addRoll }: { character: Charact
 export function WeaponPanel({ character, update, addRoll }: { character: Character; update: Update; addRoll: AddRoll }) {
   const [last, setLast] = useState<{ d20: number; total: number; crit: boolean } | null>(null);
   const [dmg, setDmg] = useState<{ total: number; dice: number[]; bonus: number; crit: boolean } | null>(null);
-  const [hitAttr, setHitAttr] = useState<Attr>(character.lineage === 'Humano' ? 'mente' : 'corpo');
+  const [chosenAttr, setHitAttr] = useState<Attr>('corpo');
+  const human = isHuman(character.lineage);
+  /** Humano: Arma de Vínculo sempre ataca com MENTE e soma MENTE ao dano. */
+  const hitAttr: Attr = human ? 'mente' : chosenAttr;
   const type = weaponByKey(character.weapon_type);
   const dice = type ? cappedWeaponDice(type.key, character.weapon_dice) ?? '' : '';
-  const hitCount = Math.max(1, character[hitAttr]);
-  const damageAttr = type?.attr === 'corpo' ? 'corpo' : type?.attr === 'atributo' ? hitAttr : null;
+  const damageAttr: Attr | null = human ? 'mente' : type?.attr === 'corpo' ? 'corpo' : type?.attr === 'atributo' ? hitAttr : null;
   const bonus = (damageAttr ? character[damageAttr] : 0) + karmaDamageBonus(character);
   return <div className="weapon-block">
     <span className="field-kicker">{character.lineage === 'Humano' ? 'ARMA DE VÍNCULO · VONTADE, HISTÓRIA E IDENTIDADE' : 'ARMA'}</span>
@@ -119,16 +121,16 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
       <Field label="DANO (TABELA)"><select disabled={!type} value={dice} onChange={e => update({ weapon_dice: e.target.value })}>
         {(type?.dice ?? []).map(d => <option key={d}>{d}</option>)}
       </select></Field>
-      <Field label="ATACAR COM"><select value={hitAttr} onChange={e => { setHitAttr(e.target.value as Attr); setLast(null); setDmg(null); }}>
-        {(['mente', 'corpo', 'espirito'] as const).map(attr => <option key={attr} value={attr}>{attrLabelFor(attr, character.lineage)} ({character[attr]}d20)</option>)}
+      <Field label="ATACAR COM"><select disabled={human} value={hitAttr} onChange={e => { setHitAttr(e.target.value as Attr); setLast(null); setDmg(null); }}>
+        {(['mente', 'corpo', 'espirito'] as const).map(attr => <option key={attr} value={attr}>{attrLabelFor(attr, character.lineage)} ({character[attr]})</option>)}
       </select></Field>
     </div>
-    {type && <p className="weapon-summary">Ataque <strong>{hitCount}d20{hitCount > 1 ? ' (maior)' : ''} + {attrLabelFor(hitAttr, character.lineage)} ({character[hitAttr]})</strong> · Dano <strong>{dice}{damageAttr ? ` + ${attrLabelFor(damageAttr, character.lineage)} (${character[damageAttr]})` : ''}</strong>{karmaDamageBonus(character) ? <strong className="text-karma"> + {karmaDamageBonus(character)} Karma</strong> : null}<br /><span>{type.note}</span></p>}
+    {type && <p className="weapon-summary">Ataque <strong>1d20 + {attrLabelFor(hitAttr, character.lineage)} ({character[hitAttr]})</strong> · Dano <strong>{dice}{damageAttr ? ` + ${attrLabelFor(damageAttr, character.lineage)} (${character[damageAttr]})` : ''}</strong>{karmaDamageBonus(character) ? <strong className="text-karma"> + {karmaDamageBonus(character)} Karma</strong> : null}<br /><span>{type.note}</span></p>}
     <div className="quick-actions mt-3">
       <Button variant="outline" disabled={!type} onClick={() => {
-        const r = multiAttackRoll(hitCount, character[hitAttr]); setLast({ d20: r.d20, total: r.total, crit: r.crit }); setDmg(null);
-        addRoll({ expression: `${hitCount}d20${hitCount > 1 ? ' (maior)' : ''} + ${character[hitAttr]}`, dice: r.dice, modifier: character[hitAttr], total: r.total, source: `Ataque com arma${r.crit ? ' — CRÍTICO' : ''}`, crit: r.crit });
-      }}><Swords /> Atacar ({hitCount}d20 + {attrLabelFor(hitAttr, character.lineage)})</Button>
+        const r = attackRoll(character[hitAttr]); setLast({ d20: r.d20, total: r.total, crit: r.crit }); setDmg(null);
+        addRoll({ expression: `1d20 + ${character[hitAttr]}`, dice: [r.d20], modifier: character[hitAttr], total: r.total, source: `Ataque com arma${r.crit ? ' — CRÍTICO' : ''}`, crit: r.crit });
+      }}><Swords /> Atacar (1d20 + {attrLabelFor(hitAttr, character.lineage)})</Button>
       <Button variant="outline" disabled={!type || !last} onClick={() => {
         const d = damageRoll(dice, bonus, !!last?.crit); setDmg({ total: d.total, dice: d.dice, bonus, crit: !!last?.crit });
         addRoll({ expression: d.expression, dice: d.dice, modifier: bonus, total: d.total, source: `Dano da arma${last?.crit ? ' — CRÍTICO (dados dobrados)' : ''}`, crit: !!last?.crit });
@@ -171,7 +173,7 @@ function parseNomenclatureText(text: string): ParsedTechnique[] {
 export function NomenclaturesTab({ character, update, addRoll }: { character: Character; update: Update; addRoll: AddRoll }) {
   const [draft, setDraft] = useState<{ name: string; cost: number; kind: NomenclatureKind; dice: number } | null>(null);
   const [pasteText, setPasteText] = useState('');
-  const [result, setResult] = useState<{ name: string; attack: number; d20: number; crit: boolean; hitDice: number[]; count: number; damage?: number; dice?: number[] } | null>(null);
+  const [result, setResult] = useState<{ name: string; attack: number; d20: number; crit: boolean; damage?: number; dice?: number[] } | null>(null);
   const parsed = draft ? parseNomenclatureText(pasteText) : [];
   const closeDraft = () => { setDraft(null); setPasteText(''); };
   return <div className="single-section">
@@ -200,7 +202,7 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
         <div className="flex gap-2"><Button disabled={!draft.name.trim()} onClick={() => { update({ nomenclatures: [...character.nomenclatures, { name: draft.name.trim(), cost: draft.cost, kind: draft.kind, dice: cappedNomenclatureDice(draft.kind, draft.dice) }] }); closeDraft(); }}><Plus /> Salvar técnica</Button><Button variant="ghost" onClick={closeDraft}>Cancelar</Button></div>
       </div>
     </div>}
-    {result && <div className={`combat-banner mb-5 ${result.crit ? 'banner-crit' : 'banner-neutral'}`}><strong>{result.crit ? `CRÍTICO! ${result.name}` : `${result.name}: ataque ${result.attack}`}</strong><span>{result.count}d20 [{result.hitDice.join(', ')}]{result.count > 1 ? ` → maior ${result.d20}` : ''} + {attrLabelFor('espirito', character.lineage)} ({character.espirito}) = {result.attack}{result.damage !== undefined ? ` · dano ${result.damage} (${result.dice?.join(' + ')})${result.crit ? ' — crítico' : ''}` : ''}</span></div>}
+    {result && <div className={`combat-banner mb-5 ${result.crit ? 'banner-crit' : 'banner-neutral'}`}><strong>{result.crit ? `CRÍTICO! ${result.name}` : `${result.name}: ataque ${result.attack}`}</strong><span>1d20 [{result.d20}] + {attrLabelFor('espirito', character.lineage)} ({character.espirito}) = {result.attack}{result.damage !== undefined ? ` · dano ${result.damage} (${result.dice?.join(' + ')})${result.crit ? ' — crítico' : ''}` : ''}</span></div>}
     <div className="item-list">{character.nomenclatures.map((item, i) => {
       const kind = item.kind ?? 'Direta'; const n = cappedNomenclatureDice(kind, item.dice);
       const critN = (item as typeof item & { critDice?: number }).critDice;
@@ -209,10 +211,9 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
         {item.effect && <p className="empty-copy" style={{ whiteSpace: 'pre-line' }}>{item.effect}</p>}
         <div className="row-actions">
           <Button size="sm" variant="outline" disabled={character.pf_current < item.cost} onClick={() => {
-            const count = Math.max(1, character.espirito);
-            const r = multiAttackRoll(count, character.espirito); update({ pf_current: character.pf_current - item.cost });
-            setResult({ name: item.name, attack: r.total, d20: r.d20, crit: r.crit, hitDice: r.dice, count });
-            addRoll({ expression: `${count}d20${count > 1 ? ' (maior)' : ''} + ${character.espirito}`, dice: r.dice, modifier: character.espirito, total: r.total, source: `${nomenclatureLabel(character.lineage)} · ${item.name} — ${nomenclatureLevelLabel(character.lineage, kind)} · acerto${r.crit ? ' CRÍTICO' : ''}`, crit: r.crit });
+            const r = attackRoll(character.espirito); update({ pf_current: character.pf_current - item.cost });
+            setResult({ name: item.name, attack: r.total, d20: r.d20, crit: r.crit });
+            addRoll({ expression: `1d20 + ${character.espirito}`, dice: [r.d20], modifier: character.espirito, total: r.total, source: `${nomenclatureLabel(character.lineage)} · ${item.name} — ${nomenclatureLevelLabel(character.lineage, kind)} · acerto${r.crit ? ' CRÍTICO' : ''}`, crit: r.crit });
           }} className="action-flux"><Sparkles /> Usar ({item.cost} PF)</Button>
           <Button size="sm" variant="outline" disabled={!result || result.name !== item.name || result.damage !== undefined} onClick={() => {
             if (!result) return;
