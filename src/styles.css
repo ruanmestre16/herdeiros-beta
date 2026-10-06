@@ -328,12 +328,16 @@ html{scroll-behavior:smooth}body{font-family:'DM Sans',sans-serif;background:#10
 @media (max-width: 620px) {
   .app-shell, .main-wrap, .workspace-content { min-width: 0; max-width: 100%; }
   .app-shell { overflow-x: clip; }
+  .main-wrap { padding-inline: 14px; }
+  .topbar-inner { padding-inline: 14px; gap: 10px; }
+  .brand { min-width: 0; white-space: nowrap; }
+  .account-button { max-width: 96px; min-height: 40px; }
   .tabbar { max-width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
   .tabbar .tab { flex: 0 0 auto; min-height: 44px; scroll-margin-inline: 20px; }
   .main-nav.nav-open { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .main-nav .nav-item { min-width: 0; justify-content: flex-start; }
   .section-heading { flex-wrap: wrap; }
-  .section-heading > div:first-child { min-width: 0; }
+  .section-heading > div:first-child { min-width: 0; flex: 1 1 180px; }
   .section-heading h2 { overflow-wrap: anywhere; }
   .section-heading > button, .section-heading > div:not(:first-child) { max-width: 100%; min-height: 40px; white-space: normal; }
   .field input, .field select, .field textarea, .campaign-picker select, .event-composer input { font-size: 16px; }
@@ -341,6 +345,14 @@ html{scroll-behavior:smooth}body{font-family:'DM Sans',sans-serif;background:#10
   .input-grid > *, .quick-actions > *, .combat-controls > * { min-width: 0; }
   .quick-actions { grid-template-columns: minmax(0, 1fr); }
   .quick-actions button, .combat-controls button { height: auto !important; min-height: 44px; white-space: normal; text-align: left; justify-content: flex-start !important; }
+  .row-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; width: 100%; }
+  .row-actions button { min-width: 0; min-height: 44px; white-space: normal; }
+  .row-actions button:not([data-slot="button"]), .row-actions button:first-child { overflow-wrap: anywhere; }
+  .editable-row, .inventory-row { min-width: 0; padding: 15px 12px; }
+  .nomen-head { display: grid; grid-template-columns: minmax(0, 1fr); }
+  .nomen-head strong, .nomen-head span { min-width: 0; overflow-wrap: anywhere; }
+  .field-stack > .flex, .game-panel > .flex { flex-wrap: wrap; }
+  .field-stack > .flex > button, .game-panel > .flex > button { min-height: 44px; white-space: normal; }
   .combat-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .combat-controls > :last-child { grid-column: 1 / -1; }
   .combatant { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 8px; }
@@ -352,4 +364,23 @@ html{scroll-behavior:smooth}body{font-family:'DM Sans',sans-serif;background:#10
   .roster-row > button { min-height: 40px; }
   .combat-banner, .weapon-summary, .log-entry { overflow-wrap: anywhere; }
   .kill-call h1 { overflow-wrap: anywhere; }
+}
+
+@media (max-width: 360px) {
+  .main-wrap { padding-inline: 10px; }
+  .topbar-inner { padding-inline: 10px; }
+  .brand { font-size: 12px !important; }
+  .brand-mark { font-size: 19px; }
+  .account-button { max-width: 82px; padding-inline: 7px !important; }
+  .scene-content { left: 18px; right: 14px; }
+  .scene-content h1 { font-size: 29px; }
+  .game-panel { padding-inline: 12px; }
+  .attributes-grid, .step-grid { gap: 5px; }
+  .attribute { padding-inline: 2px; }
+  .attribute strong { font-size: 27px; }
+  .combat-controls { grid-template-columns: minmax(0, 1fr); }
+  .combat-controls > :last-child { grid-column: auto; }
+  .combatant { grid-template-columns: auto minmax(0, 1fr); }
+  .combatant-icon { display: none; }
+  .combatant > button { grid-column: 2; }
 }
