@@ -314,6 +314,10 @@ export type Database = {
         Args: { p_campaign: string; p_password: string }
         Returns: undefined
       }
+      share_excess_pf: {
+        Args: { p_from: string; p_to: string }
+        Returns: number
+      }
       shares_campaign_sheet: { Args: { p_sheet: string }; Returns: boolean }
       shares_campaign_user: { Args: { p_user: string }; Returns: boolean }
     }
