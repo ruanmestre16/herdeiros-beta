@@ -120,7 +120,26 @@ export function attributeAllowed(c: Character, attr: Attr, value: number) {
   const stage = stageIndexFor(c.lineage, c.stage);
   const values = { corpo: c.corpo, mente: c.mente, espirito: c.espirito, [attr]: value };
   const nums = Object.values(values);
-  return value >= c[attr] && value <= stage + 3 && nums.filter(n => n === stage + 3).length <= 1 && (stage !== 2 || nums.filter(n => n >= 4).length <= 2);
+  const pointLimit = 6 + stage;
+  return value >= c[attr]
+    && value <= stage + 3
+    && nums.reduce((sum, n) => sum + n, 0) <= pointLimit
+    && nums.filter(n => n === stage + 3).length <= 1
+    && (stage !== 2 || nums.filter(n => n >= 4).length <= 2);
+}
+/** A criação concede 3 pontos; cada avanço de estágio acrescenta mais 1. */
+export function attributePointsRemaining(c: Character) {
+  const pointLimit = 6 + stageIndexFor(c.lineage, c.stage);
+  return Math.max(0, pointLimit - c.corpo - c.mente - c.espirito);
+}
+/** Maior valor que pode ser aplicado agora sem quebrar teto, quantidade ou pontos disponíveis. */
+export function attributeMaximum(c: Character, attr: Attr) {
+  let maximum = c[attr];
+  for (let value = c[attr] + 1; value <= 5; value += 1) {
+    if (!attributeAllowed(c, attr, value)) break;
+    maximum = value;
+  }
+  return maximum;
 }
 
 /* ---------- Absorver PF ---------- */
