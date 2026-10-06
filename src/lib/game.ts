@@ -107,8 +107,8 @@ export function initiativeRoll(corpo: number) { const dice = rollDice(Math.max(1
 export function normalizeCharacter(c: Partial<Character> & { id: string }): Character { return { ...makeCharacter(), ...c, abilities: Array.isArray(c.abilities) ? c.abilities : [], sync: Array.isArray(c.sync) ? c.sync : [], nomenclatures: Array.isArray(c.nomenclatures) ? c.nomenclatures : [], inventory: Array.isArray(c.inventory) ? c.inventory : [], weapon_type: c.weapon_type ?? '', weapon_dice: c.weapon_dice ?? '', initiative: c.initiative ?? null } as Character; }
 
 // Persistent rule state shares the existing JSON abilities field; no table changes.
-export type SheetState = { excess: number; rounds: number; agony: boolean; failures: number; stable: boolean; dead: boolean };
-export const emptySheetState: SheetState = { excess: 0, rounds: 0, agony: false, failures: 0, stable: false, dead: false };
+export type SheetState = { excess: number; rounds: number; agony: boolean; failures: number; stable: boolean; dead: boolean; standard: boolean };
+export const emptySheetState: SheetState = { excess: 0, rounds: 0, agony: false, failures: 0, stable: false, dead: false, standard: false };
 export function sheetState(c: Character): SheetState {
   try { return { ...emptySheetState, ...JSON.parse(c.abilities.find(a => a.kind === 'state')?.description ?? '{}') } as SheetState; }
   catch { return { ...emptySheetState }; }
@@ -116,30 +116,44 @@ export function sheetState(c: Character): SheetState {
 export function withSheetState(c: Character, patch: Partial<SheetState>): Character['abilities'] {
   return [...c.abilities.filter(a => a.kind !== 'state'), { kind: 'state', name: '__rule_state__', description: JSON.stringify({ ...sheetState(c), ...patch }) }];
 }
+/* ---------- Partilhar PF excedentes ---------- */
+/** "Mais de 2 pontos" de Sincronia = nível 3 ou maior. */
+export const SHARE_MIN_SYNC = 3;
+/** Primeiro nome, em minúsculas: "Ego Aurefield" → "ego". Mesma regra usada pela função share_excess_pf no banco. */
+export const firstName = (name: string) => (name ?? '').trim().split(' ')[0]!.toLowerCase();
+/** Maior nível de Sincronia que `from` tem com o alvo, identificado pelo começo do nome. */
+export function syncLevelWith(from: Character, target: Pick<Character, 'name'>) {
+  const key = firstName(target.name);
+  if (!key) return 0;
+  return from.sync.reduce((best, s) => firstName(s.name) === key ? Math.max(best, Number(s.level) || 0) : best, 0);
+}
+/** Motivo pelo qual Partilhar não pode ser usado agora (ou null se liberado). `sameTable` = alvo na mesma mesa. */
+export function pfShareBlock(from: Character, to: Character | null, sameTable: boolean): string | null {
+  const st = sheetState(from);
+  if (st.excess <= 0) return 'Você não tem PF excedentes para partilhar.';
+  if (st.standard) return 'Você já gastou a Ação Padrão.';
+  if (!to || to.id === from.id) return 'Escolha um alvo.';
+  if (!sameTable) return 'O alvo não está na mesma mesa.';
+  if (syncLevelWith(from, to) < SHARE_MIN_SYNC) return 'Sincronia insuficiente: é preciso mais de 2 de Sincronia com o alvo.';
+  if (to.pf_current >= to.pf_max) return 'O alvo está com os PF cheios e não pode receber o excedente.';
+  return null;
+}
+/** Resultado da transferência: o alvo recebe até o que cabe nos PF máximos; o que sobrar continua como excedente. Gasta a Ação Padrão. */
+export function applyPfShare(from: Character, to: Character) {
+  const st = sheetState(from);
+  const amount = Math.min(st.excess, Math.max(0, to.pf_max - to.pf_current));
+  const left = st.excess - amount;
+  return {
+    amount,
+    from: { ...from, abilities: withSheetState(from, { excess: left, rounds: left > 0 ? st.rounds : 0, standard: true }) } as Character,
+    to: { ...to, pf_current: to.pf_current + amount } as Character,
+  };
+}
 export function attributeAllowed(c: Character, attr: Attr, value: number) {
   const stage = stageIndexFor(c.lineage, c.stage);
   const values = { corpo: c.corpo, mente: c.mente, espirito: c.espirito, [attr]: value };
   const nums = Object.values(values);
-  const pointLimit = 6 + stage;
-  return value >= c[attr]
-    && value <= stage + 3
-    && nums.reduce((sum, n) => sum + n, 0) <= pointLimit
-    && nums.filter(n => n === stage + 3).length <= 1
-    && (stage !== 2 || nums.filter(n => n >= 4).length <= 2);
-}
-/** A criação concede 3 pontos; cada avanço de estágio acrescenta mais 1. */
-export function attributePointsRemaining(c: Character) {
-  const pointLimit = 6 + stageIndexFor(c.lineage, c.stage);
-  return Math.max(0, pointLimit - c.corpo - c.mente - c.espirito);
-}
-/** Maior valor que pode ser aplicado agora sem quebrar teto, quantidade ou pontos disponíveis. */
-export function attributeMaximum(c: Character, attr: Attr) {
-  let maximum = c[attr];
-  for (let value = c[attr] + 1; value <= 5; value += 1) {
-    if (!attributeAllowed(c, attr, value)) break;
-    maximum = value;
-  }
-  return maximum;
+  return value >= c[attr] && value <= stage + 3 && nums.filter(n => n === stage + 3).length <= 1 && (stage !== 2 || nums.filter(n => n >= 4).length <= 2);
 }
 
 /* ---------- Absorver PF ---------- */
