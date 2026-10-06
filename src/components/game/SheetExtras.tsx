@@ -5,6 +5,7 @@ import { Stepper } from './Controls';
 import {
   NOMENCLATURE_RANGES, WEAPONS, attackRoll, absorbPf, cappedNomenclatureDice, cappedWeaponDice, nomenclatureLabel, nomenclatureLevelLabel,
   damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, isTechAgent, isHuman, absorbActionLabel, attrLabelFor, sheetState, withSheetState,
+  SHARE_MIN_SYNC, syncLevelWith, pfShareBlock,
   type Attr, type Character, type NomenclatureKind,
 } from '@/lib/game';
 
@@ -258,7 +259,7 @@ export function AbilitiesTab({ character, update, addRoll }: { character: Charac
 }
 
 /** Ação rápida: Absorver PF. d20 = Espírito; cada dado convertido individualmente; + Espírito no total. */
-export function AbsorbPfAction({ character, update, addRoll }: { character: Character; update: Update; addRoll: AddRoll }) {
+export function AbsorbPfAction({ character, update, addRoll, tablemates = [], onShare }: { character: Character; update: Update; addRoll: AddRoll; tablemates?: Character[]; onShare?: (toId: string) => Promise<{ error: string | null; amount: number }> }) {
   const [res, setRes] = useState<ReturnType<typeof absorbPf> | null>(null);
   const [open, setOpen] = useState(false);
   const [choice,setChoice]=useState<'Partilhar'|'Manter'>('Manter');
@@ -266,9 +267,17 @@ export function AbsorbPfAction({ character, update, addRoll }: { character: Char
   const [dt,setDt]=useState(10);
   const [outcome,setOutcome]=useState('');
   const state=sheetState(character);
+  const [busy,setBusy]=useState(false);
+  /** Alvos elegíveis: mesma mesa (tablemates) e mais de 2 de Sincronia, identificados pelo começo do nome. */
+  const eligible=tablemates.filter(t=>t.id!==character.id&&syncLevelWith(character,t)>=SHARE_MIN_SYNC);
+  const chosen=eligible.find(t=>t.id===target)??eligible[0]??null;
+  const shareBlock=(state.standard?pfShareBlock(character,null,true):null)
+    ??(!tablemates.length?'Nenhum outro personagem na sua mesa.'
+    :!eligible.length?'Ninguém da mesa tem mais de 2 de Sincronia com você. Registre a Sincronia pelo começo do nome do personagem (ex.: "Ego").'
+    :pfShareBlock(character,chosen,true));
   return <>
     <Button variant="outline" onClick={() => {
-      const r = absorbPf(character.espirito); setRes(r); setOpen(true);
+      const r = absorbPf(character.espirito); setRes(r); setOpen(true); setOutcome('');
        const capacity=character.espirito*20;
        update({ pf_current: Math.min(capacity, character.pf_current + r.total), abilities: withSheetState(character,{excess:Math.max(0,character.pf_current+r.total-capacity),rounds:0}) });
       addRoll({ expression: `${r.count}d20 (soma ${r.sum}, maior ${r.highest}) + ${r.espirito}`, dice: r.dice, modifier: r.espirito, total: r.total, source: `${absorbActionLabel(character.lineage)}${r.crit ? ' — CRÍTICO' : ''}`, crit: r.crit });
@@ -281,6 +290,7 @@ export function AbsorbPfAction({ character, update, addRoll }: { character: Char
       <p className="text-sm mt-3">PF dos dados: <strong>{res.diceTotal}</strong> + Espírito: <strong>{res.espirito}</strong> = <strong>{res.total} PF absorvidos</strong>{res.crit ? ' · houve crítico (20)' : ''}</p>
        <p className="muted-copy text-xs mt-1">PF atual limitado a {character.espirito*20} (Espírito × 20). Excedente: {state.excess} PF.</p>
     </div>}
-    {state.excess>0&&<div className="game-panel flux-result col-span-full"><strong>{state.excess} PF excedentes {state.rounds>0?`· ${state.rounds} rodadas restantes`:''}</strong><div className="field-stack mt-3"><Field label="DESTINO"><select value={choice} onChange={e=>setChoice(e.target.value as 'Partilhar'|'Manter')}><option>Manter</option><option>Partilhar</option></select></Field>{choice==='Partilhar'?<><Field label="ALVO COM SINCRONIA 2+"><select value={target} onChange={e=>setTarget(e.target.value)}><option value="">Escolher alvo</option>{character.sync.filter(s=>s.level>=2).map(s=><option key={s.name} value={s.name}>{s.name}</option>)}</select></Field><Button disabled={!target} onClick={()=>{setOutcome(`Ande até ${target} e gaste uma ação padrão: transfira ${state.excess} PF (limite do alvo conferido pelo Mestre).`);update({abilities:withSheetState(character,{excess:0,rounds:0})})}}>Partilhar PF</Button></>:<><Button onClick={()=>{const rounds=rollDice(1,4)[0]??1;update({abilities:withSheetState(character,{rounds})});setOutcome(`${rounds} rodadas para usar ou desperdiçar os PF excedentes.`)}}><Dices/> Rolar 1d4 rodadas</Button><Button disabled={!state.rounds} onClick={()=>{setOutcome(`Expele ${state.excess} PF. Ação padrão: efeito positivo ou negativo a critério do Mestre.`);update({abilities:withSheetState(character,{excess:0,rounds:0})})}}>Expelir Fluxo</Button><Stepper label="DT DO MESTRE" value={dt} min={1} max={40} onChange={setDt}/><Button disabled={!state.rounds||!character.nomenclatures.length} onClick={()=>{const dice=rollDice(1,dieFor(character.espirito)??4);const success=(dice[0]??0)>=dt;setOutcome(`Teste de Espírito ${dice[0]} vs DT ${dt}: ${success?'PF somados à Nomenclatura':'falha; PF gastos sem efeito'}.`);update({abilities:withSheetState(character,{excess:0,rounds:0})})}}>Somar à Nomenclatura</Button></>}</div>{outcome&&<p role="status">{outcome}</p>}</div>}
+    {state.excess>0&&<div className="game-panel flux-result col-span-full"><strong>{state.excess} PF excedentes {state.rounds>0?`· ${state.rounds} rodadas restantes`:''}</strong><div className="flex items-center gap-2 flex-wrap mt-2"><span className="field-kicker">AÇÃO PADRÃO: {state.standard?'GASTA':'DISPONÍVEL'}</span>{state.standard&&<Button size="sm" variant="ghost" onClick={()=>update({abilities:withSheetState(character,{standard:false})})}>Renovar Ação Padrão</Button>}</div><div className="field-stack mt-3"><Field label="DESTINO"><select value={choice} onChange={e=>setChoice(e.target.value as 'Partilhar'|'Manter')}><option>Manter</option><option>Partilhar</option></select></Field>{choice==='Partilhar'?<><Field label="ALVO (SINCRONIA ACIMA DE 2, MESMA MESA)"><select value={chosen?.id??''} onChange={e=>setTarget(e.target.value)} disabled={!eligible.length}>{!eligible.length&&<option value="">Nenhum alvo elegível</option>}{eligible.map(t=><option key={t.id} value={t.id}>{t.name} · Sincronia {syncLevelWith(character,t)}</option>)}</select></Field>{shareBlock&&<p className="empty-copy">{shareBlock}</p>}<Button disabled={!!shareBlock||busy||!chosen||!onShare} onClick={async()=>{if(!chosen||!onShare||busy)return;setBusy(true);const r=await onShare(chosen.id);setBusy(false);setOutcome(r.error??`Você transferiu ${r.amount} PF para ${chosen.name}. A Ação Padrão foi gasta.`)}}>{busy?'Transferindo...':'Partilhar PF (Ação Padrão)'}</Button></>:<><Button onClick={()=>{const rounds=rollDice(1,4)[0]??1;update({abilities:withSheetState(character,{rounds})});setOutcome(`${rounds} rodadas para usar ou desperdiçar os PF excedentes.`)}}><Dices/> Rolar 1d4 rodadas</Button><Button disabled={!state.rounds} onClick={()=>{setOutcome(`Expele ${state.excess} PF. Ação padrão: efeito positivo ou negativo a critério do Mestre.`);update({abilities:withSheetState(character,{excess:0,rounds:0})})}}>Expelir Fluxo</Button><Stepper label="DT DO MESTRE" value={dt} min={1} max={40} onChange={setDt}/><Button disabled={!state.rounds||!character.nomenclatures.length} onClick={()=>{const dice=rollDice(1,dieFor(character.espirito)??4);const success=(dice[0]??0)>=dt;setOutcome(`Teste de Espírito ${dice[0]} vs DT ${dt}: ${success?'PF somados à Nomenclatura':'falha; PF gastos sem efeito'}.`);update({abilities:withSheetState(character,{excess:0,rounds:0})})}}>Somar à Nomenclatura</Button></>}</div></div>}
+    {outcome&&<p role="status" className="auth-message col-span-full">{outcome}</p>}
   </>;
 }

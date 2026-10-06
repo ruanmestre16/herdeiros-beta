@@ -38,12 +38,14 @@ function optionsFor(c: Combatant): AttackOption[] {
   return opts;
 }
 
-export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, updateSheet, addRoll, setPcInitiative }: {
+export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, updateSheet, addRoll, setPcInitiative, resetStandard }: {
   campaign: Campaign; party: Character[]; npcs: Npc[];
   saveCampaign: (c: Campaign) => void; saveNpc: (n: Npc) => void;
   updateSheet: (id: string, pv: number | null, pf: number | null, clearInitiative?: boolean) => void;
   addRoll: (r: RollEntry) => void;
   setPcInitiative?: (id: string, total: number) => void;
+  /** Devolve a Ação Padrão de um personagem (usado quando o turno dele começa). */
+  resetStandard?: (c: Character) => void;
 }) {
   const combatants = useMemo(() => toCombatants(party, npcs), [party, npcs]);
   const current = campaign.combat_active && combatants.length ? combatants[campaign.turn_index % combatants.length] : undefined;
@@ -177,8 +179,8 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
           <Button variant="outline" size="sm" title="Rolar iniciativa" aria-label={`Rolar iniciativa de ${c.name}`} onClick={() => c.npc ? rollNpcInitiative(c.npc) : rollPcInitiative(c)}><Dices /> Iniciativa</Button>          <span className="sr-only">{i}</span>
         </div>)}{!combatants.length && <p className="empty-copy">Os jogadores entram pela Mesa escolhendo sua ficha. Adicione NPCs para o combate.</p>}</div>
         <div className="combat-controls">
-          <Button disabled={!combatants.length} onClick={() => saveCampaign({ ...campaign, combat_active: !campaign.combat_active, round: 1, turn_index: 0, log: [`${campaign.combat_active ? 'Combate encerrado' : 'Combate iniciado'} — ${new Date().toLocaleTimeString('pt-BR')}`, ...campaign.log] })}>{campaign.combat_active ? 'Encerrar combate' : 'Iniciar combate'}</Button>
-           <Button variant="outline" disabled={!campaign.combat_active} onClick={() => { const next = campaign.turn_index + 1; const nextFighter=combatants[next % Math.max(1,combatants.length)]; if(nextFighter){setReactions(prev=>({...prev,[nextFighter.id]:0}));setLostAction(prev=>({...prev,[nextFighter.id]:false}));} setAttackerId(''); setPending(null); saveCampaign({ ...campaign, turn_index: next % Math.max(1, combatants.length), round: next >= combatants.length ? campaign.round + 1 : campaign.round, log: [`Turno de ${nextFighter?.name ?? '—'}${nextFighter&&lostAction[nextFighter.id]?' (ação padrão e movimento sacrificados)':''}`, ...campaign.log] }); }}>Próximo turno <ArrowRight /></Button>
+          <Button disabled={!combatants.length} onClick={() => { combatants.forEach(c => { if (c.pc) resetStandard?.(c.pc); }); saveCampaign({ ...campaign, combat_active: !campaign.combat_active, round: 1, turn_index: 0, log: [`${campaign.combat_active ? 'Combate encerrado' : 'Combate iniciado'} — ${new Date().toLocaleTimeString('pt-BR')}`, ...campaign.log] }); }}>{campaign.combat_active ? 'Encerrar combate' : 'Iniciar combate'}</Button>
+           <Button variant="outline" disabled={!campaign.combat_active} onClick={() => { const next = campaign.turn_index + 1; const nextFighter=combatants[next % Math.max(1,combatants.length)]; if(nextFighter){setReactions(prev=>({...prev,[nextFighter.id]:0}));setLostAction(prev=>({...prev,[nextFighter.id]:false}));if(nextFighter.pc)resetStandard?.(nextFighter.pc);} setAttackerId(''); setPending(null); saveCampaign({ ...campaign, turn_index: next % Math.max(1, combatants.length), round: next >= combatants.length ? campaign.round + 1 : campaign.round, log: [`Turno de ${nextFighter?.name ?? '—'}${nextFighter&&lostAction[nextFighter.id]?' (ação padrão e movimento sacrificados)':''}`, ...campaign.log] }); }}>Próximo turno <ArrowRight /></Button>
           <Button variant="ghost" title="Limpar iniciativas para uma nova rolagem" onClick={() => { combatants.forEach(c => c.npc ? saveNpc({ ...c.npc, initiative: null }) : updateSheet(c.id, null, null, true)); }}><RotateCcw /> Limpar iniciativas</Button>
         </div>
       </section>

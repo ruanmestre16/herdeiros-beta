@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { makeCampaign, makeCharacter, makeNpc, normalizeCharacter, type Campaign, type Character, type Npc } from '@/lib/game';
+import { applyPfShare, makeCampaign, makeCharacter, makeNpc, normalizeCharacter, pfShareBlock, type Campaign, type Character, type Npc } from '@/lib/game';
 
 // Changes to this hook's state layout require a fresh page, not preserved hook slots.
 if (import.meta.hot) import.meta.hot.accept(() => window.location.reload());
@@ -170,5 +170,26 @@ export function useGameData() {
     const { error: err } = await supabase.rpc('master_update_sheet', { p_sheet: id, p_pv: pv as number, p_pf: pf as number, p_clear_initiative: clearInitiative });
     if (err) setError(err.message);
   }
-  return { memberProfiles, joinInvite, kickMember, updateSheetResources, userId, ready, characters, partyCharacters, campaigns, npcs, memberships, profileName, error, saveProfile, setRoomPassword, joinRoom, selectMemberCharacter, leaveRoom, saveCharacter, addCharacter, deleteCharacter, saveCampaign, addCampaign, saveNpc, addNpc, deleteNpc };
+  /** Partilhar PF excedentes: transfere de verdade para a ficha do alvo e gasta a Ação Padrão de quem partilha. */
+  async function sharePf(fromId: string, toId: string): Promise<{ error: string | null; amount: number }> {
+    const pool = [...charactersRef.current, ...partyRef.current];
+    const stored = pool.find(c => c.id === fromId); const to = pool.find(c => c.id === toId);
+    if (!stored || !to) return { error: 'Ficha não encontrada.', amount: 0 };
+    const from = sheetDrafts.current.get(fromId) ?? stored;
+    if (!userId) {
+      // Demonstração: todas as fichas locais contam como a mesma mesa.
+      const block = pfShareBlock(from, to, true); if (block) return { error: block, amount: 0 };
+      const r = applyPfShare(from, to);
+      setCharacters(prev => prev.map(c => c.id === from.id ? r.from : c.id === to.id ? r.to : c));
+      return { error: null, amount: r.amount };
+    }
+    // Garante que edições pendentes das duas fichas já estão no banco antes da transferência.
+    await Promise.all([fromId, toId].filter(id => sheetDrafts.current.has(id)).map(id => flushSheet(id)));
+    const { data: moved, error: err } = await supabase.rpc('share_excess_pf', { p_from: fromId, p_to: toId });
+    if (err) return { error: err.message, amount: 0 };
+    recentSheets.current.delete(fromId); recentSheets.current.delete(toId);
+    await load(userId);
+    return { error: null, amount: Number(moved) || 0 };
+  }
+  return { sharePf, memberProfiles, joinInvite, kickMember, updateSheetResources, userId, ready, characters, partyCharacters, campaigns, npcs, memberships, profileName, error, saveProfile, setRoomPassword, joinRoom, selectMemberCharacter, leaveRoom, saveCharacter, addCharacter, deleteCharacter, saveCampaign, addCampaign, saveNpc, addNpc, deleteNpc };
 }
