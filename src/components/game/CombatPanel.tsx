@@ -133,12 +133,18 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     if (!reaction) return;
     const attrValue = attacker[option.hitAttr];
     const r = attackRoll(attrValue, target.esquiva);
-    const defense = reaction==='fluxo' ? Math.max(...rollDice(Math.max(1,target.espirito),20)) : target.esquiva;
+    // Bloqueio de Fluxo = 1d20 puro + Espírito do defensor (sem outros modificadores). Demais reações seguem como antes.
+    const fluxDie = reaction==='fluxo' ? rollDice(1,20)[0]! : null;
+    const defense = fluxDie!==null ? fluxDie + target.espirito : target.esquiva;
+    // Crítico = 20 natural com total acima da defesa efetiva (no Bloqueio de Fluxo, a defesa é o resultado do próprio Bloqueio).
+    const crit = fluxDie!==null ? (r.d20===20 && r.total>defense) : r.crit;
+    const defenseText = fluxDie!==null ? `Bloqueio de Fluxo (d20 [${fluxDie}] + ${attrLabelFor('espirito', target.pc?.lineage)} ${target.espirito} = ${defense})` : `${reaction} (defesa ${defense})`;
     const hit = reaction==='bloquear' || reaction==='parcial' || reaction==='contra-atacar' || r.total>=defense;
     if (option.pfCost) setResources(attacker, null, attacker.pf - option.pfCost);
-    setPending({ attackerId: attacker.id, targetId: target.id, option, dice, d20: r.d20, attrValue, total: r.total, esquiva: target.esquiva, hit, crit: r.crit, reaction, defense });
-    addRoll({ expression: `1d20 + ${attrValue}`, dice: [r.d20], modifier: attrValue, total: r.total, source: `${attacker.name} → ${target.name}${r.crit ? ' — CRÍTICO' : ''}`, crit: r.crit });
-    log([`${attacker.name} ataca ${target.name} (${option.label}${option.pfCost ? `, −${option.pfCost} PF` : ''}): d20 [${r.d20}] + ${attrLabelFor(option.hitAttr, lineage)} ${attrValue} = ${r.total}; reação: ${reaction} (defesa ${defense}) → ${hit ? (r.crit ? 'CRÍTICO! ATAQUE ACERTOU' : 'ATAQUE ACERTOU') : 'ALVO ESQUIVOU'}`]);
+    setPending({ attackerId: attacker.id, targetId: target.id, option, dice, d20: r.d20, attrValue, total: r.total, esquiva: target.esquiva, hit, crit, reaction, defense });
+    addRoll({ expression: `1d20 + ${attrValue}`, dice: [r.d20], modifier: attrValue, total: r.total, source: `${attacker.name} → ${target.name}${crit ? ' — CRÍTICO' : ''}`, crit });
+    if (fluxDie!==null) addRoll({ expression: `1d20 + ${target.espirito}`, dice: [fluxDie], modifier: target.espirito, total: defense, source: `Bloqueio de Fluxo: ${target.name}` });
+    log([`${attacker.name} ataca ${target.name} (${option.label}${option.pfCost ? `, −${option.pfCost} PF` : ''}): d20 [${r.d20}] + ${attrLabelFor(option.hitAttr, lineage)} ${attrValue} = ${r.total}; reação: ${defenseText} → ${hit ? (crit ? 'CRÍTICO! ATAQUE ACERTOU' : 'ATAQUE ACERTOU') : 'ALVO ESQUIVOU'}`]);
   }
 
   function rollDamage() {
@@ -192,7 +198,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
             <label className="field"><span className="field-label">ALVO</span><select value={target.id} onChange={e => { setTargetId(e.target.value); setPending(null); setArea(null); }}>{targets.map(c => <option key={c.id} value={c.id}>{c.name} (Esq {c.esquiva})</option>)}</select></label>
           </div>
           <label className="field"><span className="field-label">MODO DE ATAQUE</span><select value={mode} onChange={e => { setMode(e.target.value as 'single' | 'full' | 'half'); setPending(null); setArea(null); }}><option value="single">Um alvo</option><option value="full">Todos os inimigos · dano total</option><option value="half">Todos os inimigos · metade do dano</option></select></label>
-           {mode==='single'&&<label className="field"><span className="field-label">REAÇÃO DE {target.name.toUpperCase()} {reactionAvailable(target)?'':'· USADA NESTA RODADA'}</span><select value={chosenReaction} onChange={e=>{setChosenReaction(e.target.value as Reaction);setPending(null)}} disabled={!reactionAvailable(target)}><option value="esquivar">Esquivar · Esquiva {target.esquiva}</option><option value="bloquear">Bloquear · reduz {target.bloqueio} do dano</option><option value="contra-atacar">Contra-atacar · disputa de dano</option>{option?.nomenclature&&<><option value="parcial">Bloqueio Parcial · dado de Espírito + Bloqueio</option><option value="fluxo" disabled={!!fluxUsed[target.id]}>Bloqueio de Fluxo · maior d20 de Espírito</option></>}</select></label>}
+           {mode==='single'&&<label className="field"><span className="field-label">REAÇÃO DE {target.name.toUpperCase()} {reactionAvailable(target)?'':'· USADA NESTA RODADA'}</span><select value={chosenReaction} onChange={e=>{setChosenReaction(e.target.value as Reaction);setPending(null)}} disabled={!reactionAvailable(target)}><option value="esquivar">Esquivar · Esquiva {target.esquiva}</option><option value="bloquear">Bloquear · reduz {target.bloqueio} do dano</option><option value="contra-atacar">Contra-atacar · disputa de dano</option>{option?.nomenclature&&<><option value="parcial">Bloqueio Parcial · dado de Espírito + Bloqueio</option><option value="fluxo" disabled={!!fluxUsed[target.id]}>Bloqueio de Fluxo · 1d20 + {attrLabelFor('espirito', target.pc?.lineage)} {target.espirito}</option></>}</select></label>}
           <div className="grid grid-cols-1 gap-5 border-t border-border pt-4 sm:grid-cols-2">
             <div className="min-w-0"><h4 className="field-kicker mb-3">ARMAS</h4>
               <label className="field"><span className="field-label">ARMA</span><select aria-label="Arma de ataque" value={option && !option.nomenclature ? option.id : ''} onChange={e => selectOption(e.target.value)}><option value="" disabled>Selecionar arma</option>{weapons.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select></label>
@@ -216,7 +222,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
           </> : <>
           {pending && <div className={`combat-banner ${pending.crit ? 'banner-crit' : pending.hit ? 'banner-hit' : 'banner-miss'}`}>
             <strong>{pending.crit ? 'CRÍTICO! ATAQUE ACERTOU' : pending.hit ? 'ATAQUE ACERTOU' : 'ALVO ESQUIVOU'}</strong>
-            <span>d20 [{pending.d20}] + {attrLabelFor(pending.option.hitAttr, combatants.find(c => c.id === pending.attackerId)?.pc?.lineage)} {pending.attrValue} = {pending.total} vs Esquiva {pending.esquiva}</span>
+            <span>d20 [{pending.d20}] + {attrLabelFor(pending.option.hitAttr, combatants.find(c => c.id === pending.attackerId)?.pc?.lineage)} {pending.attrValue} = {pending.total} vs {pending.reaction === 'fluxo' ? `Bloqueio de Fluxo ${pending.defense}` : `Esquiva ${pending.esquiva}`}</span>
              {pending.damage && <span><Shield size={12} className="inline" /> Dano {pending.damage.raw} ({pending.damage.dice.join(' + ')}{pending.damage.bonus ? ` + ${pending.damage.bonus}` : ''}) − Bloqueio {pending.damage.block} = <strong>{pending.damage.final}</strong>{pending.counterDamage!==undefined&&pending.reaction==='contra-atacar'?` · disputa: ${pending.counterDamage}`:''}</span>}
           </div>}
           </>}
