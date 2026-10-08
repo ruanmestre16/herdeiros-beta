@@ -9,7 +9,8 @@ import { lovable } from '@/integrations/lovable/index';
 import scene from '@/assets/flux-scene.jpg';
 import { KarmaTest, hasAnchor, ANCHOR_NAME, SyncEditor, GakiPassive, WeaponPanel, AbsorbPfAction, AgonyPanel, NomenclaturesTab, AbilitiesTab, type RollEntry } from './SheetExtras';
 import { CombatPanel } from './CombatPanel';
-import { NewNpcDialog, threatTier, type MonsterSheet } from './NewNpcDialog';
+import { NewNpcDialog, type MonsterSheet } from './NewNpcDialog';
+import { NpcFullSheet } from './NpcFullSheet';
 import { LineagesPage } from './LineagesPage';
 import { WEAPONS } from '@/lib/game';
 
@@ -112,7 +113,6 @@ export function GameApp() {
 }
 const SHEET_MARK = '\n\n<<<FICHA>>>\n';
 const NPC_MIRROR = ['name','corpo','mente','espirito','pv_current','pv_max','pf_current','pf_max'] as const;
-type NpcTab = 'Nomenclaturas' | 'Habilidades' | 'Arma' | 'Passiva';
 
 /** Separa o texto das Observações da ficha completa guardada junto. */
 function splitNpcNotes(notes: string): { text: string; sheet: Character | null } {
@@ -135,7 +135,6 @@ function npcSheet(npc: Npc): Character | null {
 
 function NpcEditor({npc,update,remove,throwDice,addRoll,importSheet,defaultOpen=false}:{defaultOpen?:boolean;npc:Npc;update:(partial:Partial<Npc>)=>void;remove:()=>void;throwDice:(s:string,source?:string)=>unknown;addRoll:(entry:RollEntry)=>void;importSheet:()=>void}) {
   const [open,setOpen]=useState(defaultOpen);
-  const [tab,setTab]=useState<NpcTab>('Nomenclaturas');
   const { text } = splitNpcNotes(npc.notes);
   const sheet = npcSheet(npc);
   const updateSheet=(partial:Partial<Character>)=>{
@@ -143,6 +142,7 @@ function NpcEditor({npc,update,remove,throwDice,addRoll,importSheet,defaultOpen=
     const next={...sheet,...partial};
     const mirror:Record<string,unknown>={};
     for(const k of NPC_MIRROR) if(k in partial) mirror[k]=(partial as Record<string,unknown>)[k];
+    if('corpo' in partial){const d=derived(next.corpo);mirror['esquiva']=d.esquiva;mirror['bloqueio']=d.bloqueio;}
     update({ ...(mirror as Partial<Npc>), notes: joinNpcNotes(text, next) });
   };
   return <Panel title={npc.name} action={<div className="flex gap-2"><Button size="sm" variant="outline" onClick={()=>update({hidden:!npc.hidden})} title={npc.hidden?'Mostrar aos jogadores':'Ocultar dos jogadores'}>{npc.hidden?<EyeOff/>:<Eye/>}<span className="hide-mobile">{npc.hidden?'Oculto':'Visível'}</span></Button><Button size="icon" variant="ghost" onClick={remove} title="Excluir NPC" aria-label="Excluir NPC"><Trash2/></Button></div>}>
@@ -156,18 +156,7 @@ function NpcEditor({npc,update,remove,throwDice,addRoll,importSheet,defaultOpen=
         ? <Button size="sm" variant="outline" onClick={()=>{const first=normalizeCharacter({id:npc.id,name:npc.name,corpo:npc.corpo,mente:npc.mente,espirito:npc.espirito,pv_current:npc.pv_current,pv_max:npc.pv_max,pf_current:npc.pf_current,pf_max:npc.pf_max,lineage:'Gaki',stage:LINEAGE_STAGES['Gaki']?.[0]?.name??''});update({notes:joinNpcNotes(text,first)});setOpen(true)}}><Sparkles/> Ativar ficha completa</Button>
         : <><Button size="sm" variant="outline" onClick={()=>setOpen(!open)}><Sparkles/> {open?'Fechar ficha completa':'Abrir ficha completa'}</Button><Button size="sm" variant="outline" onClick={importSheet}><Plus/> Exportar para ficha de jogador</Button></>}
     </div>
-    {sheet&&open&&<div className="field-stack mt-4">
-      <div className="input-grid">
-        <label className="field"><span className="field-label">LINHAGEM</span><select value={sheet.lineage} onChange={e=>updateSheet({lineage:e.target.value,stage:LINEAGE_STAGES[e.target.value]?.[0]?.name??''})}>{['Humano','Arcadiano','Gaki','Agente Tecnológico'].map(x=><option key={x}>{x}</option>)}</select></label>
-        <label className="field"><span className="field-label">ESTÁGIO</span><select value={(LINEAGE_STAGES[sheet.lineage]??[])[stageIndexFor(sheet.lineage,sheet.stage)]?.name??''} onChange={e=>updateSheet({stage:e.target.value})}>{(LINEAGE_STAGES[sheet.lineage]??[]).map((s,i)=><option key={s.name} value={s.name}>{i+1}. {s.name}</option>)}</select></label>
-      </div>
-      {(sheet as MonsterSheet).gaki?<div className="karma-alert karma-gaki"><strong>GAKI · {(sheet as MonsterSheet).gaki!.style.toUpperCase()}</strong><span>Ameaça {(sheet as MonsterSheet).gaki!.threat} ({threatTier((sheet as MonsterSheet).gaki!.threat)}) · Karma ∞</span></div>:<Stepper label={resourceBarLabel(sheet.lineage)} value={sheet.karma} max={karmaMaximum(sheet.mente,sheet.espirito)} tone={isTechAgent(sheet.lineage)?'nucleo':'karma'} onChange={karma=>updateSheet({karma})}/>}
-      <TabBar tabs={['Nomenclaturas','Habilidades','Arma','Passiva'] as const} active={tab} onSelect={setTab} labels={{ Nomenclaturas: nomenclatureLabel(sheet.lineage, true) }}/>
-      {tab==='Nomenclaturas'&&<NomenclaturesTab character={sheet} update={updateSheet} addRoll={addRoll}/>}
-      {tab==='Habilidades'&&<AbilitiesTab character={sheet} update={updateSheet}/>}
-      {tab==='Arma'&&<WeaponPanel character={sheet} update={updateSheet} addRoll={addRoll}/>}
-      {tab==='Passiva'&&<>{(()=>{const st=(LINEAGE_STAGES[sheet.lineage]??[])[stageIndexFor(sheet.lineage,sheet.stage)];return st?<div className="passive"><span className="field-kicker">PASSIVA DE LINHAGEM · {st.name.toUpperCase()}</span><strong>{st.passive}</strong><p>{st.desc}</p></div>:null})()}{sheet.lineage==='Gaki'&&<GakiPassive character={sheet} update={updateSheet} addRoll={addRoll}/>}</>}
-    </div>}
+    {sheet&&open&&<NpcFullSheet character={sheet} update={updateSheet} addRoll={addRoll} setInitiative={n=>update({initiative:n})}/>}
   </Panel>;
 }
 function DiceRoller({rolls,throwDice,clear}:{rolls:{id:string;expression:string;dice:number[];modifier:number;total:number;source?:string|undefined}[];throwDice:(expression:string,source?:string)=>unknown;clear:()=>void}) { const [quantity,setQuantity]=useState(1);const [expression,setExpression]=useState('1d20');const [invalid,setInvalid]=useState(false); const submit=()=>{if(!throwDice(expression)){setInvalid(true)}else setInvalid(false)}; return <div className="dice-layout"><div className="stack"><Panel title="Dados rápidos"><label className="field"><span className="field-label">QUANTIDADE</span><input className="quantity-input" type="number" value={quantity} min={1} max={30} onChange={e=>setQuantity(Math.max(1,Math.min(30,Number(e.target.value)||1)))}/></label><div className="dice-grid">{[4,6,8,10,12,20].map(sides=><Button key={sides} variant="outline" className="die-button" onClick={()=>{setExpression(`${quantity}d${sides}`);throwDice(`${quantity}d${sides}`)}}><Dices/><strong>d{sides}</strong></Button>)}</div></Panel><Panel title="Expressão livre"><div className="event-composer"><input value={expression} onChange={e=>{setExpression(e.target.value);setInvalid(false)}} onKeyDown={e=>e.key==='Enter'&&submit()} aria-label="Expressão de dados" placeholder="2d20+3"/><Button onClick={submit}><Dices/> Rolar</Button></div>{invalid&&<p className="form-error">Use uma expressão como 2d20+3 (até 30 dados).</p>}</Panel></div><Panel title="Histórico" action={<Button size="sm" variant="ghost" onClick={clear} disabled={!rolls.length}><Trash2/> Limpar</Button>}>{rolls.length?rolls.map((r)=><div className="roll-row" key={r.id}><div><span className="field-kicker">{r.source||r.expression}</span><p>{r.expression} <span>·</span> [{r.dice.join(', ')}]{r.modifier?` ${r.modifier>0?'+':''}${r.modifier}`:''}</p></div><strong>{r.total}</strong></div>):<div className="empty-roll"><Dices size={28}/><p>Nenhuma rolagem ainda.</p></div>}</Panel></div>; }

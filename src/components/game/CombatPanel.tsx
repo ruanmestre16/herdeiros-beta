@@ -1,11 +1,12 @@
 import { useMemo, useState } from 'react';
-import { ArrowRight, Crosshair, Dices, RotateCcw, Shield, Skull, Swords, Users } from 'lucide-react';
+import { ArrowRight, Crosshair, Dices, RotateCcw, Shield, Skull, Sparkles, Swords, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   ATTR_LABEL, WEAPONS, attackRoll, cappedNomenclatureDice, cappedWeaponDice, damageRoll, derived, dieFor, rollDice, initiativeRoll, nomenclatureLabel, nomenclatureLevelLabel, attrLabelFor,
-  karmaDamageBonus, weaponAttrFor, weaponByKey, isHuman, agonyStatus, agonyLabel, type Attr, type Campaign, type Character, type Npc,
+  karmaDamageBonus, weaponAttrFor, weaponByKey, isHuman, agonyStatus, agonyLabel, karmaMaximum, forceActionLabel, isTechAgent, type Attr, type Campaign, type Character, type Npc,
 } from '@/lib/game';
-import type { RollEntry } from './SheetExtras';
+import { AbsorbPfAction, type RollEntry } from './SheetExtras';
+import { npcSheet, isMonster, applyNpcSheetPatch } from './npcSheet';
 
 type Combatant = {
   id: string; kind: 'pc' | 'npc'; name: string; pv: number; pvMax: number; pf: number; pfMax: number;
@@ -177,7 +178,16 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     addRoll({ expression: `${n.corpo}d20 (maior) + ${n.corpo}`, dice: r.dice, modifier: n.corpo, total: r.total, source: `Iniciativa: ${n.name}` });
   }
 
-    function rollPcInitiative(c: Combatant) {
+    /** Forçar o Fluxo de um NPC/inimigo com ficha completa (mesma regra da ficha de jogador). */
+  function npcForceFlux(n: Npc) {
+    const sheet = npcSheet(n); if (!sheet) return;
+    const dice = rollDice(Math.max(1, sheet.espirito), 20); const total = dice.reduce((a, b) => a + b, 0); const gained = Math.floor(total / 2);
+    const patch: Partial<Character> = { pf_current: Math.min(sheet.pf_max, sheet.pf_current + gained) };
+    if (!isMonster(sheet)) patch.karma = Math.min(karmaMaximum(sheet.mente, sheet.espirito), sheet.karma + Math.ceil(gained / 2));
+    saveNpc(applyNpcSheetPatch(n, patch));
+    addRoll({ expression: `${dice.length}d20`, dice, modifier: 0, total, source: `${forceActionLabel(sheet.lineage)}: ${n.name} (+${gained} PF)` });
+  }
+  function rollPcInitiative(c: Combatant) {
     const r = initiativeRoll(c.corpo);
     setPcInitiative?.(c.id, r.total);
     addRoll({ expression: `${c.corpo}d20 (maior) + ${c.corpo}`, dice: r.dice, modifier: c.corpo, total: r.total, source: `Iniciativa: ${c.name}` });
@@ -190,6 +200,10 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
           <span className="combatant-icon">{c.kind === 'npc' ? <Skull /> : <Users />}</span>
           <span className="flex-1"><strong>{c.name}</strong><small>{c.pv} / {c.pvMax} PV · <span className="text-flux">{c.pf} / {c.pfMax} PF</span> · Esq {c.esquiva} · RD {c.bloqueio}{c.pc ? agonyLabel(c.pc) : (c.pv === 0 ? ' · AGONIA' : '')}</small></span>
           <Button variant="outline" size="sm" title="Rolar iniciativa" aria-label={`Rolar iniciativa de ${c.name}`} onClick={() => c.npc ? rollNpcInitiative(c.npc) : rollPcInitiative(c)}><Dices /> Iniciativa</Button>
+          {(() => { const ns = c.npc ? npcSheet(c.npc) : null; if (!c.npc || !ns) return null; const npc = c.npc; return <>
+            <Button variant="outline" size="sm" className={isTechAgent(ns.lineage) ? 'action-force-nucleo' : 'action-force-karma'} title="Forçar o Fluxo" aria-label={`Forçar o Fluxo de ${c.name}`} onClick={() => npcForceFlux(npc)}><Sparkles /> {forceActionLabel(ns.lineage)}</Button>
+            <AbsorbPfAction character={ns} update={p => saveNpc(applyNpcSheetPatch(npc, p))} addRoll={addRoll} />
+          </>; })()}
           {c.pc && enterAgony && !agonyStatus(c.pc).active && !agonyStatus(c.pc).dead && <Button variant="outline" size="sm" className="action-agony" title="Entrar em Agonia" aria-label={`Entrar em Agonia: ${c.name}`} onClick={() => enterAgony(c.pc!)}><Skull /> Agonia</Button>}
           <span className="sr-only">{i}</span>
         </div>)}{!combatants.length && <p className="empty-copy">Os jogadores entram pela Mesa escolhendo sua ficha. Adicione NPCs para o combate.</p>}</div>
