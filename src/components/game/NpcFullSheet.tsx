@@ -23,9 +23,9 @@ export function NpcFullSheet({ character, update, addRoll, setInitiative }: { ch
   const gaki = (character as MonsterSheet).gaki;
   const kMax = karmaMaximum(character.mente, character.espirito);
   const stage = karmaStage(character.karma, kMax);
-  const test = (attr: 'corpo' | 'mente' | 'espirito') => { const die = dieFor(character[attr]); const v = rollDice(1, die)[0]!; addRoll({ expression: `1d${die}`, dice: [v], modifier: 0, total: v, source: `Teste de ${attrLabelFor(attr, character.lineage)}: ${character.name}` }); };
+  const test = (attr: 'corpo' | 'mente' | 'espirito') => { const die = dieFor(character[attr]); if (die === undefined) return; const v = rollDice(1, die)[0]; if (v === undefined) return; addRoll({ expression: `1d${die}`, dice: [v], modifier: 0, total: v, source: `Teste de ${attrLabelFor(attr, character.lineage)}: ${character.name}` }); };
   const karmaBox = monster
-    ? <div className="karma-alert karma-gaki"><strong>GAKI · {gaki!.style.toUpperCase()}</strong><span>Ameaça {gaki!.threat} ({threatTier(gaki!.threat)}) · Karma ∞</span></div>
+    ? <div className="karma-alert karma-gaki"><strong>GAKI · {gaki?.style.toUpperCase()}</strong><span>Ameaça {gaki?.threat} ({gaki ? threatTier(gaki.threat) : ''}) · Karma ∞</span></div>
     : <div className={`karma-alert karma-${stage}${isTechAgent(character.lineage) ? ` nucleo-${stage}` : ''}`}><strong>{resourceStageLabel(character.lineage, stage)}</strong><span>{Math.round(character.karma / kMax * 100)}% · limite {kMax}</span></div>;
 
   return <div className="field-stack mt-4">
@@ -64,7 +64,7 @@ export function NpcFullSheet({ character, update, addRoll, setInitiative }: { ch
         <Stepper label="EXAUSTÃO" value={character.exhaustion} max={6} onChange={exhaustion => update({ exhaustion })} />
       </div>{karmaBox}</Panel>
       <Panel title="Ações rápidas"><div className="quick-actions">
-        <Button variant="outline" onClick={() => { const d = rollDice(1, 20)[0]!; addRoll({ expression: '1d20', dice: [d], modifier: 0, total: d, source: `Ataque de ${character.name}` }); }}><Swords /> Ataque d20</Button>
+        <Button variant="outline" onClick={() => { const d = rollDice(1, 20)[0]; if (d === undefined) return; addRoll({ expression: '1d20', dice: [d], modifier: 0, total: d, source: `Ataque de ${character.name}` }); }}><Swords /> Ataque d20</Button>
         <Button variant="outline" onClick={() => { const r = initiativeRoll(character.corpo); setInitiative(r.total); addRoll({ expression: `${character.corpo}d20 (maior) + ${character.corpo}`, dice: r.dice, modifier: character.corpo, total: r.total, source: `Iniciativa: ${character.name}` }); }}><Activity /> Iniciativa</Button>
         <Button variant="outline" className={isTechAgent(character.lineage) ? 'action-force-nucleo' : 'action-force-karma'} onClick={() => {
           const dice = rollDice(Math.max(1, character.espirito), 20); const total = dice.reduce((a, b) => a + b, 0); const gained = Math.floor(total / 2);
