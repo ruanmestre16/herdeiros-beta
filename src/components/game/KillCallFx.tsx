@@ -43,7 +43,8 @@ export function KillCallFx({ campaigns }: { campaigns: { id: string; log: string
   useEffect(() => {
     if (!show || !canvasRef.current) return;
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-    const fx = createKillFx(canvasRef.current, { reduced });
+    const desktop = window.matchMedia?.('(pointer: fine)').matches ?? window.innerWidth >= 900;
+    const fx = createKillFx(canvasRef.current, { reduced, desktop });
     if (reduced) return () => fx.destroy();
     let raf = 0, last = performance.now();
     const loop = (now: number) => { fx.step((now - last) / 1000); last = now; fx.draw(); raf = requestAnimationFrame(loop); };

@@ -21,20 +21,28 @@ const COLORS = {
   gold: ['rgba(255,178,36,0.55)', 'rgba(255,238,160,0.8)'],
 } as const;
 
-export function createKillFx(canvas: HTMLCanvasElement, opts: { reduced?: boolean } = {}) {
-  const ctx = canvas.getContext('2d')!;
-  let W = 0, H = 0, dpr = 1, sc = 1, maxP = 900;
+export function createKillFx(canvas: HTMLCanvasElement, opts: { reduced?: boolean; desktop?: boolean } = {}) {
+  const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true })!;
+  let W = 0, H = 0, dpr = 1, sc = 1, maxP = 700;
+  let quality = 1;
   let t = 0, boomed = false, boomAt = 0, acc = 0;
   const ps: Particle[] = [];
   const sparks: Spark[] = [];
 
   const resize = () => {
-    dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     W = window.innerWidth; H = window.innerHeight;
-    sc = clamp(Math.sqrt((W * H) / (1280 * 720)), 0.6, 1.5);
-    maxP = Math.round(clamp((W * H) / 1400, 450, 1100));
+    const largeViewport = !!opts.desktop || Math.max(W, H) >= 900;
+    // Em monitores grandes, reduzir a resolução interna e manter a densidade de partículas
+    // limitada evita que o canvas custoso acompanhe 1440p/4K sem necessidade visual.
+    quality = largeViewport ? 0.78 : 1;
+    dpr = Math.min((window.devicePixelRatio || 1) * quality, 1.2);
+    sc = clamp(Math.sqrt((W * H) / (1280 * 720)), 0.6, 1.2);
+    const cappedArea = Math.min(W * H, 1280 * 720);
+    maxP = Math.round(clamp(cappedArea / (largeViewport ? 1900 : 1600), largeViewport ? 380 : 400, largeViewport ? 720 : 650));
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
+    canvas.style.width = '100%'; canvas.style.height = '100%';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.imageSmoothingEnabled = true;
     ctx.fillStyle = '#05030a'; ctx.fillRect(0, 0, W, H);
   };
 
@@ -67,17 +75,17 @@ export function createKillFx(canvas: HTMLCanvasElement, opts: { reduced?: boolea
       boomed = true; boomAt = t;
       for (const p of ps) { p.team = 1; p.hot = Math.random() < 0.3; }
       const fx = frontX(t, cy);
-      for (let i = 0; i < 380; i++) { const a = rnd(0, Math.PI * 2), s = rnd(250, 1700) * sc; addSpark(fx, cy, Math.cos(a) * s, Math.sin(a) * s, 1, rnd(0.8, 2.2)); }
+      for (let i = 0; i < (opts.desktop ? 220 : 300); i++) { const a = rnd(0, Math.PI * 2), s = rnd(250, 1700) * sc; addSpark(fx, cy, Math.cos(a) * s, Math.sin(a) * s, 1, rnd(0.8, 2.2)); }
     }
 
     // Surgimento contínuo de fitas pelos dois lados; depois do boom os dois lados são dourados.
-    const rate = (190 * started + 60) * sc * dt;
+    const rate = ((opts.desktop ? 135 : 165) * started + 50) * sc * dt;
     let n = rate; while (n > 0) { if (Math.random() < Math.min(n, 1)) { spawn(true, boomed ? 1 : 0); spawn(false, 1); } n -= 1; }
     if (t === dt) for (let i = 0; i < 140 * sc; i++) { spawn(true, 0, true); spawn(false, 1, true); }
 
     // Faíscas nascem na frente de batalha, mais e mais fortes.
     if (!boomed) {
-      const sr = 70 * smooth((t - 0.8) / 1.5) * sc * dt; let m = sr;
+      const sr = (opts.desktop ? 46 : 60) * smooth((t - 0.8) / 1.5) * sc * dt; let m = sr;
       while (m > 0) { if (Math.random() < Math.min(m, 1)) { const y = rnd(H * 0.08, H * 0.92); const fx = frontX(t, y); const s = rnd(120, 520) * sc; const ang = rnd(-1.2, 1.2); const dir = Math.random() < 0.5 ? -1 : 1; addSpark(fx, y, Math.cos(ang) * s * dir, Math.sin(ang) * s, dir < 0 ? 0 : 1, rnd(0.35, 0.9)); } m -= 1; }
     }
 
@@ -138,7 +146,8 @@ export function createKillFx(canvas: HTMLCanvasElement, opts: { reduced?: boolea
 
     // Fumaça de energia: manchas macias que respiram atrás das fitas.
     for (let side = 0; side < 2; side++) {
-      for (let i = 0; i < 6; i++) {
+      const smokeBands = opts.desktop ? 3 : 4;
+      for (let i = 0; i < smokeBands; i++) {
         const ph = i * 1.7 + side * 3;
         const bx = (side === 0 ? W * 0.24 : W * 0.76) + Math.sin(t * 0.5 + ph) * W * 0.09;
         const by = H * (0.2 + 0.6 * ((i % 3) / 2)) + Math.cos(t * 0.45 + ph * 1.3) * H * 0.1;
