@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Dices, Plus, Skull, Sparkles, Swords, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Stepper } from './Controls';
@@ -106,10 +106,10 @@ export function GakiPassive({ character, update, addRoll }: { character: Charact
 export function WeaponPanel({ character, update, addRoll }: { character: Character; update: Update; addRoll: AddRoll }) {
   const [last, setLast] = useState<{ d20: number; total: number; crit: boolean } | null>(null);
   const [dmg, setDmg] = useState<{ total: number; dice: number[]; bonus: number; crit: boolean } | null>(null);
-  const [chosenAttr, setHitAttr] = useState<Attr>('corpo');
+  const [chosenAttr, setHitAttr] = useState<Attr | null>(null);
   const human = isHuman(character.lineage);
-  /** Humano: Arma de Vínculo sempre ataca com MENTE e soma MENTE ao dano. */
-  const hitAttr: Attr = human ? 'mente' : chosenAttr;
+  /** Acerto = 1d20 + atributo escolhido. Padrão: MENTE para humano, CORPO para as demais linhagens. O humano pode escolher Corpo ou Espírito; o dano da Arma de Vínculo continua somando MENTE. */
+  const hitAttr: Attr = chosenAttr ?? (human ? 'mente' : 'corpo');
   const type = weaponByKey(character.weapon_type);
   const dice = type ? cappedWeaponDice(type.key, character.weapon_dice) ?? '' : '';
   const damageAttr: Attr | null = human ? 'mente' : type?.attr === 'corpo' ? 'corpo' : type?.attr === 'atributo' ? hitAttr : null;
@@ -123,7 +123,7 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
       <Field label="DANO (TABELA)"><select disabled={!type} value={dice} onChange={e => update({ weapon_dice: e.target.value })}>
         {(type?.dice ?? []).map(d => <option key={d}>{d}</option>)}
       </select></Field>
-      <Field label="ATACAR COM"><select disabled={human} value={hitAttr} onChange={e => { setHitAttr(e.target.value as Attr); setLast(null); setDmg(null); }}>
+      <Field label="ATACAR COM"><select value={hitAttr} onChange={e => { setHitAttr(e.target.value as Attr); setLast(null); setDmg(null); }}>
         {(['mente', 'corpo', 'espirito'] as const).map(attr => <option key={attr} value={attr}>{attrLabelFor(attr, character.lineage)} ({character[attr]})</option>)}
       </select></Field>
     </div>
@@ -302,23 +302,34 @@ export function AbsorbPfAction({ character, update, addRoll, tablemates = [], on
  */
 export function AgonyPanel({ character, update, addRoll, isMaster }: { character: Character; update: Update; addRoll: AddRoll; isMaster: boolean }) {
   const [dt, setDt] = useState(10);
-  const [attr, setAttr] = useState<'corpo' | 'espirito'>('corpo');
+  const [attr, setAttr] = useState<'corpo' | 'espirito' | 'mente'>('corpo');
   const [last, setLast] = useState<{ roll: number; die: number; dt: number; success: boolean; died: boolean } | null>(null);
   const a = agonyStatus(character);
-  const apply = (next: Character) => update({ abilities: next.abilities });
+  /** Grava abilities e PV juntos (sair da Agonia devolve 1 PV a quem estava com 0). */
+  const apply = (next: Character) => update({ abilities: next.abilities, pv_current: next.pv_current });
+  // Ao entrar em Agonia de novo, some o aviso antigo de "passou no teste".
+  useEffect(() => { if (a.active) setLast(prev => prev?.success ? null : prev); }, [a.active]);
   if (!a.active && !a.dead) {
-    return isMaster
-      ? <div className="agony-idle"><Button size="sm" variant="outline" className="action-agony" onClick={() => apply(agonyEnter(character))}><Skull /> Entrar em Agonia</Button></div>
-      : null;
+    const survived = last?.success;
+    if (!isMaster && !survived) return null;
+    return <div className="agony-idle">
+      {survived && last && <div className="combat-banner banner-hit agony-survived" role="status">
+        <strong>PASSOU NO TESTE DE AGONIA</strong>
+        <span>Resultado {last.roll} (1d{last.die}) contra DT {last.dt}. Saiu da Agonia e voltou com 1 PV.</span>
+        <Button size="sm" variant="ghost" onClick={() => setLast(null)}>Fechar</Button>
+      </div>}
+      {isMaster && <Button size="sm" variant="outline" className="action-agony" onClick={() => { setLast(null); apply(agonyEnter(character)); }}><Skull /> Entrar em Agonia</Button>}
+    </div>;
   }
   const die = dieFor(character[attr]) ?? 4;
   const rollTest = () => {
     const roll = rollDice(1, die)[0]!; const success = roll >= dt;
-    const after = success ? character : agonyFailure(character);
+    // Passou: sai da Agonia sozinho (marcações zeram e, se estava com 0 PV, volta com 1 PV). Falhou: preenche uma marcação.
+    const after = success ? agonyLeave(character) : agonyFailure(character);
     const died = !success && agonyStatus(after).dead;
-    if (!success) apply(after);
+    apply(after);
     setLast({ roll, die, dt, success, died });
-    addRoll({ expression: `1d${die}`, dice: [roll], modifier: 0, total: roll, source: `Teste de Agonia (${attrLabelFor(attr, character.lineage)}, DT ${dt}) — ${success ? 'sucesso' : died ? 'falha, MORTE' : 'falha'}` });
+    addRoll({ expression: `1d${die}`, dice: [roll], modifier: 0, total: roll, source: `Teste de Agonia (${attrLabelFor(attr, character.lineage)}, DT ${dt}) — ${success ? 'sucesso, sai da Agonia (1 PV)' : died ? 'falha, MORTE' : 'falha'}` });
   };
   return <section className={`agony-panel${a.dead ? ' agony-dead' : ''}`} aria-live="polite">
     <div className="agony-head">
@@ -329,14 +340,14 @@ export function AgonyPanel({ character, update, addRoll, isMaster }: { character
     </div>
     <p className="muted-copy">{a.dead
       ? `${AGONY_MAX_FAILURES} falhas no teste de Agonia: não há retorno.`
-      : `A cada turno, teste Corpo ou Espírito conforme a causa. Cada falha preenche uma marcação; ${AGONY_MAX_FAILURES} falhas encerram a vida para sempre.`}</p>
+      : `A cada turno, teste Corpo, Espírito ou Mente conforme a causa. Cada falha preenche uma marcação; ${AGONY_MAX_FAILURES} falhas encerram a vida para sempre.`}</p>
     {!a.dead && <div className="gaki-grid">
-      <Field label="CAUSA (ATRIBUTO DO TESTE)"><select value={attr} onChange={e => setAttr(e.target.value as 'corpo' | 'espirito')}><option value="corpo">{attrLabelFor('corpo', character.lineage)} · 1d{dieFor(character.corpo) ?? 4}</option><option value="espirito">{attrLabelFor('espirito', character.lineage)} · 1d{dieFor(character.espirito) ?? 4}</option></select></Field>
+      <Field label="CAUSA (ATRIBUTO DO TESTE)"><select value={attr} onChange={e => setAttr(e.target.value as 'corpo' | 'espirito' | 'mente')}><option value="corpo">{attrLabelFor('corpo', character.lineage)} · 1d{dieFor(character.corpo) ?? 4}</option><option value="espirito">{attrLabelFor('espirito', character.lineage)} · 1d{dieFor(character.espirito) ?? 4}</option><option value="mente">{attrLabelFor('mente', character.lineage)} · 1d{dieFor(character.mente) ?? 4}</option></select></Field>
       <Stepper label="DT DO TESTE (MESTRE)" value={dt} min={1} max={20} onChange={setDt} />
       <Button variant="outline" className="action-agony" onClick={rollTest}><Dices /> Rolar teste de Agonia (1d{die} vs DT {dt})</Button>
     </div>}
-    {last && <div className={`combat-banner ${last.success ? 'banner-hit' : 'banner-miss'}`}>
-      <strong>{last.success ? 'SUCESSO — SEM NOVA MARCAÇÃO' : last.died ? 'FALHA — TERCEIRA MARCAÇÃO: MORTE' : 'FALHA — MARCAÇÃO PREENCHIDA'}</strong>
+    {last && !last.success && <div className="combat-banner banner-miss">
+      <strong>{last.died ? 'FALHA — TERCEIRA MARCAÇÃO: MORTE' : 'FALHA — MARCAÇÃO PREENCHIDA'}</strong>
       <span>Resultado {last.roll} (1d{last.die}) contra DT {last.dt}</span>
     </div>}
     {isMaster && <div className="agony-master">
@@ -344,9 +355,9 @@ export function AgonyPanel({ character, update, addRoll, isMaster }: { character
       <div className="agony-master-actions">
         <Button size="sm" variant="outline" className="action-agony" disabled={a.dead} onClick={() => apply(agonyFailure(character))}>+ Falha</Button>
         <Button size="sm" variant="outline" disabled={!a.failures && !a.dead} onClick={() => apply(agonyUndo(character))}>− Falha (desfazer)</Button>
-        {!a.dead && <Button size="sm" variant="ghost" disabled={character.pv_current <= 0} onClick={() => apply(agonyLeave(character))}>Sair da Agonia</Button>}
+        {!a.dead && <Button size="sm" variant="ghost" onClick={() => apply(agonyLeave(character))}>Sair da Agonia</Button>}
       </div>
-      {!a.dead && character.pv_current <= 0 && <small className="muted-copy">Com 0 PV a ficha continua em Agonia. Cure acima de 0 PV para sair e zerar as marcações.</small>}
+      {!a.dead && <small className="muted-copy">Ao sair da Agonia (teste ou botão), o personagem sempre volta com 1 PV e as marcações zeram.</small>}
     </div>}
   </section>;
 }

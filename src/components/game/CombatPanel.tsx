@@ -59,6 +59,8 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   const [fluxUsed, setFluxUsed] = useState<Record<string, boolean>>({});
   const [lostAction, setLostAction] = useState<Record<string, boolean>>({});
   const [chosenReaction, setChosenReaction] = useState<Reaction>('esquivar');
+  /** Humano com Arma de Vínculo: atributo escolhido para acertar (por atacante). Padrão MENTE. */
+  const [humanHit, setHumanHit] = useState<Record<string, Attr>>({});
   const [mode, setMode] = useState<'single' | 'full' | 'half'>('single');
   const [area, setArea] = useState<null | { attackerId: string; option: AttackOption; dice: string; d20: number; attrValue: number; total: number; crit: boolean; results: { id: string; name: string; esquiva: number; hit: boolean; crit: boolean }[]; damage?: { raw: number; applied: number; lines: string[] } }>(null);
   const [pending, setPending] = useState<null | { attackerId: string; targetId: string; option: AttackOption; dice: string; d20: number; attrValue: number; total: number; esquiva: number; hit: boolean; crit: boolean; reaction: Reaction; defense: number; counterDamage?: number; damage?: { raw: number; dice: number[]; bonus: number; block: number; final: number } }>(null);
@@ -67,7 +69,10 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   const options = attacker ? optionsFor(attacker) : [];
   const weapons = options.filter(o => !o.nomenclature);
   const nomenclatures = options.filter(o => o.nomenclature);
-  const option = options.find(o => o.id === optionId) ?? weapons[0];
+  const baseOption = options.find(o => o.id === optionId) ?? weapons[0];
+  const humanWeapon = !!baseOption && baseOption.id === 'arma' && !!attacker?.pc && isHuman(attacker.pc.lineage);
+  // Humano com Arma de Vínculo acerta com 1d20 + Mente, Corpo ou Espírito (à escolha); o dano segue como está.
+  const option = baseOption && humanWeapon && attacker ? { ...baseOption, hitAttr: humanHit[attacker.id] ?? baseOption.hitAttr } : baseOption;
   const dice = option && option.dice.includes(diceChoice) ? diceChoice : option?.dice[0] ?? '';
   const targets = combatants.filter(c => c.id !== attacker?.id);
   const target = targets.find(c => c.id === targetId) ?? targets[0];
@@ -206,6 +211,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
           <div className="grid grid-cols-1 gap-5 border-t border-border pt-4 sm:grid-cols-2">
             <div className="min-w-0"><h4 className="field-kicker mb-3">ARMAS</h4>
               <label className="field"><span className="field-label">ARMA</span><select aria-label="Arma de ataque" value={option && !option.nomenclature ? option.id : ''} onChange={e => selectOption(e.target.value)}><option value="" disabled>Selecionar arma</option>{weapons.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select></label>
+              {humanWeapon && option && !option.nomenclature && attacker && <label className="field"><span className="field-label">ACERTAR COM (1d20 + ATRIBUTO)</span><select aria-label="Atributo para acertar o ataque" value={option.hitAttr} onChange={e => { const v = e.target.value as Attr; const id = attacker.id; setHumanHit(prev => ({ ...prev, [id]: v })); setPending(null); setArea(null); }}>{(['mente', 'corpo', 'espirito'] as const).map(a => <option key={a} value={a}>{attrLabelFor(a, lineage)} ({attacker[a]})</option>)}</select></label>}
               {option && !option.nomenclature && attackButtons()}
             </div>
             <div className="min-w-0"><h4 className="field-kicker mb-3">{nomenclatureLabel(lineage, true).toUpperCase()}</h4>
