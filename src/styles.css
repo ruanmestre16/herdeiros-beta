@@ -328,16 +328,12 @@ html{scroll-behavior:smooth}body{font-family:'DM Sans',sans-serif;background:#10
 @media (max-width: 620px) {
   .app-shell, .main-wrap, .workspace-content { min-width: 0; max-width: 100%; }
   .app-shell { overflow-x: clip; }
-  .main-wrap { padding-inline: 14px; }
-  .topbar-inner { padding-inline: 14px; gap: 10px; }
-  .brand { min-width: 0; white-space: nowrap; }
-  .account-button { max-width: 96px; min-height: 40px; }
   .tabbar { max-width: 100%; min-width: 0; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
   .tabbar .tab { flex: 0 0 auto; min-height: 44px; scroll-margin-inline: 20px; }
   .main-nav.nav-open { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .main-nav .nav-item { min-width: 0; justify-content: flex-start; }
   .section-heading { flex-wrap: wrap; }
-  .section-heading > div:first-child { min-width: 0; flex: 1 1 180px; }
+  .section-heading > div:first-child { min-width: 0; }
   .section-heading h2 { overflow-wrap: anywhere; }
   .section-heading > button, .section-heading > div:not(:first-child) { max-width: 100%; min-height: 40px; white-space: normal; }
   .field input, .field select, .field textarea, .campaign-picker select, .event-composer input { font-size: 16px; }
@@ -345,14 +341,6 @@ html{scroll-behavior:smooth}body{font-family:'DM Sans',sans-serif;background:#10
   .input-grid > *, .quick-actions > *, .combat-controls > * { min-width: 0; }
   .quick-actions { grid-template-columns: minmax(0, 1fr); }
   .quick-actions button, .combat-controls button { height: auto !important; min-height: 44px; white-space: normal; text-align: left; justify-content: flex-start !important; }
-  .row-actions { display: grid; grid-template-columns: minmax(0, 1fr) auto; width: 100%; }
-  .row-actions button { min-width: 0; min-height: 44px; white-space: normal; }
-  .row-actions button:not([data-slot="button"]), .row-actions button:first-child { overflow-wrap: anywhere; }
-  .editable-row, .inventory-row { min-width: 0; padding: 15px 12px; }
-  .nomen-head { display: grid; grid-template-columns: minmax(0, 1fr); }
-  .nomen-head strong, .nomen-head span { min-width: 0; overflow-wrap: anywhere; }
-  .field-stack > .flex, .game-panel > .flex { flex-wrap: wrap; }
-  .field-stack > .flex > button, .game-panel > .flex > button { min-height: 44px; white-space: normal; }
   .combat-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .combat-controls > :last-child { grid-column: 1 / -1; }
   .combatant { display: grid; grid-template-columns: auto auto minmax(0, 1fr); gap: 8px; }
@@ -366,21 +354,30 @@ html{scroll-behavior:smooth}body{font-family:'DM Sans',sans-serif;background:#10
   .kill-call h1 { overflow-wrap: anywhere; }
 }
 
-@media (max-width: 360px) {
-  .main-wrap { padding-inline: 10px; }
-  .topbar-inner { padding-inline: 10px; }
-  .brand { font-size: 12px !important; }
-  .brand-mark { font-size: 19px; }
-  .account-button { max-width: 82px; padding-inline: 7px !important; }
-  .scene-content { left: 18px; right: 14px; }
-  .scene-content h1 { font-size: 29px; }
-  .game-panel { padding-inline: 12px; }
-  .attributes-grid, .step-grid { gap: 5px; }
-  .attribute { padding-inline: 2px; }
-  .attribute strong { font-size: 27px; }
-  .combat-controls { grid-template-columns: minmax(0, 1fr); }
-  .combat-controls > :last-child { grid-column: auto; }
-  .combatant { grid-template-columns: auto minmax(0, 1fr); }
-  .combatant-icon { display: none; }
-  .combatant > button { grid-column: 2; }
+/* ---------- Agonia: 3 marcações, destaque vermelho ---------- */
+.agony-panel { margin-top: 14px; padding: 14px 16px; border: 1px solid #c34551; background: linear-gradient(180deg, #451d24, #2a1218); color: #ffd2d5; display: grid; gap: 12px; animation: agony-pulse 1.6s ease-in-out infinite alternate; }
+.agony-panel .field-kicker, .agony-panel strong { color: #ffd2d5; }
+.agony-panel .muted-copy { color: #e3a7ad; font-size: 12px; line-height: 1.5; }
+.agony-head { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.agony-title { display: grid; gap: 2px; min-width: 0; }
+.agony-title strong { font-size: 18px; letter-spacing: .04em; overflow-wrap: anywhere; }
+.agony-marks { display: flex; align-items: center; gap: 10px; }
+.agony-mark { width: 26px; height: 26px; border-radius: 999px; border: 2px solid #c34551; background: transparent; box-shadow: inset 0 0 6px #00000066; transition: background .2s, box-shadow .2s; }
+.agony-mark.filled { background: #e3333f; box-shadow: 0 0 12px #e3333faa, inset 0 0 4px #00000055; }
+.agony-dead { animation: none; border-color: #5c4b4e; background: linear-gradient(180deg, #1b1315, #0d0a0b); color: #a99a9d; }
+.agony-dead .field-kicker, .agony-dead strong { color: #c9bcbf; }
+.agony-dead .agony-mark { border-color: #6d5a5e; }
+.agony-dead .agony-mark.filled { background: #8f2b35; box-shadow: none; }
+.agony-idle { margin-top: 12px; display: flex; justify-content: flex-end; }
+.agony-master { display: grid; gap: 8px; border-top: 1px solid #c3455155; padding-top: 10px; }
+.agony-master-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.app-shell .action-agony { color: #ffb4ba !important; border-color: #8f2b35 !important; }
+.app-shell .action-agony:hover { background: #451d24 !important; }
+@keyframes agony-pulse { to { box-shadow: inset 0 0 25px #a31f3344, 0 0 14px #df333d55; } }
+@media (prefers-reduced-motion: reduce) { .agony-panel { animation: none; } }
+@media (max-width: 620px) {
+  .agony-panel { padding: 12px; }
+  .agony-mark { width: 30px; height: 30px; }
+  .agony-master-actions > button { flex: 1 1 100%; min-height: 44px; }
+  .agony-idle > button { width: 100%; min-height: 44px; }
 }
