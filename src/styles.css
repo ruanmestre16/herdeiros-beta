@@ -368,7 +368,8 @@ html{scroll-behavior:smooth}body{font-family:'DM Sans',sans-serif;background:#10
 .agony-dead .field-kicker, .agony-dead strong { color: #c9bcbf; }
 .agony-dead .agony-mark { border-color: #6d5a5e; }
 .agony-dead .agony-mark.filled { background: #8f2b35; box-shadow: none; }
-.agony-idle { margin-top: 12px; display: flex; justify-content: flex-end; }
+.agony-idle { margin-top: 12px; display: grid; gap: 10px; justify-items: end; }
+.agony-idle > .agony-survived { justify-self: stretch; display: grid; gap: 6px; justify-items: start; }
 .agony-master { display: grid; gap: 8px; border-top: 1px solid #c3455155; padding-top: 10px; }
 .agony-master-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 .app-shell .action-agony { color: #ffb4ba !important; border-color: #8f2b35 !important; }
