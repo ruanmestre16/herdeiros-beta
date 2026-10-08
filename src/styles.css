@@ -382,3 +382,6 @@ html{scroll-behavior:smooth}body{font-family:'DM Sans',sans-serif;background:#10
   .agony-master-actions > button { flex: 1 1 100%; min-height: 44px; }
   .agony-idle > button { width: 100%; min-height: 44px; }
 }
+/* Combate: botões extras de NPC com ficha completa */
+.combatant { flex-wrap: wrap; }
+.combatant > .flux-result { flex: 1 1 100%; min-width: 0; }
