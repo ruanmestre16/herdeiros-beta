@@ -16,3 +16,4 @@
 - The campaign master may edit any member sheet (RLS `is_master_of_sheet`); members read all table sheets/campaign/visible NPCs, and non-master UI is wrapped in a disabled fieldset. Why: players see everything, only the master edits.
 - Invites use `campaigns.invite_token` + `join_campaign_invite` RPC via `/mesa?convite=`. Why: one-click Google entry without a password.
 - Sheet notes (Anotações) are stored inside the existing `story` column after a marker (splitStory/joinStory in src/lib/game.ts), so no database change is needed and the original backend keeps working.
+- Keep the shared kill-call overlay in KillCallFx with its campaign-log interface; uploaded filenames must match imports so synced versions remain loadable.

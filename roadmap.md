@@ -21,3 +21,4 @@
 - [x] Ajustar a navegação da ficha, os controles de combate e os campos para uso no celular.
 - [x] Corrigir os controles que ainda transbordam ou ficam apertados em celulares de 320–390 px.
 - [x] Aplicar pontos permanentes e limites de atributos por estágio na edição do jogador e do Mestre.
+- [x] Corrigir o arquivo de efeito ausente e o erro de rolagem que impedem a última versão do GitHub de abrir; verificar a prévia.
