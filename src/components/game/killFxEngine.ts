@@ -26,6 +26,7 @@ export function createKillFx(canvas: HTMLCanvasElement, opts: { reduced?: boolea
   let W = 0, H = 0, dpr = 1, sc = 1, maxP = 700;
   let quality = 1;
   let t = 0, boomed = false, boomAt = 0, acc = 0;
+  let initialized = false;
   const ps: Particle[] = [];
   const sparks: Spark[] = [];
 
@@ -34,11 +35,16 @@ export function createKillFx(canvas: HTMLCanvasElement, opts: { reduced?: boolea
     const largeViewport = !!opts.desktop || Math.max(W, H) >= 900;
     // Em monitores grandes, reduzir a resolução interna e manter a densidade de partículas
     // limitada evita que o canvas custoso acompanhe 1440p/4K sem necessidade visual.
-    quality = largeViewport ? 0.78 : 1;
-    dpr = Math.min((window.devicePixelRatio || 1) * quality, 1.2);
-    sc = clamp(Math.sqrt((W * H) / (1280 * 720)), 0.6, 1.2);
+    // Nunca congelamos o efeito. Quando o navegador pede menos movimento, reduzimos
+    // a resolução/partículas, mas a linha do tempo continua rodando até o BOOM.
+    quality = opts.reduced ? 0.62 : (largeViewport ? 0.72 : 1);
+    dpr = Math.min((window.devicePixelRatio || 1) * quality, opts.reduced ? 0.95 : 1.1);
+    sc = clamp(Math.sqrt((W * H) / (1280 * 720)), 0.6, 1.15);
     const cappedArea = Math.min(W * H, 1280 * 720);
-    maxP = Math.round(clamp(cappedArea / (largeViewport ? 1900 : 1600), largeViewport ? 380 : 400, largeViewport ? 720 : 650));
+    const divisor = opts.reduced ? 2400 : (largeViewport ? 2100 : 1600);
+    const minParticles = opts.reduced ? 220 : (largeViewport ? 340 : 400);
+    const maxParticles = opts.reduced ? 420 : (largeViewport ? 600 : 650);
+    maxP = Math.round(clamp(cappedArea / divisor, minParticles, maxParticles));
     canvas.width = Math.round(W * dpr); canvas.height = Math.round(H * dpr);
     canvas.style.width = '100%'; canvas.style.height = '100%';
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -75,17 +81,21 @@ export function createKillFx(canvas: HTMLCanvasElement, opts: { reduced?: boolea
       boomed = true; boomAt = t;
       for (const p of ps) { p.team = 1; p.hot = Math.random() < 0.3; }
       const fx = frontX(t, cy);
-      for (let i = 0; i < (opts.desktop ? 220 : 300); i++) { const a = rnd(0, Math.PI * 2), s = rnd(250, 1700) * sc; addSpark(fx, cy, Math.cos(a) * s, Math.sin(a) * s, 1, rnd(0.8, 2.2)); }
+      for (let i = 0; i < (opts.reduced ? 110 : (opts.desktop ? 180 : 260)); i++) { const a = rnd(0, Math.PI * 2), s = rnd(250, 1700) * sc; addSpark(fx, cy, Math.cos(a) * s, Math.sin(a) * s, 1, rnd(0.8, 2.2)); }
     }
 
     // Surgimento contínuo de fitas pelos dois lados; depois do boom os dois lados são dourados.
-    const rate = ((opts.desktop ? 135 : 165) * started + 50) * sc * dt;
+    const rate = ((opts.reduced ? 80 : (opts.desktop ? 125 : 165)) * started + 35) * sc * dt;
     let n = rate; while (n > 0) { if (Math.random() < Math.min(n, 1)) { spawn(true, boomed ? 1 : 0); spawn(false, 1); } n -= 1; }
-    if (t === dt) for (let i = 0; i < 140 * sc; i++) { spawn(true, 0, true); spawn(false, 1, true); }
+    if (!initialized) {
+      initialized = true;
+      const initialCount = Math.round((opts.reduced ? 70 : 110) * sc);
+      for (let i = 0; i < initialCount; i++) { spawn(true, 0, true); spawn(false, 1, true); }
+    }
 
     // Faíscas nascem na frente de batalha, mais e mais fortes.
     if (!boomed) {
-      const sr = (opts.desktop ? 46 : 60) * smooth((t - 0.8) / 1.5) * sc * dt; let m = sr;
+      const sr = (opts.reduced ? 22 : (opts.desktop ? 42 : 60)) * smooth((t - 0.8) / 1.5) * sc * dt; let m = sr;
       while (m > 0) { if (Math.random() < Math.min(m, 1)) { const y = rnd(H * 0.08, H * 0.92); const fx = frontX(t, y); const s = rnd(120, 520) * sc; const ang = rnd(-1.2, 1.2); const dir = Math.random() < 0.5 ? -1 : 1; addSpark(fx, y, Math.cos(ang) * s * dir, Math.sin(ang) * s, dir < 0 ? 0 : 1, rnd(0.35, 0.9)); } m -= 1; }
     }
 
@@ -146,7 +156,7 @@ export function createKillFx(canvas: HTMLCanvasElement, opts: { reduced?: boolea
 
     // Fumaça de energia: manchas macias que respiram atrás das fitas.
     for (let side = 0; side < 2; side++) {
-      const smokeBands = opts.desktop ? 3 : 4;
+      const smokeBands = opts.reduced ? 1 : (opts.desktop ? 2 : 4);
       for (let i = 0; i < smokeBands; i++) {
         const ph = i * 1.7 + side * 3;
         const bx = (side === 0 ? W * 0.24 : W * 0.76) + Math.sin(t * 0.5 + ph) * W * 0.09;
@@ -193,8 +203,5 @@ export function createKillFx(canvas: HTMLCanvasElement, opts: { reduced?: boolea
 
   resize();
   window.addEventListener('resize', resize);
-  // "Reduzir movimento": avança a simulação em silêncio e mostra só o quadro final, parado.
-  if (opts.reduced) { for (let i = 0; i < 260; i++) { step(1 / 30); draw(); } }
-
   return { step, draw, resize, destroy: () => window.removeEventListener('resize', resize), get time() { return t; } };
 }

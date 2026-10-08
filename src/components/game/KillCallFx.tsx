@@ -45,9 +45,18 @@ export function KillCallFx({ campaigns }: { campaigns: { id: string; log: string
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
     const desktop = window.matchMedia?.('(pointer: fine)').matches ?? window.innerWidth >= 900;
     const fx = createKillFx(canvasRef.current, { reduced, desktop });
-    if (reduced) return () => fx.destroy();
-    let raf = 0, last = performance.now();
-    const loop = (now: number) => { fx.step((now - last) / 1000); last = now; fx.draw(); raf = requestAnimationFrame(loop); };
+    // A preferência de movimento reduzido deve diminuir a carga, não congelar o efeito.
+    // O desktop também precisa atravessar a sequência 0s -> BOOM -> pós-BOOM normalmente.
+    let raf = 0;
+    let last = performance.now();
+    const loop = (now: number) => {
+      const dt = Math.min((now - last) / 1000, 1 / 24);
+      last = now;
+      fx.step(dt);
+      fx.draw();
+      raf = requestAnimationFrame(loop);
+    };
+    fx.draw();
     raf = requestAnimationFrame(loop);
     return () => { cancelAnimationFrame(raf); fx.destroy(); };
   }, [show]);
