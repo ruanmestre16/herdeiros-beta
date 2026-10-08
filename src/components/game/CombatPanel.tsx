@@ -200,15 +200,18 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     if (!reaction) return false;
     const attrValue = attackerToResolve[optionToResolve.hitAttr];
     const r = attackRoll(attrValue, targetToResolve.esquiva);
-    const fluxDie = reaction === 'fluxo' ? rollDice(1, 20)[0]! : null;
-    const defense = fluxDie !== null ? fluxDie + targetToResolve.espirito : targetToResolve.esquiva;
-    const crit = fluxDie !== null ? (r.d20 === 20 && r.total > defense) : r.crit;
-    const defenseText = fluxDie !== null ? `Bloqueio de Fluxo (d20 [${fluxDie}] + ${attrLabelFor('espirito', targetToResolve.pc?.lineage)} ${targetToResolve.espirito} = ${defense})` : `${reaction} (defesa ${defense})`;
-    const hit = reaction === 'bloquear' || reaction === 'parcial' || reaction === 'contra-atacar' || r.total >= defense;
+    const isFlowBlock = reaction === 'fluxo';
+    // Bloqueio de Fluxo não usa Esquiva nem cria uma segunda rolagem defensiva.
+    // O ataque é inevitável e a única defesa posterior é o RD/Bloqueio no dano.
+    const defense = targetToResolve.esquiva;
+    const crit = r.crit;
+    const defenseText = isFlowBlock
+      ? `Bloqueio de Fluxo — Esquiva: INEXISTENTE · acerto inevitável · RD ${targetToResolve.bloqueio}`
+      : `${reaction} (defesa ${defense})`;
+    const hit = isFlowBlock || reaction === 'bloquear' || reaction === 'parcial' || reaction === 'contra-atacar' || r.total >= defense;
     if (optionToResolve.pfCost) setResources(attackerToResolve, null, attackerToResolve.pf - optionToResolve.pfCost);
     setPending({ attackerId: attackerToResolve.id, targetId: targetToResolve.id, option: optionToResolve, dice: diceToResolve, d20: r.d20, attrDie: r.attrDie, attrRoll: r.attrRoll, total: r.total, esquiva: targetToResolve.esquiva, hit, crit, reaction, defense });
     addRoll({ expression: r.expression, dice: r.dice, modifier: r.modifier, total: r.total, source: `${attackerToResolve.name} → ${targetToResolve.name}${crit ? ' — CRÍTICO' : ''}`, crit });
-    if (fluxDie !== null) addRoll({ expression: `1d20 + ${targetToResolve.espirito}`, dice: [fluxDie], modifier: targetToResolve.espirito, total: defense, source: `Bloqueio de Fluxo: ${targetToResolve.name}` });
     log([`${attackerToResolve.name} ataca ${targetToResolve.name} (${optionToResolve.label}${optionToResolve.pfCost ? `, −${optionToResolve.pfCost} PF` : ''}): d20 [${r.d20}] + 1d${r.attrDie} [${r.attrRoll}] (${attrLabelFor(optionToResolve.hitAttr, attackerToResolve.pc?.lineage)}) = ${r.total}; reação: ${defenseText} → ${hit ? (crit ? 'CRÍTICO! ATAQUE ACERTOU' : 'ATAQUE ACERTOU') : 'ALVO ESQUIVOU'}`]);
     if (requestId && userId) {
       const channel = supabase.channel(`herdeiros-combat-actions-${campaign.id}`);
@@ -246,7 +249,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     const counterOption = optionsFor(t).find(o=>!o.nomenclature);
     const counterDamage = pending.reaction==='contra-atacar' && counterOption ? damageRoll(counterOption.dice[0]??'1d6', t[counterOption.damageAttr??'corpo'], false).total : 0;
     const counterWins = counterDamage > d.total;
-    const block = pending.reaction==='bloquear' ? t.bloqueio : pending.reaction==='parcial' ? (rollDice(1,dieFor(t.espirito)??4)[0]??0)+t.bloqueio : 0;
+    const block = pending.reaction==='bloquear' || pending.reaction==='fluxo' ? t.bloqueio : pending.reaction==='parcial' ? (rollDice(1,dieFor(t.espirito)??4)[0]??0)+t.bloqueio : 0;
     const final = counterWins ? 0 : Math.max(0, d.total - block); const pv = Math.max(0, t.pv - final);
     if(counterWins){const counter=attackRoll(t.mente,a.esquiva);if(counter.hit){const free=damageRoll('1d6',t.corpo,counter.crit);setResources(a,Math.max(0,a.pv-free.total),null);log([`${t.name} contra-ataca: dano ${counterDamage} > ${d.total}; ataque grátis corpo a corpo d20 [${counter.d20}] + 1d${counter.attrDie} [${counter.attrRoll}] (MENTE) = ${counter.total}, dano ${free.total} em ${a.name}.`]);}else log([`${t.name} vence a disputa de dano (${counterDamage} > ${d.total}), mas o contra-ataque erra (${counter.total} vs ${a.esquiva}).`]);}
     setPending({ ...pending, counterDamage, damage: { raw: d.total, dice: d.dice, bonus, block, final } });
@@ -307,7 +310,8 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
             <label className="field"><span className="field-label">ALVO</span><select value={target.id} onChange={e => { setTargetId(e.target.value); setPending(null); setArea(null); }} disabled={!masterMode && !isMyTurn}>{targets.map(c => <option key={c.id} value={c.id}>{c.name} (Esq {c.esquiva})</option>)}</select></label>
           </div>
           {masterMode && <label className="field"><span className="field-label">MODO DE ATAQUE</span><select value={mode} onChange={e => { setMode(e.target.value as 'single' | 'full' | 'half'); setPending(null); setArea(null); }}><option value="single">Um alvo</option><option value="full">Todos os inimigos · dano total</option><option value="half">Todos os inimigos · metade do dano</option></select></label>}
-          {masterMode && mode==='single'&&<label className="field"><span className="field-label">REAÇÃO DE {target.name.toUpperCase()} {reactionAvailable(target)?'':'· USADA NESTA RODADA'}</span><select value={chosenReaction} onChange={e=>{setChosenReaction(e.target.value as Reaction);setPending(null)}} disabled={!reactionAvailable(target)}><option value="esquivar">Esquivar · Esquiva {target.esquiva}</option><option value="bloquear">Bloquear · reduz {target.bloqueio} do dano</option><option value="contra-atacar">Contra-atacar · disputa de dano</option>{option?.nomenclature&&<><option value="parcial">Bloqueio Parcial · dado de Espírito + Bloqueio</option><option value="fluxo" disabled={!!fluxUsed[target.id]}>Bloqueio de Fluxo · 1d20 + {attrLabelFor('espirito', target.pc?.lineage)} {target.espirito}</option></>}</select></label>}
+          {masterMode && mode==='single'&&<label className="field"><span className="field-label">REAÇÃO DE {target.name.toUpperCase()} {reactionAvailable(target)?'':'· USADA NESTA RODADA'}</span><select value={chosenReaction} onChange={e=>{setChosenReaction(e.target.value as Reaction);setPending(null)}} disabled={!reactionAvailable(target)}><option value="esquivar">Esquivar · Esquiva {target.esquiva}</option><option value="bloquear">Bloquear · reduz {target.bloqueio} do dano</option><option value="contra-atacar">Contra-atacar · disputa de dano</option>{option?.nomenclature&&<><option value="parcial">Bloqueio Parcial · dado de Espírito + Bloqueio</option><option value="fluxo" disabled={!!fluxUsed[target.id]}>Bloqueio de Fluxo · ACERTO INEVITÁVEL · Esquiva inexistente · RD {target.bloqueio}</option></>}</select></label>}
+          {masterMode && mode==='single' && chosenReaction==='fluxo' && option?.nomenclature && <div className="combat-banner banner-hit"><strong>Bloqueio de Fluxo — Acerto inevitável</strong><span>Esquiva: <strong>INEXISTENTE</strong>. Não há comparação com Esquiva e não existe erro por Esquiva, inclusive se o ataque resultar em 1.</span><span><Shield size={12} className="inline" /> Única defesa válida: RD/Bloqueio {target.bloqueio}. Depois do ataque, role o dano normalmente.</span></div>}
           <div className="grid grid-cols-1 gap-5 border-t border-border pt-4 sm:grid-cols-2">
             <div className="min-w-0"><h4 className="field-kicker mb-3">ARMAS</h4>
               <label className="field"><span className="field-label">ARMA</span><select aria-label="Arma de ataque" value={option && !option.nomenclature ? option.id : ''} onChange={e => selectOption(e.target.value)} disabled={!masterMode && !isMyTurn}><option value="" disabled>Selecionar arma</option>{weapons.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select></label>
@@ -331,9 +335,9 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
           </div>}
           </> : <>
           {pending && <div className={`combat-banner ${pending.crit ? 'banner-crit' : pending.hit ? 'banner-hit' : 'banner-miss'}`}>
-            <strong>{pending.crit ? 'CRÍTICO! ATAQUE ACERTOU' : pending.hit ? 'ATAQUE ACERTOU' : 'ALVO ESQUIVOU'}</strong>
-            <span>d20 [{pending.d20}] + 1d{pending.attrDie} [{pending.attrRoll}] ({attrLabelFor(pending.option.hitAttr, combatants.find(c => c.id === pending.attackerId)?.pc?.lineage)}) = {pending.total} vs {pending.reaction === 'fluxo' ? `Bloqueio de Fluxo ${pending.defense}` : `Esquiva ${pending.esquiva}`}</span>
-             {pending.damage && <span><Shield size={12} className="inline" /> Dano {pending.damage.raw} ({pending.damage.dice.join(' + ')}{pending.damage.bonus ? ` + ${pending.damage.bonus}` : ''}) − Bloqueio {pending.damage.block} = <strong>{pending.damage.final}</strong>{pending.counterDamage!==undefined&&pending.reaction==='contra-atacar'?` · disputa: ${pending.counterDamage}`:''}</span>}
+            <strong>{pending.reaction === 'fluxo' ? (pending.crit ? 'CRÍTICO! ATAQUE ACERTOU' : 'BLOQUEIO DE FLUXO — ACERTO INEVITÁVEL') : pending.crit ? 'CRÍTICO! ATAQUE ACERTOU' : pending.hit ? 'ATAQUE ACERTOU' : 'ALVO ESQUIVOU'}</strong>
+            <span>d20 [{pending.d20}] + 1d{pending.attrDie} [{pending.attrRoll}] ({attrLabelFor(pending.option.hitAttr, combatants.find(c => c.id === pending.attackerId)?.pc?.lineage)}) = {pending.total}{pending.reaction === 'fluxo' ? ' · Esquiva: INEXISTENTE · nenhuma comparação com Esquiva' : ` vs Esquiva ${pending.esquiva}`}</span>
+             {pending.damage && <span><Shield size={12} className="inline" /> Dano bruto {pending.damage.raw} ({pending.damage.dice.join(' + ')}{pending.damage.bonus ? ` + ${pending.damage.bonus}` : ''}) − {pending.reaction === 'fluxo' ? 'RD/Bloqueio' : 'Bloqueio'} {pending.damage.block} = <strong>Dano final {pending.damage.final}</strong>{pending.counterDamage!==undefined&&pending.reaction==='contra-atacar'?` · disputa: ${pending.counterDamage}`:''}</span>}
           </div>}
           </>}
         </div> : <p className="empty-copy">São necessários ao menos dois combatentes.</p>}
