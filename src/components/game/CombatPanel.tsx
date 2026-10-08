@@ -3,7 +3,7 @@ import { ArrowRight, Crosshair, Dices, RotateCcw, Shield, Skull, Swords, Users }
 import { Button } from '@/components/ui/button';
 import {
   ATTR_LABEL, WEAPONS, attackRoll, cappedNomenclatureDice, cappedWeaponDice, damageRoll, derived, dieFor, rollDice, initiativeRoll, nomenclatureLabel, nomenclatureLevelLabel, attrLabelFor,
-  karmaDamageBonus, weaponAttrFor, weaponByKey, isHuman, type Attr, type Campaign, type Character, type Npc,
+  karmaDamageBonus, weaponAttrFor, weaponByKey, isHuman, agonyStatus, agonyLabel, type Attr, type Campaign, type Character, type Npc,
 } from '@/lib/game';
 import type { RollEntry } from './SheetExtras';
 
@@ -38,7 +38,7 @@ function optionsFor(c: Combatant): AttackOption[] {
   return opts;
 }
 
-export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, updateSheet, addRoll, setPcInitiative, resetStandard }: {
+export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, updateSheet, addRoll, setPcInitiative, resetStandard, enterAgony }: {
   campaign: Campaign; party: Character[]; npcs: Npc[];
   saveCampaign: (c: Campaign) => void; saveNpc: (n: Npc) => void;
   updateSheet: (id: string, pv: number | null, pf: number | null, clearInitiative?: boolean) => void;
@@ -46,6 +46,8 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   setPcInitiative?: (id: string, total: number) => void;
   /** Devolve a Ação Padrão de um personagem (usado quando o turno dele começa). */
   resetStandard?: (c: Character) => void;
+  /** Mestre manda um personagem entrar em Agonia (inclusive após sofrer dano, mesmo com PV acima de 0). */
+  enterAgony?: (c: Character) => void;
 }) {
   const combatants = useMemo(() => toCombatants(party, npcs), [party, npcs]);
   const current = campaign.combat_active && combatants.length ? combatants[campaign.turn_index % combatants.length] : undefined;
@@ -181,8 +183,10 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
         <div className="combat-list">{combatants.map((c, i) => <div key={c.id} className={`combatant ${current?.id === c.id ? 'current' : ''}`}>
           <span className="combatant-number">{c.initiative ?? '—'}</span>
           <span className="combatant-icon">{c.kind === 'npc' ? <Skull /> : <Users />}</span>
-          <span className="flex-1"><strong>{c.name}</strong><small>{c.pv} / {c.pvMax} PV · <span className="text-flux">{c.pf} / {c.pfMax} PF</span> · Esq {c.esquiva} · RD {c.bloqueio}{c.pv === 0 ? ' · AGONIA' : ''}</small></span>
-          <Button variant="outline" size="sm" title="Rolar iniciativa" aria-label={`Rolar iniciativa de ${c.name}`} onClick={() => c.npc ? rollNpcInitiative(c.npc) : rollPcInitiative(c)}><Dices /> Iniciativa</Button>          <span className="sr-only">{i}</span>
+          <span className="flex-1"><strong>{c.name}</strong><small>{c.pv} / {c.pvMax} PV · <span className="text-flux">{c.pf} / {c.pfMax} PF</span> · Esq {c.esquiva} · RD {c.bloqueio}{c.pc ? agonyLabel(c.pc) : (c.pv === 0 ? ' · AGONIA' : '')}</small></span>
+          <Button variant="outline" size="sm" title="Rolar iniciativa" aria-label={`Rolar iniciativa de ${c.name}`} onClick={() => c.npc ? rollNpcInitiative(c.npc) : rollPcInitiative(c)}><Dices /> Iniciativa</Button>
+          {c.pc && enterAgony && !agonyStatus(c.pc).active && !agonyStatus(c.pc).dead && <Button variant="outline" size="sm" className="action-agony" title="Entrar em Agonia" aria-label={`Entrar em Agonia: ${c.name}`} onClick={() => enterAgony(c.pc!)}><Skull /> Agonia</Button>}
+          <span className="sr-only">{i}</span>
         </div>)}{!combatants.length && <p className="empty-copy">Os jogadores entram pela Mesa escolhendo sua ficha. Adicione NPCs para o combate.</p>}</div>
         <div className="combat-controls">
           <Button disabled={!combatants.length} onClick={() => { combatants.forEach(c => { if (c.pc) resetStandard?.(c.pc); }); saveCampaign({ ...campaign, combat_active: !campaign.combat_active, round: 1, turn_index: 0, log: [`${campaign.combat_active ? 'Combate encerrado' : 'Combate iniciado'} — ${new Date().toLocaleTimeString('pt-BR')}`, ...campaign.log] }); }}>{campaign.combat_active ? 'Encerrar combate' : 'Iniciar combate'}</Button>

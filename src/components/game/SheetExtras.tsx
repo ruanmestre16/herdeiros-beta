@@ -6,6 +6,7 @@ import {
   NOMENCLATURE_RANGES, WEAPONS, attackRoll, absorbPf, cappedNomenclatureDice, cappedWeaponDice, nomenclatureLabel, nomenclatureLevelLabel,
   damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, isTechAgent, isHuman, absorbActionLabel, attrLabelFor, sheetState, withSheetState,
   SHARE_MIN_SYNC, syncLevelWith, pfShareBlock,
+  agonyStatus, agonyEnter, agonyFailure, agonyUndo, agonyLeave, AGONY_MAX_FAILURES,
   type Attr, type Character, type NomenclatureKind,
 } from '@/lib/game';
 
@@ -293,4 +294,59 @@ export function AbsorbPfAction({ character, update, addRoll, tablemates = [], on
     {state.excess>0&&<div className="game-panel flux-result col-span-full"><strong>{state.excess} PF excedentes {state.rounds>0?`· ${state.rounds} rodadas restantes`:''}</strong><div className="flex items-center gap-2 flex-wrap mt-2"><span className="field-kicker">AÇÃO PADRÃO: {state.standard?'GASTA':'DISPONÍVEL'}</span>{state.standard&&<Button size="sm" variant="ghost" onClick={()=>update({abilities:withSheetState(character,{standard:false})})}>Renovar Ação Padrão</Button>}</div><div className="field-stack mt-3"><Field label="DESTINO"><select value={choice} onChange={e=>setChoice(e.target.value as 'Partilhar'|'Manter')}><option>Manter</option><option>Partilhar</option></select></Field>{choice==='Partilhar'?<><Field label="ALVO (SINCRONIA ACIMA DE 2, MESMA MESA)"><select value={chosen?.id??''} onChange={e=>setTarget(e.target.value)} disabled={!eligible.length}>{!eligible.length&&<option value="">Nenhum alvo elegível</option>}{eligible.map(t=><option key={t.id} value={t.id}>{t.name} · Sincronia {syncLevelWith(character,t)}</option>)}</select></Field>{shareBlock&&<p className="empty-copy">{shareBlock}</p>}<Button disabled={!!shareBlock||busy||!chosen||!onShare} onClick={async()=>{if(!chosen||!onShare||busy)return;setBusy(true);const r=await onShare(chosen.id);setBusy(false);setOutcome(r.error??`Você transferiu ${r.amount} PF para ${chosen.name}. A Ação Padrão foi gasta.`)}}>{busy?'Transferindo...':'Partilhar PF (Ação Padrão)'}</Button></>:<><Button onClick={()=>{const rounds=rollDice(1,4)[0]??1;update({abilities:withSheetState(character,{rounds})});setOutcome(`${rounds} rodadas para usar ou desperdiçar os PF excedentes.`)}}><Dices/> Rolar 1d4 rodadas</Button><Button disabled={!state.rounds} onClick={()=>{setOutcome(`Expele ${state.excess} PF. Ação padrão: efeito positivo ou negativo a critério do Mestre.`);update({abilities:withSheetState(character,{excess:0,rounds:0})})}}>Expelir Fluxo</Button><Stepper label="DT DO MESTRE" value={dt} min={1} max={40} onChange={setDt}/><Button disabled={!state.rounds||!character.nomenclatures.length} onClick={()=>{const dice=rollDice(1,dieFor(character.espirito)??4);const success=(dice[0]??0)>=dt;setOutcome(`Teste de Espírito ${dice[0]} vs DT ${dt}: ${success?'PF somados à Nomenclatura':'falha; PF gastos sem efeito'}.`);update({abilities:withSheetState(character,{excess:0,rounds:0})})}}>Somar à Nomenclatura</Button></>}</div></div>}
     {outcome&&<p role="status" className="auth-message col-span-full">{outcome}</p>}
   </>;
+}
+
+/**
+ * Agonia: aparece com 0 PV (automático) ou quando o Mestre usa "Entrar em Agonia".
+ * 3 marcações; cada falha no teste de Agonia preenche uma; na 3ª o personagem morre de vez.
+ */
+export function AgonyPanel({ character, update, addRoll, isMaster }: { character: Character; update: Update; addRoll: AddRoll; isMaster: boolean }) {
+  const [dt, setDt] = useState(10);
+  const [attr, setAttr] = useState<'corpo' | 'espirito'>('corpo');
+  const [last, setLast] = useState<{ roll: number; die: number; dt: number; success: boolean; died: boolean } | null>(null);
+  const a = agonyStatus(character);
+  const apply = (next: Character) => update({ abilities: next.abilities });
+  if (!a.active && !a.dead) {
+    return isMaster
+      ? <div className="agony-idle"><Button size="sm" variant="outline" className="action-agony" onClick={() => apply(agonyEnter(character))}><Skull /> Entrar em Agonia</Button></div>
+      : null;
+  }
+  const die = dieFor(character[attr]) ?? 4;
+  const rollTest = () => {
+    const roll = rollDice(1, die)[0]!; const success = roll >= dt;
+    const after = success ? character : agonyFailure(character);
+    const died = !success && agonyStatus(after).dead;
+    if (!success) apply(after);
+    setLast({ roll, die, dt, success, died });
+    addRoll({ expression: `1d${die}`, dice: [roll], modifier: 0, total: roll, source: `Teste de Agonia (${attrLabelFor(attr, character.lineage)}, DT ${dt}) — ${success ? 'sucesso' : died ? 'falha, MORTE' : 'falha'}` });
+  };
+  return <section className={`agony-panel${a.dead ? ' agony-dead' : ''}`} aria-live="polite">
+    <div className="agony-head">
+      <div className="agony-title"><span className="field-kicker">{a.dead ? 'MORTE DEFINITIVA' : 'AGONIA'}</span><strong>{a.dead ? '☠ O personagem morreu' : 'Em Agonia'}</strong></div>
+      <div className="agony-marks" role="img" aria-label={`${a.failures} de ${AGONY_MAX_FAILURES} falhas no teste de Agonia`}>
+        {Array.from({ length: AGONY_MAX_FAILURES }, (_, i) => <span key={i} className={`agony-mark${i < a.failures ? ' filled' : ''}`} />)}
+      </div>
+    </div>
+    <p className="muted-copy">{a.dead
+      ? `${AGONY_MAX_FAILURES} falhas no teste de Agonia: não há retorno.`
+      : `A cada turno, teste Corpo ou Espírito conforme a causa. Cada falha preenche uma marcação; ${AGONY_MAX_FAILURES} falhas encerram a vida para sempre.`}</p>
+    {!a.dead && <div className="gaki-grid">
+      <Field label="CAUSA (ATRIBUTO DO TESTE)"><select value={attr} onChange={e => setAttr(e.target.value as 'corpo' | 'espirito')}><option value="corpo">{attrLabelFor('corpo', character.lineage)} · 1d{dieFor(character.corpo) ?? 4}</option><option value="espirito">{attrLabelFor('espirito', character.lineage)} · 1d{dieFor(character.espirito) ?? 4}</option></select></Field>
+      <Stepper label="DT DO TESTE (MESTRE)" value={dt} min={1} max={20} onChange={setDt} />
+      <Button variant="outline" className="action-agony" onClick={rollTest}><Dices /> Rolar teste de Agonia (1d{die} vs DT {dt})</Button>
+    </div>}
+    {last && <div className={`combat-banner ${last.success ? 'banner-hit' : 'banner-miss'}`}>
+      <strong>{last.success ? 'SUCESSO — SEM NOVA MARCAÇÃO' : last.died ? 'FALHA — TERCEIRA MARCAÇÃO: MORTE' : 'FALHA — MARCAÇÃO PREENCHIDA'}</strong>
+      <span>Resultado {last.roll} (1d{last.die}) contra DT {last.dt}</span>
+    </div>}
+    {isMaster && <div className="agony-master">
+      <span className="field-kicker">MESTRE</span>
+      <div className="agony-master-actions">
+        <Button size="sm" variant="outline" className="action-agony" disabled={a.dead} onClick={() => apply(agonyFailure(character))}>+ Falha</Button>
+        <Button size="sm" variant="outline" disabled={!a.failures && !a.dead} onClick={() => apply(agonyUndo(character))}>− Falha (desfazer)</Button>
+        {!a.dead && <Button size="sm" variant="ghost" disabled={character.pv_current <= 0} onClick={() => apply(agonyLeave(character))}>Sair da Agonia</Button>}
+      </div>
+      {!a.dead && character.pv_current <= 0 && <small className="muted-copy">Com 0 PV a ficha continua em Agonia. Cure acima de 0 PV para sair e zerar as marcações.</small>}
+    </div>}
+  </section>;
 }

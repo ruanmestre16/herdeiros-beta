@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { applyPfShare, makeCampaign, makeCharacter, makeNpc, normalizeCharacter, pfShareBlock, type Campaign, type Character, type Npc } from '@/lib/game';
+import { applyPfShare, makeCampaign, makeCharacter, makeNpc, normalizeCharacter, pfShareBlock, reconcileAgony, type Campaign, type Character, type Npc } from '@/lib/game';
 
 // Changes to this hook's state layout require a fresh page, not preserved hook slots.
 if (import.meta.hot) import.meta.hot.accept(() => window.location.reload());
@@ -80,6 +80,8 @@ export function useGameData() {
     return write;
   }, []);
   function saveCharacter(character: Character, immediate = false) {
+    // Curou de 0 PV para acima de 0: a Agonia termina e as marcações zeram.
+    character = reconcileAgony(sheetDrafts.current.get(character.id) ?? charactersRef.current.find(c => c.id === character.id) ?? partyRef.current.find(c => c.id === character.id), character);
     setCharacters(prev => prev.map(c => c.id === character.id ? character : c));
     setPartyCharacters(prev => prev.map(c => c.id === character.id ? character : c));
     if (!userId) return Promise.resolve();
