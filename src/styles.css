@@ -398,10 +398,10 @@ html{scroll-behavior:smooth}body{font-family:'DM Sans',sans-serif;background:#10
 /* ===== "Como você quer matar ele(a)?": Karma (roxo) x Fluxo (dourado) — o Fluxo vence, boom, runas ===== */
 /* O choque (canvas) roda em killFxEngine.ts; --boom é definido pelo componente a partir de BOOM, para CSS e canvas explodirem juntos.
    Depois do boom: flash, anéis, a frase e as runas. */
-.kx-root { --boom: 3.8s; --kx-gold: oklch(0.86 0.15 88); position: fixed; inset: 0; z-index: 9999; overflow: hidden; cursor: pointer; background: #05030a; text-align: center; animation: kx-fade-in .35s ease-out both; }
+.kx-root { contain: layout paint size; --boom: 3.8s; --kx-gold: oklch(0.86 0.15 88); position: fixed; inset: 0; z-index: 9999; overflow: hidden; cursor: pointer; background: #05030a; text-align: center; animation: kx-fade-in .35s ease-out both; }
 .kx-root * { pointer-events: none; }
 .kx-shake { position: absolute; inset: 0; display: grid; place-items: center; animation: kx-shake-b .9s ease-out var(--boom) both; }
-.kx-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: #05030a; }
+.kx-canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; background: #05030a; transform: translateZ(0); backface-visibility: hidden; contain: strict; }
 @keyframes kx-shake-b { 0%, 100% { transform: translate(0, 0); } 10% { transform: translate(-18px, 10px); } 25% { transform: translate(16px, -12px); } 40% { transform: translate(-12px, -8px); } 55% { transform: translate(9px, 8px); } 70% { transform: translate(-5px, 3px); } 85% { transform: translate(3px, -2px); } }
 .kx-flash { position: absolute; inset: 0; z-index: 6; opacity: 0; background: radial-gradient(circle at 38% 50%, oklch(1 0.03 95), oklch(0.93 0.12 90) 45%, oklch(0.78 0.15 82) 100%); animation: kx-flash 1.1s ease-out var(--boom) both; }
 @keyframes kx-flash { 0% { opacity: 0; } 8% { opacity: 1; } 100% { opacity: 0; } }
@@ -411,7 +411,7 @@ html{scroll-behavior:smooth}body{font-family:'DM Sans',sans-serif;background:#10
 .kx-shade { position: absolute; inset: 0; z-index: 3; opacity: 0; background: radial-gradient(ellipse at 50% 50%, oklch(0.08 0.02 300 / .6), oklch(0.08 0.02 300 / .12) 72%); animation: kx-fade-in .8s ease-out calc(var(--boom) + .3s) both; }
 /* Runas douradas atravessando a tela em fileiras que alternam o sentido. */
 .kx-content::before { content: ''; position: absolute; z-index: -1; inset: -35% -45%; background: radial-gradient(ellipse at 50% 50%, oklch(0.08 0.02 300 / .78) 0, oklch(0.08 0.02 300 / .35) 45%, transparent 72%); opacity: 0; animation: kx-fade-in .8s ease-out calc(var(--boom) + .3s) both; }
-.kx-runes { position: absolute; inset: 0; z-index: 4; overflow: hidden; opacity: 0; -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); animation: kx-fade-in 1s ease-out calc(var(--boom) + .15s) both; }
+.kx-runes { position: absolute; will-change: opacity; transform: translateZ(0); inset: 0; z-index: 4; overflow: hidden; opacity: 0; -webkit-mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); mask-image: linear-gradient(90deg, transparent, #000 12%, #000 88%, transparent); animation: kx-fade-in 1s ease-out calc(var(--boom) + .15s) both; }
 .kx-row { position: absolute; left: 0; display: flex; width: max-content; white-space: nowrap; line-height: 1; font-weight: 700; color: oklch(0.93 0.13 92); text-shadow: 0 0 3px oklch(0.12 0.03 70), 0 0 3px oklch(0.12 0.03 70), 0 0 14px var(--kx-gold), 0 0 30px oklch(0.8 0.15 85 / .9); animation: kx-run 20s linear infinite; }
 .kx-row span { padding-right: 1em; letter-spacing: .5em; }
 .kx-row.rev { animation-direction: reverse; }
@@ -427,4 +427,11 @@ html{scroll-behavior:smooth}body{font-family:'DM Sans',sans-serif;background:#10
   .kx-flash, .kx-ring { display: none !important; }
   .kx-shake, .kx-row, .kx-content { animation: none !important; }
   .kx-shade, .kx-content::before, .kx-runes, .kx-skull, .kx-root h1 { opacity: 1 !important; animation: none !important; }
+}
+
+/* Desktop: reduzir o custo dos efeitos de texto sem alterar a animação do celular. */
+@media (min-width: 901px) {
+  .kx-row { text-shadow: 0 0 2px oklch(0.12 0.03 70), 0 0 8px var(--kx-gold); }
+  .kx-content { will-change: filter; transform: translateZ(0); }
+  .kx-skull, .kx-root h1 { will-change: transform, opacity, filter; }
 }
