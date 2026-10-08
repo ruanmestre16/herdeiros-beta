@@ -60,7 +60,7 @@ export const attrLabelFor = (attr: Attr, lineage?: string) => {
   if (lineage && isTechAgent(lineage) && attr === 'espirito') return 'TECNOLOGIA';
   return ATTR_LABEL[attr];
 };
-/** Humanos: arma formada pela vontade, ataque baseado em MENTE. Demais linhagens usam CORPO. */
+/** Atributo PADRÃO do ataque com arma: humanos MENTE (vontade), demais linhagens CORPO. Humanos podem escolher outro. */
 export const weaponAttrFor = (lineage: string): Attr => lineage === 'Humano' ? 'mente' : 'corpo';
 
 export function rollDice(count: number, sides: number) { return Array.from({ length: count }, () => 1 + Math.floor(Math.random() * sides)); }
@@ -186,9 +186,10 @@ export function agonyUndo(c: Character): Character {
   if (!a.failures && !a.dead) return c;
   return { ...c, abilities: withSheetState(c, { failures: Math.max(0, a.failures - 1), dead: false }) };
 }
-/** Mestre encerra a Agonia (só faz sentido com PV acima de 0; com 0 PV a ficha continua em Agonia). */
+/** Sair da Agonia (passou no teste ou o Mestre encerrou): zera as marcações e volta SEMPRE com 1 PV, qualquer que fosse o PV antes (inclusive Agonia forçada pelo Mestre com PV alto). */
 export function agonyLeave(c: Character): Character {
-  return { ...c, abilities: withSheetState(c, { agony: false, failures: 0 }) };
+  if (agonyStatus(c).dead) return c;
+  return { ...c, pv_current: 1, abilities: withSheetState(c, { agony: false, failures: 0 }) };
 }
 /** Ao curar de 0 PV para mais de 0, a Agonia termina e as marcações zeram. Morte nunca é desfeita aqui. */
 export function reconcileAgony(prev: Character | undefined, next: Character): Character {
@@ -226,7 +227,7 @@ export function absorbPf(espirito: number) {
 }
 
 /* ---------- Arma de Vínculo (Humano) ---------- */
-/** Humano: Arma de Vínculo. Ataque = 1d20 + MENTE; dano = dados da arma + MENTE (+ bônus de Karma). */
+/** Humano: Arma de Vínculo. Ataque = 1d20 + atributo à escolha (MENTE por padrão; pode ser CORPO ou ESPÍRITO); dano = dados da arma + MENTE (+ bônus de Karma). */
 export const isHuman = (lineage: string) => lineage === 'Humano';
 /** Notas livres guardadas junto à história da ficha (sem mudar o formato salvo). */
 export const NOTES_MARK = '\n\n<<<ANOTACOES>>>\n';
