@@ -22,3 +22,4 @@
 - [x] Corrigir os controles que ainda transbordam ou ficam apertados em celulares de 320–390 px.
 - [x] Aplicar pontos permanentes e limites de atributos por estágio na edição do jogador e do Mestre.
 - [x] Corrigir o arquivo de efeito ausente e o erro de rolagem que impedem a última versão do GitHub de abrir; verificar a prévia.
+- [ ] Trocar todos os acertos para D20 + dado do atributo do atacante e verificar ficha e combate no computador e celular.

@@ -66,12 +66,15 @@ export const weaponAttrFor = (lineage: string): Attr => lineage === 'Humano' ? '
 export function rollDice(count: number, sides: number) { return Array.from({ length: count }, () => 1 + Math.floor(Math.random() * sides)); }
 export function parseDice(expr: string) { const m = expr.match(/^(\d+)d(\d+)$/); return m ? { count: Number(m[1]), sides: Number(m[2]) } : null; }
 
-/** Acerto: 1d20 + atributo vs Esquiva (empate favorece o atacante). Crítico: 20 natural e total acima da Esquiva. */
+/** Acerto: 1d20 + dado do atributo do atacante vs Esquiva (empate favorece o atacante). Crítico: 20 natural e total acima da Esquiva. */
 export function attackRoll(attrValue: number, esquiva?: number) {
-  const d20 = 1 + Math.floor(Math.random() * 20); const total = d20 + attrValue;
+  const d20 = 1 + Math.floor(Math.random() * 20);
+  const attrDie = dieFor(attrValue) ?? 4;
+  const attrRoll = 1 + Math.floor(Math.random() * attrDie);
+  const total = d20 + attrRoll;
   const hit = esquiva === undefined ? null : total >= esquiva;
   const crit = d20 === 20 && (esquiva === undefined ? true : total > esquiva);
-  return { d20, total, hit, crit };
+  return { d20, attrDie, attrRoll, dice: [d20, attrRoll], expression: `1d20 + 1d${attrDie}`, modifier: 0, total, hit, crit };
 }
 /** Dano: no crítico dobra apenas os dados; o atributo é somado uma única vez. */
 export function damageRoll(dice: string, bonus: number, crit: boolean) {
@@ -227,7 +230,7 @@ export function absorbPf(espirito: number) {
 }
 
 /* ---------- Arma de Vínculo (Humano) ---------- */
-/** Humano: Arma de Vínculo. Ataque = 1d20 + atributo à escolha (MENTE por padrão; pode ser CORPO ou ESPÍRITO); dano = dados da arma + MENTE (+ bônus de Karma). */
+/** Humano: Arma de Vínculo. Ataque = 1d20 + dado do atributo à escolha (MENTE por padrão; pode ser CORPO ou ESPÍRITO); dano = dados da arma + MENTE (+ bônus de Karma). */
 export const isHuman = (lineage: string) => lineage === 'Humano';
 /** Notas livres guardadas junto à história da ficha (sem mudar o formato salvo). */
 export const NOTES_MARK = '\n\n<<<ANOTACOES>>>\n';
