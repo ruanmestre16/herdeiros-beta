@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Crosshair, Dices, RotateCcw, Shield, Skull, Sparkles, Swords, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -16,7 +16,19 @@ type Combatant = {
 };
 type AttackOption = { id: string; label: string; hitAttr: Attr; dice: string[]; damageAttr: Attr | null; pfCost: number; karma: number; nomenclature: boolean };
 type Reaction = 'esquivar' | 'bloquear' | 'contra-atacar' | 'parcial' | 'fluxo';
-type CombatActionIntent = { attackerId: string; targetId: string; optionId: string; diceChoice: string; mode: 'single' | 'full' | 'half'; playerName: string; createdAt: number };
+type AttackIntent = {
+  requestId: string;
+  campaignId: string;
+  attackerId: string;
+  targetId: string;
+  optionId: string;
+  dice: string;
+  hitAttr?: Attr;
+  mode: 'single';
+  senderUserId: string;
+  senderName: string;
+  createdAt: number;
+};
 
 function toCombatants(party: Character[], npcs: Npc[]): Combatant[] {
   const pcs = party.map<Combatant>(c => { const d = derived(c.corpo); return { id: c.id, kind: 'pc', name: c.name, pv: c.pv_current, pvMax: c.pv_max, pf: c.pf_current, pfMax: c.pf_max, corpo: c.corpo, mente: c.mente, espirito: c.espirito, esquiva: d.esquiva, bloqueio: d.bloqueio, initiative: c.initiative, pc: c }; });
@@ -41,7 +53,7 @@ function optionsFor(c: Combatant): AttackOption[] {
   return opts;
 }
 
-export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, updateSheet, addRoll, setPcInitiative, resetStandard, enterAgony }: {
+export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, updateSheet, addRoll, setPcInitiative, resetStandard, enterAgony, isMaster = false, userId = null, myCharacterId = null, openSheet }: {
   campaign: Campaign; party: Character[]; npcs: Npc[];
   saveCampaign: (c: Campaign) => void; saveNpc: (n: Npc) => void;
   updateSheet: (id: string, pv: number | null, pf: number | null, clearInitiative?: boolean) => void;
@@ -51,37 +63,14 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   resetStandard?: (c: Character) => void;
   /** Mestre manda um personagem entrar em Agonia (inclusive após sofrer dano, mesmo com PV acima de 0). */
   enterAgony?: (c: Character) => void;
-  canControlCombat?: boolean;
-  controlledCharacterId?: string | null;
-  openSheet?: (id: string, kind: 'pc' | 'npc') => void;
+  /** Permite ao Mestre abrir qualquer ficha e ao jogador abrir somente a própria ficha. */
+  isMaster?: boolean;
+  userId?: string | null;
+  myCharacterId?: string | null;
+  openSheet?: (combatant: Combatant) => void;
 }) {
   const combatants = useMemo(() => toCombatants(party, npcs), [party, npcs]);
   const current = campaign.combat_active && combatants.length ? combatants[campaign.turn_index % combatants.length] : undefined;
-  const combatChannelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
-  const [playerIntent, setPlayerIntent] = useState<CombatActionIntent | null>(null);
-  const canControl = !!canControlCombat;
-  const playerTurn = !!current?.pc && !!controlledCharacterId && current.id === controlledCharacterId;
-  useEffect(() => { if (!canControl) { setAttackerId(current?.id ?? ''); setPending(null); setArea(null); } }, [current?.id, canControl]);
-  useEffect(() => {
-    if (!campaign.id) return;
-    const channel = supabase.channel(`herdeiros-combat-${campaign.id}`);
-    combatChannelRef.current = channel;
-    channel.on('broadcast', { event: 'player-action' }, ({ payload }) => {
-      const intent = payload as CombatActionIntent;
-      if (!intent?.attackerId) return;
-      setPlayerIntent(intent);
-      if (canControl) {
-        setAttackerId(intent.attackerId);
-        setTargetId(intent.targetId);
-        setOptionId(intent.optionId);
-        setDiceChoice(intent.diceChoice || '');
-        setMode(intent.mode);
-        setPending(null);
-        setArea(null);
-      }
-    }).subscribe();
-    return () => { combatChannelRef.current = null; void supabase.removeChannel(channel); };
-  }, [campaign.id, canControl]);
   const [attackerId, setAttackerId] = useState('');
   const [optionId, setOptionId] = useState('desarmado_leve');
   const [diceChoice, setDiceChoice] = useState('');
@@ -95,8 +84,13 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   const [mode, setMode] = useState<'single' | 'full' | 'half'>('single');
   const [area, setArea] = useState<null | { attackerId: string; option: AttackOption; dice: string; d20: number; attrDie: number; attrRoll: number; total: number; crit: boolean; results: { id: string; name: string; esquiva: number; hit: boolean; crit: boolean }[]; damage?: { raw: number; applied: number; lines: string[] } }>(null);
   const [pending, setPending] = useState<null | { attackerId: string; targetId: string; option: AttackOption; dice: string; d20: number; attrDie: number; attrRoll: number; total: number; esquiva: number; hit: boolean; crit: boolean; reaction: Reaction; defense: number; counterDamage?: number; damage?: { raw: number; dice: number[]; bonus: number; block: number; final: number } }>(null);
+  const [incomingIntents, setIncomingIntents] = useState<AttackIntent[]>([]);
+  const [sentIntentId, setSentIntentId] = useState<string | null>(null);
 
-  const attacker = combatants.find(c => c.id === (attackerId || current?.id)) ?? combatants[0];
+  const masterMode = isMaster || !userId;
+  const attacker = masterMode
+    ? (combatants.find(c => c.id === (attackerId || current?.id)) ?? combatants[0])
+    : combatants.find(c => c.id === myCharacterId) ?? undefined;
   const options = attacker ? optionsFor(attacker) : [];
   const weapons = options.filter(o => !o.nomenclature);
   const nomenclatures = options.filter(o => o.nomenclature);
@@ -107,12 +101,48 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   const dice = option && option.dice.includes(diceChoice) ? diceChoice : option?.dice[0] ?? '';
   const targets = combatants.filter(c => c.id !== attacker?.id);
   const target = targets.find(c => c.id === targetId) ?? targets[0];
+  const isMyTurn = !!attacker && !!myCharacterId && attacker.id === myCharacterId && current?.id === myCharacterId && campaign.combat_active;
+  const playerCanChooseAttack = !masterMode && isMyTurn && attacker?.kind === 'pc';
 
   const areaTargets = attacker ? combatants.filter(c => c.id !== attacker.id && c.kind !== attacker.kind) : [];
   const lineage = attacker?.pc?.lineage ?? '';
   const skillName = nomenclatureLabel(lineage);
   const selectedSkill = option?.nomenclature ? attacker?.pc?.nomenclatures[Number(option.id.slice(4))] : undefined;
   const reactionAvailable = (c: Combatant) => reactions[c.id] !== campaign.round;
+
+  useEffect(() => {
+    if (!userId || !campaign.id) return;
+    const channel = supabase.channel(`herdeiros-combat-actions-${campaign.id}`)
+      .on('broadcast', { event: 'combat_attack_intent' }, ({ payload }) => {
+        const intent = payload as AttackIntent;
+        if (!intent?.requestId || intent.campaignId !== campaign.id || intent.senderUserId === userId) return;
+        if (masterMode) {
+          setIncomingIntents(prev => prev.some(item => item.requestId === intent.requestId) ? prev : [...prev, intent]);
+        }
+      })
+      .on('broadcast', { event: 'combat_attack_resolved' }, ({ payload }) => {
+        const resolved = payload as { requestId?: string };
+        if (resolved?.requestId) setSentIntentId(current => current === resolved.requestId ? null : current);
+      })
+      .subscribe();
+    return () => { void supabase.removeChannel(channel); };
+  }, [campaign.id, masterMode, userId]);
+
+  async function sendAttackIntent() {
+    if (!playerCanChooseAttack || !attacker || !target || !option || option.pfCost > attacker.pf || sentIntentId) return;
+    if (option.nomenclature && option.pfCost > attacker.pf) return;
+    const requestId = crypto.randomUUID();
+    const intent: AttackIntent = {
+      requestId, campaignId: campaign.id, attackerId: attacker.id, targetId: target.id, optionId: option.id,
+      dice, hitAttr: option.hitAttr, mode: 'single', senderUserId: userId!, senderName: attacker.name, createdAt: Date.now(),
+    };
+    const channel = supabase.channel(`herdeiros-combat-actions-${campaign.id}`);
+    await channel.subscribe();
+    await channel.send({ type: 'broadcast', event: 'combat_attack_intent', payload: intent });
+    await supabase.removeChannel(channel);
+    setSentIntentId(requestId);
+    setPending(null);
+  }
   function selectReaction(c: Combatant, reaction: Reaction, nomenclature: boolean) {
     if (!reactionAvailable(c) || ((reaction === 'parcial' || reaction === 'fluxo') && !nomenclature) || (reaction === 'fluxo' && fluxUsed[c.id])) return null;
     setReactions(prev => ({...prev,[c.id]:campaign.round}));
@@ -123,20 +153,8 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   function selectOption(id: string) {
     setOptionId(id); setDiceChoice(''); setPending(null); setArea(null);
   }
-  async function sendPlayerAction() {
-    if (!attacker || !option || !target || !playerTurn || option.pfCost > attacker.pf) return;
-    const intent: CombatActionIntent = { attackerId: attacker.id, targetId: mode === 'single' ? target.id : '', optionId: option.id, diceChoice: diceChoice || option.dice[0] || '', mode, playerName: attacker.name, createdAt: Date.now() };
-    setPlayerIntent(intent);
-    if (combatChannelRef.current) await combatChannelRef.current.send({ type: 'broadcast', event: 'player-action', payload: intent });
-  }
   function attackButtons() {
     if (!option) return null;
-    if (!canControl) {
-      return <div className="mt-3 flex flex-wrap gap-2">
-        {playerTurn && <Button disabled={option.pfCost > (attacker?.pf ?? 0) || (mode === 'single' && !target)} onClick={() => void sendPlayerAction()}><Swords /> Enviar ação ao Mestre</Button>}
-        {playerIntent?.attackerId === attacker?.id && <span className="combat-action-status">Ação enviada. Aguarde a reação do Mestre.</span>}
-      </div>;
-    }
     return <div className="mt-3 flex flex-wrap gap-2">
       {mode !== 'single' ? <>
         <Button disabled={option.pfCost > (attacker?.pf ?? 0) || !areaTargets.length} onClick={rollAreaAttack}><Swords /> Atacar todos ({areaTargets.length})</Button>
@@ -176,25 +194,47 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     else updateSheet(c.id, pv, pf);
   }
 
+  function resolveAttack(attackerToResolve: Combatant, targetToResolve: Combatant, optionToResolve: AttackOption, diceToResolve: string, reactionToUse: Reaction, requestId?: string) {
+    if (optionToResolve.pfCost > attackerToResolve.pf) return false;
+    const reaction = selectReaction(targetToResolve, reactionToUse, optionToResolve.nomenclature);
+    if (!reaction) return false;
+    const attrValue = attackerToResolve[optionToResolve.hitAttr];
+    const r = attackRoll(attrValue, targetToResolve.esquiva);
+    const fluxDie = reaction === 'fluxo' ? rollDice(1, 20)[0]! : null;
+    const defense = fluxDie !== null ? fluxDie + targetToResolve.espirito : targetToResolve.esquiva;
+    const crit = fluxDie !== null ? (r.d20 === 20 && r.total > defense) : r.crit;
+    const defenseText = fluxDie !== null ? `Bloqueio de Fluxo (d20 [${fluxDie}] + ${attrLabelFor('espirito', targetToResolve.pc?.lineage)} ${targetToResolve.espirito} = ${defense})` : `${reaction} (defesa ${defense})`;
+    const hit = reaction === 'bloquear' || reaction === 'parcial' || reaction === 'contra-atacar' || r.total >= defense;
+    if (optionToResolve.pfCost) setResources(attackerToResolve, null, attackerToResolve.pf - optionToResolve.pfCost);
+    setPending({ attackerId: attackerToResolve.id, targetId: targetToResolve.id, option: optionToResolve, dice: diceToResolve, d20: r.d20, attrDie: r.attrDie, attrRoll: r.attrRoll, total: r.total, esquiva: targetToResolve.esquiva, hit, crit, reaction, defense });
+    addRoll({ expression: r.expression, dice: r.dice, modifier: r.modifier, total: r.total, source: `${attackerToResolve.name} → ${targetToResolve.name}${crit ? ' — CRÍTICO' : ''}`, crit });
+    if (fluxDie !== null) addRoll({ expression: `1d20 + ${targetToResolve.espirito}`, dice: [fluxDie], modifier: targetToResolve.espirito, total: defense, source: `Bloqueio de Fluxo: ${targetToResolve.name}` });
+    log([`${attackerToResolve.name} ataca ${targetToResolve.name} (${optionToResolve.label}${optionToResolve.pfCost ? `, −${optionToResolve.pfCost} PF` : ''}): d20 [${r.d20}] + 1d${r.attrDie} [${r.attrRoll}] (${attrLabelFor(optionToResolve.hitAttr, attackerToResolve.pc?.lineage)}) = ${r.total}; reação: ${defenseText} → ${hit ? (crit ? 'CRÍTICO! ATAQUE ACERTOU' : 'ATAQUE ACERTOU') : 'ALVO ESQUIVOU'}`]);
+    if (requestId && userId) {
+      const channel = supabase.channel(`herdeiros-combat-actions-${campaign.id}`);
+      void channel.subscribe().then(async () => {
+        await channel.send({ type: 'broadcast', event: 'combat_attack_resolved', payload: { requestId, campaignId: campaign.id, userId } });
+        await supabase.removeChannel(channel);
+      });
+    }
+    return true;
+  }
+
   function rollAttack() {
-    if (!attacker || !target || !option || lostAction[attacker.id]) return;
-    if (option.pfCost > attacker.pf) return;
-    const reaction = selectReaction(target, chosenReaction, option.nomenclature);
-    if (!reaction) return;
-    const attrValue = attacker[option.hitAttr];
-    const r = attackRoll(attrValue, target.esquiva);
-    // Bloqueio de Fluxo = 1d20 puro + Espírito do defensor (sem outros modificadores). Demais reações seguem como antes.
-    const fluxDie = reaction==='fluxo' ? rollDice(1,20)[0]! : null;
-    const defense = fluxDie!==null ? fluxDie + target.espirito : target.esquiva;
-    // Crítico = 20 natural com total acima da defesa efetiva (no Bloqueio de Fluxo, a defesa é o resultado do próprio Bloqueio).
-    const crit = fluxDie!==null ? (r.d20===20 && r.total>defense) : r.crit;
-    const defenseText = fluxDie!==null ? `Bloqueio de Fluxo (d20 [${fluxDie}] + ${attrLabelFor('espirito', target.pc?.lineage)} ${target.espirito} = ${defense})` : `${reaction} (defesa ${defense})`;
-    const hit = reaction==='bloquear' || reaction==='parcial' || reaction==='contra-atacar' || r.total>=defense;
-    if (option.pfCost) setResources(attacker, null, attacker.pf - option.pfCost);
-    setPending({ attackerId: attacker.id, targetId: target.id, option, dice, d20: r.d20, attrDie: r.attrDie, attrRoll: r.attrRoll, total: r.total, esquiva: target.esquiva, hit, crit, reaction, defense });
-    addRoll({ expression: r.expression, dice: r.dice, modifier: r.modifier, total: r.total, source: `${attacker.name} → ${target.name}${crit ? ' — CRÍTICO' : ''}`, crit });
-    if (fluxDie!==null) addRoll({ expression: `1d20 + ${target.espirito}`, dice: [fluxDie], modifier: target.espirito, total: defense, source: `Bloqueio de Fluxo: ${target.name}` });
-    log([`${attacker.name} ataca ${target.name} (${option.label}${option.pfCost ? `, −${option.pfCost} PF` : ''}): d20 [${r.d20}] + 1d${r.attrDie} [${r.attrRoll}] (${attrLabelFor(option.hitAttr, lineage)}) = ${r.total}; reação: ${defenseText} → ${hit ? (crit ? 'CRÍTICO! ATAQUE ACERTOU' : 'ATAQUE ACERTOU') : 'ALVO ESQUIVOU'}`]);
+    if (!masterMode || !attacker || !target || !option || lostAction[attacker.id]) return;
+    resolveAttack(attacker, target, option, dice, chosenReaction);
+  }
+
+  function resolveIncomingIntent(intent: AttackIntent, reaction: Reaction) {
+    const a = combatants.find(c => c.id === intent.attackerId);
+    const t = combatants.find(c => c.id === intent.targetId);
+    if (!a || !t || !a.pc || a.id !== current?.id || !campaign.combat_active) return;
+    const opts = optionsFor(a);
+    const selectedBase = opts.find(o => o.id === intent.optionId);
+    if (!selectedBase) return;
+    const selected = intent.hitAttr ? { ...selectedBase, hitAttr: intent.hitAttr } : selectedBase;
+    const resolved = resolveAttack(a, t, selected, intent.dice, reaction, intent.requestId);
+    if (resolved) setIncomingIntents(prev => prev.filter(item => item.requestId !== intent.requestId));
   }
 
   function rollDamage() {
@@ -241,41 +281,42 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
           <span className="combatant-number">{c.initiative ?? '—'}</span>
           <span className="combatant-icon">{c.kind === 'npc' ? <Skull /> : <Users />}</span>
           <span className="flex-1"><strong>{c.name}</strong><small>{c.pv} / {c.pvMax} PV · <span className="text-flux">{c.pf} / {c.pfMax} PF</span> · Esq {c.esquiva} · RD {c.bloqueio}{c.pc ? agonyLabel(c.pc) : (c.pv === 0 ? ' · AGONIA' : '')}</small></span>
-          {openSheet && (canControl || c.id === controlledCharacterId) && <Button variant="outline" size="sm" title={`Abrir ficha de ${c.name}`} aria-label={`Abrir ficha de ${c.name}`} onClick={() => openSheet(c.id, c.kind)}><Users /> Abrir ficha</Button>}
-          <Button variant="outline" size="sm" disabled={!canControl} title="Rolar iniciativa" aria-label={`Rolar iniciativa de ${c.name}`} onClick={() => c.npc ? rollNpcInitiative(c.npc) : rollPcInitiative(c)}><Dices /> Iniciativa</Button>
-          {canControl && (() => { const ns = c.npc ? npcSheet(c.npc) : null; if (!c.npc || !ns) return null; const npc = c.npc; return <>
+          <Button variant="outline" size="sm" title="Rolar iniciativa" aria-label={`Rolar iniciativa de ${c.name}`} onClick={() => c.npc ? rollNpcInitiative(c.npc) : rollPcInitiative(c)}><Dices /> Iniciativa</Button>
+          {(() => { const ns = c.npc ? npcSheet(c.npc) : null; if (!c.npc || !ns) return null; const npc = c.npc; return <>
             <Button variant="outline" size="sm" className={isTechAgent(ns.lineage) ? 'action-force-nucleo' : 'action-force-karma'} title="Forçar o Fluxo" aria-label={`Forçar o Fluxo de ${c.name}`} onClick={() => npcForceFlux(npc)}><Sparkles /> {forceActionLabel(ns.lineage)}</Button>
             <AbsorbPfAction character={ns} update={p => saveNpc(applyNpcSheetPatch(npc, p))} addRoll={addRoll} />
           </>; })()}
-          {canControl && c.pc && enterAgony && !agonyStatus(c.pc).active && !agonyStatus(c.pc).dead && <Button variant="outline" size="sm" className="action-agony" title="Entrar em Agonia" aria-label={`Entrar em Agonia: ${c.name}`} onClick={() => enterAgony(c.pc!)}><Skull /> Agonia</Button>}
+          {openSheet && (!masterMode ? c.id === myCharacterId : true) && <Button variant="outline" size="sm" title={masterMode ? 'Editar ficha' : 'Abrir ficha'} aria-label={`${masterMode ? 'Editar' : 'Abrir'} ficha de ${c.name}`} onClick={() => openSheet(c)}>{masterMode ? 'Editar ficha' : 'Abrir ficha'}</Button>}
+          {c.pc && enterAgony && masterMode && !agonyStatus(c.pc).active && !agonyStatus(c.pc).dead && <Button variant="outline" size="sm" className="action-agony" title="Entrar em Agonia" aria-label={`Entrar em Agonia: ${c.name}`} onClick={() => enterAgony(c.pc!)}><Skull /> Agonia</Button>}
           <span className="sr-only">{i}</span>
         </div>)}{!combatants.length && <p className="empty-copy">Os jogadores entram pela Mesa escolhendo sua ficha. Adicione NPCs para o combate.</p>}</div>
         <div className="combat-controls">
-          {canControl && <><Button disabled={!combatants.length} onClick={() => { combatants.forEach(c => { if (c.pc) resetStandard?.(c.pc); }); saveCampaign({ ...campaign, combat_active: !campaign.combat_active, round: 1, turn_index: 0, log: [`${campaign.combat_active ? 'Combate encerrado' : 'Combate iniciado'} — ${new Date().toLocaleTimeString('pt-BR')}`, ...campaign.log] }); }}>{campaign.combat_active ? 'Encerrar combate' : 'Iniciar combate'}</Button>
+          <Button disabled={!combatants.length} onClick={() => { combatants.forEach(c => { if (c.pc) resetStandard?.(c.pc); }); saveCampaign({ ...campaign, combat_active: !campaign.combat_active, round: 1, turn_index: 0, log: [`${campaign.combat_active ? 'Combate encerrado' : 'Combate iniciado'} — ${new Date().toLocaleTimeString('pt-BR')}`, ...campaign.log] }); }}>{campaign.combat_active ? 'Encerrar combate' : 'Iniciar combate'}</Button>
            <Button variant="outline" disabled={!campaign.combat_active} onClick={() => { const next = campaign.turn_index + 1; const nextFighter=combatants[next % Math.max(1,combatants.length)]; if(nextFighter){setReactions(prev=>({...prev,[nextFighter.id]:0}));setLostAction(prev=>({...prev,[nextFighter.id]:false}));if(nextFighter.pc)resetStandard?.(nextFighter.pc);} setAttackerId(''); setPending(null); saveCampaign({ ...campaign, turn_index: next % Math.max(1, combatants.length), round: next >= combatants.length ? campaign.round + 1 : campaign.round, log: [`Turno de ${nextFighter?.name ?? '—'}${nextFighter&&lostAction[nextFighter.id]?' (ação padrão e movimento sacrificados)':''}`, ...campaign.log] }); }}>Próximo turno <ArrowRight /></Button>
-          <Button variant="ghost" title="Limpar iniciativas para uma nova rolagem" onClick={() => { combatants.forEach(c => c.npc ? saveNpc({ ...c.npc, initiative: null }) : updateSheet(c.id, null, null, true)); }}><RotateCcw /> Limpar iniciativas</Button></>}
+          <Button variant="ghost" title="Limpar iniciativas para uma nova rolagem" onClick={() => { combatants.forEach(c => c.npc ? saveNpc({ ...c.npc, initiative: null }) : updateSheet(c.id, null, null, true)); }}><RotateCcw /> Limpar iniciativas</Button>
         </div>
       </section>
 
       <section className="game-panel"><div className="panel-head"><h3>Ação de ataque</h3><Crosshair size={15} /></div>
-        {!canControl && campaign.combat_active && (playerTurn ? <p className="combat-turn-banner">Seu turno: escolha o alvo e como deseja atacar. O Mestre decide a reação.</p> : <p className="empty-copy">Aguarde seu turno. O combate está sendo conduzido pelo Mestre.</p>)}
-        {canControl && playerIntent && <p className="combat-turn-banner">Ação recebida de {playerIntent.playerName}. Escolha Esquivar, Bloquear ou Contra-atacar e role o ataque.</p>}
-        {attacker && target ? <fieldset disabled={!canControl && !playerTurn} className="field-stack">
+        {!masterMode && incomingIntents.length > 0 && <div className="combat-banner banner-hit mb-4"><strong>O Mestre recebeu {incomingIntents.length} ação(ões)</strong><span>Escolha a reação para resolver cada ataque.</span>{incomingIntents.map(intent => { const a = combatants.find(c => c.id === intent.attackerId); const t = combatants.find(c => c.id === intent.targetId); const o = a ? optionsFor(a).find(x => x.id === intent.optionId) : undefined; return <span key={intent.requestId}>{intent.senderName} → {t?.name ?? intent.targetId} · {o?.label ?? intent.optionId}</span>; })}</div>}
+        {masterMode && incomingIntents.length > 0 && <div className="game-panel mb-5"><div className="panel-head"><h3>Ações dos jogadores</h3><span className="field-kicker">TEMPO REAL</span></div><div className="stack">{incomingIntents.map(intent => { const a = combatants.find(c => c.id === intent.attackerId); const t = combatants.find(c => c.id === intent.targetId); const o = a ? optionsFor(a).find(x => x.id === intent.optionId) : undefined; if (!a || !t || !o) return null; const available = reactionAvailable(t); return <div key={intent.requestId} className="combat-banner banner-hit"><strong>{a.name} quer atacar {t.name}</strong><span>{o.label} · {intent.dice}</span><div className="flex flex-wrap gap-2 pt-2"><Button size="sm" variant="outline" disabled={!available} onClick={() => resolveIncomingIntent(intent, 'esquivar')}>Esquivar</Button><Button size="sm" variant="outline" disabled={!available} onClick={() => resolveIncomingIntent(intent, 'bloquear')}>Bloquear</Button><Button size="sm" variant="outline" disabled={!available} onClick={() => resolveIncomingIntent(intent, 'contra-atacar')}>Contra-atacar</Button>{o.nomenclature&&<><Button size="sm" variant="outline" disabled={!available} onClick={() => resolveIncomingIntent(intent, 'parcial')}>Bloqueio Parcial</Button><Button size="sm" variant="outline" disabled={!available || !!fluxUsed[t.id]} onClick={() => resolveIncomingIntent(intent, 'fluxo')}>Bloqueio de Fluxo</Button></>}</div></div>; })}</div></div>}
+        {!masterMode && !isMyTurn && campaign.combat_active && <p className="empty-copy">Aguarde seu turno. Quando ele chegar, escolha o alvo e o ataque; o Mestre decidirá a reação.</p>}
+        {attacker && target ? <div className="field-stack">
           <div className="input-grid">
-            <label className="field"><span className="field-label">ATACANTE</span><select value={attacker.id} disabled={!canControl} onChange={e => { setAttackerId(e.target.value); selectOption('desarmado_leve'); }}>{combatants.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-            <label className="field"><span className="field-label">ALVO</span><select value={target.id} onChange={e => { setTargetId(e.target.value); setPending(null); setArea(null); }}>{targets.map(c => <option key={c.id} value={c.id}>{c.name} (Esq {c.esquiva})</option>)}</select></label>
+            {masterMode ? <label className="field"><span className="field-label">ATACANTE</span><select value={attacker.id} onChange={e => { setAttackerId(e.target.value); selectOption('desarmado_leve'); }}>{combatants.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label> : <div className="field"><span className="field-label">ATACANTE</span><strong>{attacker.name} · {isMyTurn ? 'SEU TURNO' : 'AGUARDE'}</strong></div>}
+            <label className="field"><span className="field-label">ALVO</span><select value={target.id} onChange={e => { setTargetId(e.target.value); setPending(null); setArea(null); }} disabled={!masterMode && !isMyTurn}>{targets.map(c => <option key={c.id} value={c.id}>{c.name} (Esq {c.esquiva})</option>)}</select></label>
           </div>
-          <label className="field"><span className="field-label">MODO DE ATAQUE</span><select value={mode} onChange={e => { setMode(e.target.value as 'single' | 'full' | 'half'); setPending(null); setArea(null); }}><option value="single">Um alvo</option><option value="full">Todos os inimigos · dano total</option><option value="half">Todos os inimigos · metade do dano</option></select></label>
-           {mode==='single'&&canControl&&<label className="field"><span className="field-label">REAÇÃO DE {target.name.toUpperCase()} {reactionAvailable(target)?'':'· USADA NESTA RODADA'}</span><select value={chosenReaction} onChange={e=>{setChosenReaction(e.target.value as Reaction);setPending(null)}} disabled={!reactionAvailable(target)}><option value="esquivar">Esquivar · Esquiva {target.esquiva}</option><option value="bloquear">Bloquear · reduz {target.bloqueio} do dano</option><option value="contra-atacar">Contra-atacar · disputa de dano</option>{option?.nomenclature&&<><option value="parcial">Bloqueio Parcial · dado de Espírito + Bloqueio</option><option value="fluxo" disabled={!!fluxUsed[target.id]}>Bloqueio de Fluxo · 1d20 + {attrLabelFor('espirito', target.pc?.lineage)} {target.espirito}</option></>}</select></label>}
+          {masterMode && <label className="field"><span className="field-label">MODO DE ATAQUE</span><select value={mode} onChange={e => { setMode(e.target.value as 'single' | 'full' | 'half'); setPending(null); setArea(null); }}><option value="single">Um alvo</option><option value="full">Todos os inimigos · dano total</option><option value="half">Todos os inimigos · metade do dano</option></select></label>}
+          {masterMode && mode==='single'&&<label className="field"><span className="field-label">REAÇÃO DE {target.name.toUpperCase()} {reactionAvailable(target)?'':'· USADA NESTA RODADA'}</span><select value={chosenReaction} onChange={e=>{setChosenReaction(e.target.value as Reaction);setPending(null)}} disabled={!reactionAvailable(target)}><option value="esquivar">Esquivar · Esquiva {target.esquiva}</option><option value="bloquear">Bloquear · reduz {target.bloqueio} do dano</option><option value="contra-atacar">Contra-atacar · disputa de dano</option>{option?.nomenclature&&<><option value="parcial">Bloqueio Parcial · dado de Espírito + Bloqueio</option><option value="fluxo" disabled={!!fluxUsed[target.id]}>Bloqueio de Fluxo · 1d20 + {attrLabelFor('espirito', target.pc?.lineage)} {target.espirito}</option></>}</select></label>}
           <div className="grid grid-cols-1 gap-5 border-t border-border pt-4 sm:grid-cols-2">
             <div className="min-w-0"><h4 className="field-kicker mb-3">ARMAS</h4>
-              <label className="field"><span className="field-label">ARMA</span><select aria-label="Arma de ataque" value={option && !option.nomenclature ? option.id : ''} onChange={e => selectOption(e.target.value)}><option value="" disabled>Selecionar arma</option>{weapons.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select></label>
+              <label className="field"><span className="field-label">ARMA</span><select aria-label="Arma de ataque" value={option && !option.nomenclature ? option.id : ''} onChange={e => selectOption(e.target.value)} disabled={!masterMode && !isMyTurn}><option value="" disabled>Selecionar arma</option>{weapons.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select></label>
               {humanWeapon && option && !option.nomenclature && attacker && <label className="field"><span className="field-label">ACERTAR COM (1d20 + DADO)</span><select aria-label="Atributo para acertar o ataque" value={option.hitAttr} onChange={e => { const v = e.target.value as Attr; const id = attacker.id; setHumanHit(prev => ({ ...prev, [id]: v })); setPending(null); setArea(null); }}>{(['mente', 'corpo', 'espirito'] as const).map(a => <option key={a} value={a}>{attrLabelFor(a, lineage)} (1d{dieFor(attacker[a]) ?? 4})</option>)}</select></label>}
-              {option && !option.nomenclature && attackButtons()}
+              {option && !option.nomenclature && (masterMode ? attackButtons() : <Button className="mt-3" disabled={!playerCanChooseAttack || !!sentIntentId || option.pfCost > attacker.pf} onClick={() => void sendAttackIntent()}><Swords /> {sentIntentId ? 'Ataque enviado ao Mestre' : 'Enviar ataque ao Mestre'}</Button>)}
             </div>
             <div className="min-w-0"><h4 className="field-kicker mb-3">{nomenclatureLabel(lineage, true).toUpperCase()}</h4>
-              <div className="grid max-h-60 gap-2 overflow-y-auto">{nomenclatures.map(o => { const n = attacker.pc?.nomenclatures[Number(o.id.slice(4))]; return <Button key={o.id} variant="outline" aria-pressed={option?.id === o.id} disabled={o.pfCost > attacker.pf && option?.id !== o.id} onClick={() => selectOption(o.id)} className={`h-auto min-w-0 justify-start whitespace-normal py-2 text-left ${option?.id === o.id ? 'border-primary bg-accent' : ''}`}><span className="grid min-w-0 gap-1"><strong className="break-words">{n?.name ?? o.label}</strong><span className="break-words text-xs">{nomenclatureLevelLabel(lineage, n?.kind)} · {o.dice[0]} · {o.pfCost} PF</span></span></Button>; })}{!nomenclatures.length && <p className="empty-copy">Nenhuma {skillName.toLowerCase()} criada na ficha.</p>}</div>
-              {selectedSkill && attackButtons()}
+              <div className="grid max-h-60 gap-2 overflow-y-auto">{nomenclatures.map(o => { const n = attacker.pc?.nomenclatures[Number(o.id.slice(4))]; return <Button key={o.id} variant="outline" aria-pressed={option?.id === o.id} disabled={(masterMode ? false : !isMyTurn) || (o.pfCost > attacker.pf && option?.id !== o.id)} onClick={() => selectOption(o.id)} className={`h-auto min-w-0 justify-start whitespace-normal py-2 text-left ${option?.id === o.id ? 'border-primary bg-accent' : ''}`}><span className="grid min-w-0 gap-1"><strong className="break-words">{n?.name ?? o.label}</strong><span className="break-words text-xs">{nomenclatureLevelLabel(lineage, n?.kind)} · {o.dice[0]} · {o.pfCost} PF</span></span></Button>; })}{!nomenclatures.length && <p className="empty-copy">Nenhuma {skillName.toLowerCase()} criada na ficha.</p>}</div>
+              {selectedSkill && (masterMode ? attackButtons() : <Button className="mt-3" disabled={!playerCanChooseAttack || !!sentIntentId || option.pfCost > attacker.pf} onClick={() => void sendAttackIntent()}><Swords /> {sentIntentId ? 'Ataque enviado ao Mestre' : 'Enviar ataque ao Mestre'}</Button>)}
             </div>
           </div>
           {option && option.dice.length > 1 && <label className="field"><span className="field-label">DADOS DE DANO (LIMITE DA TABELA)</span><select value={dice} onChange={e => { setDiceChoice(e.target.value); setPending(null); setArea(null); }}>{option.dice.map(d => <option key={d}>{d}</option>)}</select></label>}
@@ -295,7 +336,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
              {pending.damage && <span><Shield size={12} className="inline" /> Dano {pending.damage.raw} ({pending.damage.dice.join(' + ')}{pending.damage.bonus ? ` + ${pending.damage.bonus}` : ''}) − Bloqueio {pending.damage.block} = <strong>{pending.damage.final}</strong>{pending.counterDamage!==undefined&&pending.reaction==='contra-atacar'?` · disputa: ${pending.counterDamage}`:''}</span>}
           </div>}
           </>}
-        </fieldset> : <p className="empty-copy">São necessários ao menos dois combatentes.</p>}
+        </div> : <p className="empty-copy">São necessários ao menos dois combatentes.</p>}
       </section>
     </div>
     <section className="game-panel"><div className="panel-head"><h3>Crônica do combate</h3></div>{campaign.log.length ? campaign.log.filter(l => !l.startsWith('☠KILL:')).slice(0, 30).map((l, i) => <p className={`log-entry ${l.includes('CRÍTICO') ? 'log-crit' : ''}`} key={i}><span>✦</span>{l}</p>) : <p className="empty-copy">Os acontecimentos da batalha aparecerão aqui.</p>}</section>
