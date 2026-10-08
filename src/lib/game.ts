@@ -149,6 +149,56 @@ export function applyPfShare(from: Character, to: Character) {
     to: { ...to, pf_current: to.pf_current + amount } as Character,
   };
 }
+/* ---------- Agonia ---------- */
+export const AGONY_MAX_FAILURES = 3;
+/**
+ * Agonia: ativa automaticamente com 0 PV, ou quando o Mestre manda o personagem entrar (mesmo com PV acima de 0).
+ * Cada falha no teste de Agonia preenche uma marcação; 3 falhas = morte definitiva.
+ */
+export function agonyStatus(c: Character) {
+  const st = sheetState(c);
+  const failures = Math.max(0, Math.min(AGONY_MAX_FAILURES, Math.floor(Number(st.failures) || 0)));
+  const dead = !!st.dead || failures >= AGONY_MAX_FAILURES;
+  const active = !dead && (!!st.agony || c.pv_current <= 0);
+  return { active, dead, failures };
+}
+export const agonyMarks = (failures: number) => '●'.repeat(failures) + '○'.repeat(Math.max(0, AGONY_MAX_FAILURES - failures));
+/** Texto curto para listas: " · AGONIA ●○○", " · ☠ MORTO" ou "". */
+export function agonyLabel(c: Character) {
+  const a = agonyStatus(c);
+  return a.dead ? ' · ☠ MORTO' : a.active ? ` · AGONIA ${agonyMarks(a.failures)}` : '';
+}
+/** Mestre manda entrar em Agonia (não zera falhas já marcadas). */
+export function agonyEnter(c: Character): Character {
+  if (agonyStatus(c).dead) return c;
+  return { ...c, abilities: withSheetState(c, { agony: true }) };
+}
+/** Preenche uma marcação; na terceira, o personagem morre de vez. */
+export function agonyFailure(c: Character): Character {
+  const a = agonyStatus(c);
+  if (a.dead) return c;
+  const failures = Math.min(AGONY_MAX_FAILURES, a.failures + 1);
+  return { ...c, abilities: withSheetState(c, { agony: true, failures, dead: failures >= AGONY_MAX_FAILURES }) };
+}
+/** Desfaz a última marcação (correção de engano do Mestre; também desfaz uma morte marcada por engano). */
+export function agonyUndo(c: Character): Character {
+  const a = agonyStatus(c);
+  if (!a.failures && !a.dead) return c;
+  return { ...c, abilities: withSheetState(c, { failures: Math.max(0, a.failures - 1), dead: false }) };
+}
+/** Mestre encerra a Agonia (só faz sentido com PV acima de 0; com 0 PV a ficha continua em Agonia). */
+export function agonyLeave(c: Character): Character {
+  return { ...c, abilities: withSheetState(c, { agony: false, failures: 0 }) };
+}
+/** Ao curar de 0 PV para mais de 0, a Agonia termina e as marcações zeram. Morte nunca é desfeita aqui. */
+export function reconcileAgony(prev: Character | undefined, next: Character): Character {
+  if (!prev || prev.pv_current > 0 || next.pv_current <= 0) return next;
+  const st = sheetState(next);
+  if (st.dead || st.failures >= AGONY_MAX_FAILURES) return next;
+  if (!st.agony && st.failures === 0) return next;
+  return { ...next, abilities: withSheetState(next, { agony: false, failures: 0 }) };
+}
+
 export function attributeAllowed(c: Character, attr: Attr, value: number) {
   const stage = stageIndexFor(c.lineage, c.stage);
   const values = { corpo: c.corpo, mente: c.mente, espirito: c.espirito, [attr]: value };
