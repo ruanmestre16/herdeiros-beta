@@ -12,6 +12,7 @@ import { CombatPanel } from './CombatPanel';
 import { NewNpcDialog, type MonsterSheet } from './NewNpcDialog';
 import { NpcFullSheet } from './NpcFullSheet';
 import { LineagesPage } from './LineagesPage';
+import { KillCallFx } from './KillCallFx';
 import { WEAPONS } from '@/lib/game';
 
 type Area = 'jogador'|'mesa'|'mestre'|'rolador'|'regras'|'linhagens';
@@ -69,7 +70,7 @@ export function GameApp() {
   await data.saveCharacter({...clean,id,initiative:null},true);
   alert('Ficha importada para "Suas fichas" na área do Jogador.');
  }
- return <div className="app-shell"><KillCall campaigns={data.campaigns}/>
+ return <div className="app-shell"><KillCall campaigns={data.campaigns}/><KillCallFx campaigns={data.campaigns}/>
   <header className="topbar"><div className="topbar-inner"><Button variant="ghost" className="brand" onClick={()=>go('jogador')}><span className="brand-mark">✦</span><span>HERDEIROS<span className="brand-dot">.</span></span></Button><nav className={`main-nav ${mobileNav?'nav-open':''}`} aria-label="Navegação principal">{nav.map(item=><Button key={item.key} variant="ghost" className={`nav-item ${area===item.key?'nav-active':''}`} onClick={()=>go(item.key)}><item.icon size={15}/>{item.label}</Button>)}</nav><div className="topbar-actions"><span className="live-indicator"><i/> MESA VIVA</span><Button variant="outline" size="sm" onClick={()=>setAuthOpen(true)} className="account-button">{data.userId?<><Users/> {data.profileName || 'Definir perfil'}</>:<><LogIn/> Entrar</>}</Button><Button variant="ghost" size="icon" className="mobile-menu" onClick={()=>setMobileNav(!mobileNav)} aria-label="Abrir menu">{mobileNav?<X/>:<Menu/>}</Button></div></div></header>
   <main className="main-wrap">
    {area==='jogador' && <><div className="scene-banner"><img src={scene} width={1536} height={1024} alt="Herdeiro diante de um portal de Fluxo ancestral"/><div className="scene-content"><span className="eyebrow"><span className="eyebrow-line"/> O DESPERTAR COMEÇA AQUI</span><h1>Seu destino.<br/><em>Sua história.</em></h1><p>Cada escolha deixa uma marca no <span className="text-flux">Fluxo</span>.</p></div><span className="scene-corner">HERDEIROS / FICHA DE PERSONAGEM</span></div>
