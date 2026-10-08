@@ -9,6 +9,7 @@ import { lovable } from '@/integrations/lovable/index';
 import scene from '@/assets/flux-scene.jpg';
 import { KarmaTest, hasAnchor, ANCHOR_NAME, SyncEditor, GakiPassive, WeaponPanel, AbsorbPfAction, AgonyPanel, NomenclaturesTab, AbilitiesTab, type RollEntry } from './SheetExtras';
 import { CombatPanel } from './CombatPanel';
+import { NewNpcDialog, threatTier, type MonsterSheet } from './NewNpcDialog';
 import { LineagesPage } from './LineagesPage';
 import { WEAPONS } from '@/lib/game';
 
@@ -31,7 +32,7 @@ function TabBar<T extends string>({ tabs, active, onSelect, labels }: { tabs: re
 
 export function GameApp() {
  const data=useGameData();
- const [area,setArea]=useState<Area>('jogador'); const [sheetTab,setSheetTab]=useState<SheetTab>('Geral'); const [sheetId,setSheetIdRaw]=useState<string|null>(null); const setSheetId=(id:string|null)=>{setSheetIdRaw(id); try{ if(id)sessionStorage.setItem('herdeiros-sheet',id); else sessionStorage.removeItem('herdeiros-sheet'); }catch{/* ignore */}}; const [campaignId,setCampaignId]=useState<string|null>(null); const [masterTab,setMasterTab]=useState('NPCs e inimigos'); const [mobileNav,setMobileNav]=useState(false); const [authOpen,setAuthOpen]=useState(false);
+ const [newNpcOpen,setNewNpcOpen]=useState(false); const [openNpcId,setOpenNpcId]=useState(''); const [area,setArea]=useState<Area>('jogador'); const [sheetTab,setSheetTab]=useState<SheetTab>('Geral'); const [sheetId,setSheetIdRaw]=useState<string|null>(null); const setSheetId=(id:string|null)=>{setSheetIdRaw(id); try{ if(id)sessionStorage.setItem('herdeiros-sheet',id); else sessionStorage.removeItem('herdeiros-sheet'); }catch{/* ignore */}}; const [campaignId,setCampaignId]=useState<string|null>(null); const [masterTab,setMasterTab]=useState('NPCs e inimigos'); const [mobileNav,setMobileNav]=useState(false); const [authOpen,setAuthOpen]=useState(false);
  const [roomPassword,setRoomPassword]=useState(''); const [passwordFeedback,setPasswordFeedback]=useState(''); const [joinCode,setJoinCode]=useState(''); const [joinPassword,setJoinPassword]=useState(''); const [joinFeedback,setJoinFeedback]=useState(''); 
  const [rolls,setRolls]=useState<{id:string; expression:string; dice:number[]; modifier:number; total:number; source?:string|undefined; crit?:boolean}[]>([]);
  const allSheetsEarly=[...data.characters,...data.partyCharacters.filter(c=>!data.characters.some(own=>own.id===c.id))]; const character=allSheetsEarly.find(c=>c.id===sheetId) ?? data.characters[0]; const campaign=data.campaigns.find(c=>c.id===campaignId) ?? data.campaigns[0]; const isMaster=!!data.userId && !!campaign && ('master_id' in campaign) && campaign.master_id===data.userId; const campaignNpcs=data.npcs.filter(n=>!('campaign_id' in n) || n.campaign_id===campaign?.id);
@@ -63,7 +64,8 @@ export function GameApp() {
   async function importNpcSheet(npc:Npc) {
   const full=npcSheet(npc); if(!full) return;
   const id=await data.addCharacter(); if(!id) return;
-  await data.saveCharacter({...full,id,initiative:null},true);
+  const { gaki: _gaki, ...clean } = full as MonsterSheet; // dados do Gaki-monstro não existem no banco de fichas
+  await data.saveCharacter({...clean,id,initiative:null},true);
   alert('Ficha importada para "Suas fichas" na área do Jogador.');
  }
  return <div className="app-shell"><KillCall campaigns={data.campaigns}/>
@@ -95,7 +97,7 @@ export function GameApp() {
        {!tableMembers.length&&<p className="empty-copy">{data.userId?'Nenhum jogador entrou ainda. Envie o convite.':'Entre na sua conta para convidar jogadores.'}</p>}
        {campaignNpcs.length>0&&<><span className="field-kicker mt-4 block">NPCs E INIMIGOS</span>{campaignNpcs.map(n=><div className="roster-row" key={n.id}><span className="sheet-avatar">{n.name.slice(0,1)}</span><span className="flex-1"><strong>{n.name}</strong><small>{n.pv_current}/{n.pv_max} PV{n.hidden?' · oculto':''}</small></span><Button size="sm" variant="outline" onClick={()=>updateNpc(n,{pv_current:Math.max(0,n.pv_current-1)})}>−1 PV</Button><Button size="sm" variant="outline" onClick={()=>updateNpc(n,{pv_current:Math.max(0,n.pv_current-5)})}>−5 PV</Button><Button size="sm" variant="outline" onClick={()=>updateNpc(n,{pv_current:Math.min(n.pv_max,n.pv_current+1)})}>+1 PV</Button></div>)}</>}
       </Panel></div>}
-    {masterTab==='NPCs e inimigos'&&<div className="master-area"><Panel title="Minha ficha jogável" action={<Button size="sm" variant="outline" onClick={()=>go('jogador')}><Plus/> Criar ficha jogável</Button>}><p className="empty-copy">Uma ficha completa de personagem para você jogar nesta mesa, que aparece junto dos jogadores.</p></Panel><SectionHeading number="01" title="NPCs e inimigos" aside={<Button size="sm" onClick={()=>void data.addNpc(campaign.id)}><Plus/> Novo</Button>}/><div className="npc-list">{campaignNpcs.map(npc=><NpcEditor key={npc.id} npc={npc} update={partial=>updateNpc(npc,partial)} remove={()=>{if(confirm(`Excluir ${npc.name}?`))void data.deleteNpc(npc.id)}} throwDice={throwDice} addRoll={addRoll} importSheet={()=>void importNpcSheet(npc)}/>)}</div>{!campaignNpcs.length&&<p className="empty-copy">Nenhum NPC na mesa. Adicione o primeiro.</p>}</div>}
+    {masterTab==='NPCs e inimigos'&&<div className="master-area"><Panel title="Minha ficha jogável" action={<Button size="sm" variant="outline" onClick={()=>go('jogador')}><Plus/> Criar ficha jogável</Button>}><p className="empty-copy">Uma ficha completa de personagem para você jogar nesta mesa, que aparece junto dos jogadores.</p></Panel><SectionHeading number="01" title="NPCs e inimigos" aside={<Button size="sm" onClick={()=>setNewNpcOpen(true)}><Plus/> Novo</Button>}/><div className="npc-list">{campaignNpcs.map(npc=><NpcEditor key={npc.id} defaultOpen={npc.id===openNpcId} npc={npc} update={partial=>updateNpc(npc,partial)} remove={()=>{if(confirm(`Excluir ${npc.name}?`))void data.deleteNpc(npc.id)}} throwDice={throwDice} addRoll={addRoll} importSheet={()=>void importNpcSheet(npc)}/>)}</div>{!campaignNpcs.length&&<p className="empty-copy">Nenhum NPC na mesa. Adicione o primeiro.</p>}</div>}
     {masterTab==='Combate'&&<>{isMaster&&<div className="kill-call-bar"><Button className="kill-call-button" onClick={()=>void data.saveCampaign({...campaign,log:[`☠KILL:${Date.now()}|Como você quer matar ele?`,...campaign.log]})}>☠ Como você quer matar ele?</Button></div>}<CombatPanel campaign={campaign} party={combatParty} npcs={campaignNpcs} saveCampaign={c=>void data.saveCampaign(c)} saveNpc={n=>void data.saveNpc(n)} updateSheet={(id,pv,pf,clear)=>void data.updateSheetResources(id,pv,pf,clear)} addRoll={addRoll} setPcInitiative={setPcInitiative} resetStandard={c=>{if(sheetState(c).standard)void data.saveCharacter({...c,abilities:withSheetState(c,{standard:false})},true)}} enterAgony={c=>void data.saveCharacter(agonyEnter(c),true)}/></>}
     {masterTab==='Eventos'&&<div className="single-section"><SectionHeading number="02" title="Registro da sessão"/><div className="event-composer"><input id="new-event" placeholder="O que aconteceu na mesa?" onKeyDown={e=>{if(e.key==='Enter'&&e.currentTarget.value.trim()){void data.saveCampaign({...campaign,log:[e.currentTarget.value.trim(),...campaign.log]});e.currentTarget.value=''}}}/><Button onClick={()=>{const input=document.getElementById('new-event') as HTMLInputElement|null;if(input?.value.trim()){void data.saveCampaign({...campaign,log:[input.value.trim(),...campaign.log]});input.value=''}}}><Plus/> Registrar</Button></div>{campaign.log.filter(l=>!l.startsWith('☠KILL:')).map((item,i)=><p className="log-entry" key={i}><span>✦</span>{resourceText(item)}</p>)}{!campaign.log.length&&<p className="empty-copy">Nenhum evento registrado.</p>}</div>}
     </fieldset>{masterTab==='Rolador'&&<DiceRoller rolls={rolls} throwDice={throwDice} clear={()=>setRolls([])}/>}</>:<div className="empty-stage"><h2>Crie uma mesa para começar.</h2></div>}</>}
@@ -105,6 +107,7 @@ export function GameApp() {
    {area==='regras'&&<><div className="page-heading standalone"><div><span className="eyebrow subtle">CÓDICE / CONSULTA RÁPIDA</span><h1>As regras do <em>Despertar.</em></h1><p className="muted-copy">O essencial para manter a história em movimento.</p></div></div><div className="rules-layout"><aside className="rules-index"><span className="field-kicker">NESTA PÁGINA</span>{ruleSections.map((r,i)=><a key={i} href={`#regra-${i}`}><span>{String(i+1).padStart(2,'0')}</span>{resourceText(r.title)}</a>)}</aside><div className="rules-content">{ruleSections.map((r,i)=><section id={`regra-${i}`} key={i} className="rule-block"><SectionHeading number={String(i+1).padStart(2,'0')} title={r.title}/>{r.items.map((item,j)=><p key={j}>{resourceText(item)}</p>)}</section>)}<div className="rule-block"><SectionHeading number="06" title="Atributos derivados"/><div className="rule-table"><div><span>CORPO</span><span>PV</span><span>ESQUIVA</span><span>BLOQUEIO</span></div>{[1,2,3,4,5].map(n=><div key={n}><strong>{n}</strong><span>{derived(n).pv}</span><span>{derived(n).esquiva}</span><span>{derived(n).bloqueio}</span></div>)}</div></div></div></div></>}
   </main><footer className="site-footer"><span>✦ HERDEIROS <i>·</i> O DESPERTAR</span><span>O <span className="text-flux">Fluxo</span> nunca permanece o mesmo.</span></footer>
   {data.error&&<div role="alert" className="error-toast">{data.error}<Button variant="ghost" size="icon" aria-label="Fechar aviso" onClick={()=>window.location.reload()}><X/></Button></div>}
+  {newNpcOpen&&campaign&&<NewNpcDialog close={()=>setNewNpcOpen(false)} create={async r=>{setNewNpcOpen(false);const id=await data.addNpc(campaign.id,{...r.npc,notes:joinNpcNotes('',r.sheet)});if(id)setOpenNpcId(id)}}/>}
   {authOpen&&<AuthDialog userId={data.userId} profileName={data.profileName} saveProfile={data.saveProfile} close={()=>setAuthOpen(false)}/>}</div>;
 }
 const SHEET_MARK = '\n\n<<<FICHA>>>\n';
@@ -130,8 +133,8 @@ function npcSheet(npc: Npc): Character | null {
   return { ...sheet, id: npc.id, name: npc.name, corpo: npc.corpo, mente: npc.mente, espirito: npc.espirito, pv_current: npc.pv_current, pv_max: npc.pv_max, pf_current: npc.pf_current, pf_max: npc.pf_max };
 }
 
-function NpcEditor({npc,update,remove,throwDice,addRoll,importSheet}:{npc:Npc;update:(partial:Partial<Npc>)=>void;remove:()=>void;throwDice:(s:string,source?:string)=>unknown;addRoll:(entry:RollEntry)=>void;importSheet:()=>void}) {
-  const [open,setOpen]=useState(false);
+function NpcEditor({npc,update,remove,throwDice,addRoll,importSheet,defaultOpen=false}:{defaultOpen?:boolean;npc:Npc;update:(partial:Partial<Npc>)=>void;remove:()=>void;throwDice:(s:string,source?:string)=>unknown;addRoll:(entry:RollEntry)=>void;importSheet:()=>void}) {
+  const [open,setOpen]=useState(defaultOpen);
   const [tab,setTab]=useState<NpcTab>('Nomenclaturas');
   const { text } = splitNpcNotes(npc.notes);
   const sheet = npcSheet(npc);
@@ -151,14 +154,14 @@ function NpcEditor({npc,update,remove,throwDice,addRoll,importSheet}:{npc:Npc;up
       <Button size="sm" variant="outline" onClick={()=>throwDice('1d20',`Ataque de ${npc.name}`)}><Swords/> Rolar ataque</Button>
       {!sheet
         ? <Button size="sm" variant="outline" onClick={()=>{const first=normalizeCharacter({id:npc.id,name:npc.name,corpo:npc.corpo,mente:npc.mente,espirito:npc.espirito,pv_current:npc.pv_current,pv_max:npc.pv_max,pf_current:npc.pf_current,pf_max:npc.pf_max,lineage:'Gaki',stage:LINEAGE_STAGES['Gaki']?.[0]?.name??''});update({notes:joinNpcNotes(text,first)});setOpen(true)}}><Sparkles/> Ativar ficha completa</Button>
-        : <><Button size="sm" variant="outline" onClick={()=>setOpen(!open)}><Sparkles/> {open?'Fechar ficha completa':'Abrir ficha completa'}</Button><Button size="sm" variant="outline" onClick={importSheet}><Plus/> Importar para minhas fichas</Button></>}
+        : <><Button size="sm" variant="outline" onClick={()=>setOpen(!open)}><Sparkles/> {open?'Fechar ficha completa':'Abrir ficha completa'}</Button><Button size="sm" variant="outline" onClick={importSheet}><Plus/> Exportar para ficha de jogador</Button></>}
     </div>
     {sheet&&open&&<div className="field-stack mt-4">
       <div className="input-grid">
         <label className="field"><span className="field-label">LINHAGEM</span><select value={sheet.lineage} onChange={e=>updateSheet({lineage:e.target.value,stage:LINEAGE_STAGES[e.target.value]?.[0]?.name??''})}>{['Humano','Arcadiano','Gaki','Agente Tecnológico'].map(x=><option key={x}>{x}</option>)}</select></label>
         <label className="field"><span className="field-label">ESTÁGIO</span><select value={(LINEAGE_STAGES[sheet.lineage]??[])[stageIndexFor(sheet.lineage,sheet.stage)]?.name??''} onChange={e=>updateSheet({stage:e.target.value})}>{(LINEAGE_STAGES[sheet.lineage]??[]).map((s,i)=><option key={s.name} value={s.name}>{i+1}. {s.name}</option>)}</select></label>
       </div>
-      <Stepper label={resourceBarLabel(sheet.lineage)} value={sheet.karma} max={karmaMaximum(sheet.mente,sheet.espirito)} tone={isTechAgent(sheet.lineage)?'nucleo':'karma'} onChange={karma=>updateSheet({karma})}/>
+      {(sheet as MonsterSheet).gaki?<div className="karma-alert karma-gaki"><strong>GAKI · {(sheet as MonsterSheet).gaki!.style.toUpperCase()}</strong><span>Ameaça {(sheet as MonsterSheet).gaki!.threat} ({threatTier((sheet as MonsterSheet).gaki!.threat)}) · Karma ∞</span></div>:<Stepper label={resourceBarLabel(sheet.lineage)} value={sheet.karma} max={karmaMaximum(sheet.mente,sheet.espirito)} tone={isTechAgent(sheet.lineage)?'nucleo':'karma'} onChange={karma=>updateSheet({karma})}/>}
       <TabBar tabs={['Nomenclaturas','Habilidades','Arma','Passiva'] as const} active={tab} onSelect={setTab} labels={{ Nomenclaturas: nomenclatureLabel(sheet.lineage, true) }}/>
       {tab==='Nomenclaturas'&&<NomenclaturesTab character={sheet} update={updateSheet} addRoll={addRoll}/>}
       {tab==='Habilidades'&&<AbilitiesTab character={sheet} update={updateSheet}/>}
