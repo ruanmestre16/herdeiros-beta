@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import clashImage from '@/assets/flux-clash.jpg';
+import { useEffect, useRef, useState } from 'react';
+import { BOOM, createKillFx } from './killFxEngine';
 
 const KILL_MARK = '☠KILL:';
 const RUNES = 'ᚠᚢᚦᚨᚱᚲᚷᚹᚺᚾᛁᛃᛇᛈᛉᛊᛏᛒᛖᛗᛚᛜᛞᛟ'.split('');
@@ -15,15 +15,13 @@ const ROWS = Array.from({ length: 9 }, (_, r) => ({
 }));
 
 /**
- * "Como você quer matar ele?": o Karma (roxo) e o Fluxo (dourado) se chocam e se degladiam;
- * o Fluxo vence, tudo explode ("boom") e fica só o dourado, com a frase e as runas passando pela tela.
- * Aparece para todos da mesa quando o Mestre aciona o botão. Temporização em styles.css (.kx-*; --boom = momento da explosão).
+ * "Como você quer matar ele(a)?": o Karma (roxo) e o Fluxo (dourado) se chocam e se degladiam num canvas animado em
+ * tempo real (killFxEngine.ts); o Fluxo vence, tudo explode ("boom") e fica só o dourado, com a frase e as runas passando.
+ * Aparece para todos da mesa quando o Mestre aciona o botão. O momento do boom (BOOM) é compartilhado com o CSS (.kx-*).
  */
 export function KillCallFx({ campaigns }: { campaigns: { id: string; log: string[] }[] }) {
   const [seen, setSeen] = useState<string>('');
   const [show, setShow] = useState<string | null>(null);
-  // Pré-carrega a imagem para a animação não começar com o quadro vazio.
-  useEffect(() => { const img = new Image(); img.src = clashImage; }, []);
   useEffect(() => {
     for (const c of campaigns) {
       const e = c.log?.[0];
@@ -40,23 +38,29 @@ export function KillCallFx({ campaigns }: { campaigns: { id: string; log: string
     const t = setTimeout(() => setShow(null), 13000);
     return () => clearTimeout(t);
   }, [show]);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  // Motor do canvas: um laço requestAnimationFrame por exibição, limpo ao fechar.
+  useEffect(() => {
+    if (!show || !canvasRef.current) return;
+    const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+    const fx = createKillFx(canvasRef.current, { reduced });
+    if (reduced) return () => fx.destroy();
+    let raf = 0, last = performance.now();
+    const loop = (now: number) => { fx.step((now - last) / 1000); last = now; fx.draw(); raf = requestAnimationFrame(loop); };
+    raf = requestAnimationFrame(loop);
+    return () => { cancelAnimationFrame(raf); fx.destroy(); };
+  }, [show]);
   if (!show) return null;
-  return <div className="kx-root" role="alert" key={show} onClick={() => setShow(null)}>
+  return <div className="kx-root" style={{ ['--boom' as string]: `${BOOM}s` }} role="alert" key={show} onClick={() => setShow(null)}>
     <div className="kx-shake">
-      <div className="kx-art" aria-hidden="true">
-        <img className="kx-half kx-purple" src={clashImage} alt="" draggable={false} />
-        <img className="kx-half kx-gold" src={clashImage} alt="" draggable={false} />
-        <img className="kx-half kx-mirror" src={clashImage} alt="" draggable={false} />
-        <div className="kx-core" />
-      </div>
-      <div className="kx-wash" />
+      <canvas ref={canvasRef} className="kx-canvas" aria-hidden="true" />
       <div className="kx-shade" />
       <div className="kx-runes" aria-hidden="true">
         {ROWS.map((r, i) => <div key={i} className={`kx-row${r.reverse ? ' rev' : ''}`} style={{ top: `${r.top}%`, fontSize: r.size, animationDuration: `${r.dur}s`, opacity: r.opacity }}><span>{r.text}</span><span>{r.text}</span></div>)}
       </div>
-      <div className="kx-ring kx-ring0" /><div className="kx-ring" /><div className="kx-ring kx-ring2" />
+      <div className="kx-ring" /><div className="kx-ring kx-ring2" />
       <div className="kx-flash" />
-      <div className="kx-content"><span className="kx-skull">☠</span><h1>Como você quer matar ele?</h1></div>
+      <div className="kx-content"><span className="kx-skull">☠</span><h1>Como Você Quer Matar Ele(a)?</h1></div>
     </div>
   </div>;
 }
