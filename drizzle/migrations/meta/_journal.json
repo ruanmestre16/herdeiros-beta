@@ -8,6 +8,13 @@
       "when": 1791428326128,
       "tag": "0000_share_excess_pf",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791794796439,
+      "tag": "0001_v8_elo_share_threshold",
+      "breakpoints": true
     }
   ]
 }
