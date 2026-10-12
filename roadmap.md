@@ -23,3 +23,7 @@
 - [x] Aplicar pontos permanentes e limites de atributos por estágio na edição do jogador e do Mestre.
 - [x] Corrigir o arquivo de efeito ausente e o erro de rolagem que impedem a última versão do GitHub de abrir; verificar a prévia.
 - [ ] Trocar todos os acertos para D20 + dado do atributo do atacante e verificar ficha e combate no computador e celular.
+- [ ] Atualizar textos e nomes para o livro v8, preservando a subclasse tecnológica e os dados existentes.
+- [ ] Aplicar críticos, atributos de arma, passivas, reações e defesas do livro v8.
+- [ ] Aplicar Elo, partilha, progressão GS, Moedas do Destino, habilidades e Agonia do livro v8.
+- [ ] Verificar cálculos e fluxos reais no computador e em celulares de 320 e 390 px; não publicar.
