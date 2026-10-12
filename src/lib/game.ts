@@ -4,7 +4,7 @@ export type Character = {
   pf_current: number; pf_max: number; karma: number; gs: number; exhaustion: number;
   sync: { name: string; level: number }[]; nomenclatures: Nomenclature[];
   inventory: { name: string; quantity: number }[]; story: string;
-  abilities: { name: string; description: string; kind?: 'scar' | 'state'; scarType?: string; benefit?: string }[]; weapon_type: string; weapon_dice: string; initiative: number | null;
+   abilities: { name: string; description: string; kind?: 'scar' | 'state'; scarType?: string; benefit?: string }[]; weapon_type: string; weapon_dice: string; initiative: number | null;
 };
 export type NomenclatureKind = 'Direta' | 'Parcial' | 'Completa';
 export type Nomenclature = { name: string; cost: number; effect?: string; kind?: NomenclatureKind; dice?: number };
