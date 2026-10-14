@@ -39,6 +39,7 @@ type AttackIntent = {
   dice: string;
   mode: 'single';
   triple?: boolean;
+  stylized?: boolean;
   senderUserId: string;
   senderName: string;
   createdAt: number;
@@ -124,6 +125,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   /** Passiva do Humano: fluxo parcial lido (atacante>alvo). */
   const [read, setRead] = useState<Record<string, boolean>>({});
   const [triple, setTriple] = useState(false);
+  const [stylized, setStylized] = useState(false);
   const [notice, setNotice] = useState('');
   const [mode, setMode] = useState<'single' | 'full' | 'half'>('single');
   const [area, setArea] = useState<null | { attackerId: string; option: AttackOption; dice: string; d20: number; attrDie: number; attrRoll: number; total: number; crit: boolean; fumble: boolean; results: { id: string; name: string; esquiva: number; hit: boolean; crit: boolean }[]; damage?: { raw: number; applied: number; lines: string[] } }>(null);
@@ -152,6 +154,8 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   const selectedSkill = option?.nomenclature ? attacker?.pc?.nomenclatures[Number(option.id.slice(4))] : undefined;
   const reactionAvailable = (c: Combatant) => reactions[c.id] !== campaign.round;
   const tripleAvailable = !!attacker?.pc && !option?.nomenclature && canTripleCrit(attacker.pc) && attacker.pf >= TRIPLE_CRIT_COST + (option?.pfCost ?? 0);
+  const stylizedAvailable = !!attacker?.pc && !option?.nomenclature && canTripleCrit(attacker.pc) && attacker.pf >= STYLIZED_CRIT_COST + (option?.pfCost ?? 0);
+  const stylizedThreshold = attacker?.pc ? stylizedCritThreshold(attacker.pc.mente) : 20;
   const humanReadBonus = (a: Combatant, t: Combatant) => a.pc && isHuman(a.pc.lineage) && read[`${a.id}>${t.id}`] ? (READ_BONUS[stageIndexFor(a.pc.lineage, a.pc.stage)] ?? 3) : 0;
 
   /** Reações possíveis do alvo contra este ataque (Cap. V): Parcial só contra Parcial, Completa só contra Completa, Dança só no corpo a corpo. */
@@ -200,7 +204,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     const requestId = crypto.randomUUID();
     const intent: AttackIntent = {
       requestId, campaignId: campaign.id, attackerId: attacker.id, targetId: target.id, optionId: option.id,
-      dice, mode: 'single', triple: triple && tripleAvailable, senderUserId: userId!, senderName: attacker.name, createdAt: Date.now(),
+      dice, mode: 'single', triple: triple && tripleAvailable, stylized: stylized && stylizedAvailable, senderUserId: userId!, senderName: attacker.name, createdAt: Date.now(),
     };
     const channel = supabase.channel(`herdeiros-combat-actions-${campaign.id}`);
     await channel.subscribe();
