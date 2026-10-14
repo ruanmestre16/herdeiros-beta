@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Crosshair, Dices, RotateCcw, Shield, Skull, Sparkles, Swords, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  NOMENCLATURE_CRIT_DICE, PROTECTION_MIN_ELO, TRIPLE_CRIT_COST, WEAPONS,
+  NOMENCLATURE_CRIT_DICE, PROTECTION_MIN_ELO, STYLIZED_CRIT_COST, stylizedCritThreshold, TRIPLE_CRIT_COST, WEAPONS,
   attackRoll, canTripleCrit, counterRoll, damageRoll, danceStep, derived, dieFor, forceFlux, initiativeRoll, nomenclatureLabel, nomenclatureLevelLabel, attrLabelFor,
   karmaDamageBonus, karmaMaximum, weaponByKey, weaponRules, techniqueRules, upgradedDamage, protectRoll, syncLevelWith, stageIndexFor, isHuman, agonyStatus, agonyLabel, forceActionLabel, isTechAgent,
   type Attr, type Campaign, type Character, type NomenclatureKind, type Npc,
