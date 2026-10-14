@@ -12,7 +12,7 @@ export type Npc = { id: string; name: string; kind: string; hidden: boolean; pv_
 export type Campaign = { id: string; name: string; code: string; scene: string; round: number; turn_index: number; combat_active: boolean; log: string[] };
 export const dieFor = (n: number) => [0, 4, 6, 8, 10, 12][Math.max(1, Math.min(5, n))];
 export const derived = (corpo: number) => ({ pv: [0,25,32,42,52,60][corpo] ?? 25, esquiva: [0,10,12,14,15,16][corpo] ?? 10, bloqueio: [0,3,5,7,10,12][corpo] ?? 3, deslocamento: [0,7,9,11,12,13][corpo] ?? 7 });
-export const makeCharacter = (): Character => ({ id: crypto.randomUUID(), name: 'Novo Herdeiro', lineage: 'Humano', stage: 'Libertado', concept: '', weapon: '', corpo: 1, mente: 1, espirito: 1, pv_current: 25, pv_max: 25, pf_current: 0, pf_max: 20, karma: 0, gs: 1, exhaustion: 0, sync: [], nomenclatures: [], inventory: [], story: '', abilities: [], weapon_type: '', weapon_dice: '', initiative: null });
+export const makeCharacter = (): Character => ({ id: crypto.randomUUID(), name: 'Novo Herdeiro', lineage: 'Humano', stage: 'Libertado', concept: '', weapon: '', corpo: 1, mente: 1, espirito: 1, pv_current: 25, pv_max: 25, pf_current: 0, pf_max: 20, karma: 0, gs: 0, exhaustion: 0, sync: [], nomenclatures: [], inventory: [], story: '', abilities: [], weapon_type: '', weapon_dice: '', initiative: null });
 export const makeNpc = (): Npc => ({ id: crypto.randomUUID(), name: 'Novo inimigo', kind: 'inimigo', hidden: true, pv_current: 25, pv_max: 25, pf_current: 0, pf_max: 20, corpo: 1, mente: 1, espirito: 1, esquiva: 10, bloqueio: 3, notes: '', initiative: null });
 export const makeCampaign = (): Campaign => ({ id: crypto.randomUUID(), name: 'A primeira travessia', code: 'DM3JUT', scene: 'O limiar', round: 1, turn_index: 0, combat_active: false, log: [] });
 export function roll(expression: string) {
@@ -27,30 +27,32 @@ export function roll(expression: string) {
 export function karmaMaximum(mente:number,espirito:number){ return Math.max(1,Math.floor((mente*20)/2+(espirito*20)/4)); }
 export function karmaStage(value:number,max:number){const percent=value/Math.max(1,max)*100;return percent>=100?"consumido":percent>=70?"berserker":percent>=50?"gaki":"normal";}
 
-/* ---------- Tabelas do documento "Resumo de Mecânicas" (valores capados) ---------- */
+/* ---------- Tabelas do Códice Supremo (valores fixos) ---------- */
 export type WeaponType = { key: string; label: string; dice: string[]; attr: 'corpo' | 'atributo' | null; note: string };
-/** Dano base: exatamente a tabela do documento. Nenhuma arma pode exceder estes dados. */
+/** Dano base: exatamente a tabela do Códice. Cada tipo de arma tem UM dado (o crítico dobra os dados). */
 export const WEAPONS: WeaponType[] = [
-  { key: 'desarmado_leve', label: 'Desarmado leve', dice: ['1d6'], attr: 'corpo', note: 'Golpes rápidos, socos e chutes. 1d6 + CORPO.' },
-  { key: 'desarmado_pesado', label: 'Desarmado médio/pesado', dice: ['2d8', '3d8'], attr: 'corpo', note: 'Exige foco ou preparação. 2d8 a 3d8 + CORPO.' },
-  { key: 'cortante_leve', label: 'Cortante leve', dice: ['1d8'], attr: 'atributo', note: 'Facas, adagas. 1d8 + Atributo.' },
-  { key: 'media_pesada', label: 'Média / pesada', dice: ['1d12', '2d10'], attr: 'atributo', note: 'Espadas longas, machados. 1d12 a 2d10 + Atributo.' },
-  { key: 'fogo', label: 'Armas à distância (fogo, arco, besta)', dice: ['1d10', '2d12'], attr: 'atributo', note: '1d10 a 2d12 + atributo da linhagem; arma comum soma CORPO.' },
+  { key: 'desarmado_leve', label: 'Desarmado leve', dice: ['1d6'], attr: 'corpo', note: 'Golpes rápidos, socos e chutes. 1d6 + CORPO (crítico 2d6 + CORPO).' },
+  { key: 'desarmado_pesado', label: 'Desarmado médio/pesado', dice: ['2d8'], attr: 'corpo', note: 'Exige foco ou preparação. 2d8 + CORPO (crítico 4d8 + CORPO).' },
+  { key: 'cortante_leve', label: 'Cortante leve', dice: ['1d8'], attr: 'atributo', note: 'Facas e adagas. 1d8 + atributo (crítico 2d8 + atributo).' },
+  { key: 'media_pesada', label: 'Média / pesada', dice: ['1d10'], attr: 'atributo', note: 'Espadas, machados, martelos grandes e porretes. 1d10 + atributo (crítico 2d10 + atributo).' },
+  { key: 'fogo', label: 'Armas à distância (fogo, arco, besta)', dice: ['1d12'], attr: 'atributo', note: '1d12 + atributo (crítico 2d12 + atributo). Varia com tipo, calibre, manutenção, munição e pressão emocional do disparo.' },
 ];
 export const weaponByKey = (key: string) => WEAPONS.find(w => w.key === key);
 /** Garante que o dado escolhido pertence à tabela da arma (nunca acima do limite). */
-export function cappedWeaponDice(type: string, dice: string) { const w = weaponByKey(type); if (!w) return null; return w.dice.includes(dice) ? dice : w.dice[0]!; }
+export function cappedWeaponDice(type: string, _dice?: string) { const w = weaponByKey(type); if (!w) return null; return w.dice[0]!; }
 
-export const NOMENCLATURE_RANGES: Record<NomenclatureKind, number[]> = { Direta: [1, 2], Parcial: [3, 4, 5], Completa: [6] };
-export const NOMENCLATURE_LABEL: Record<NomenclatureKind, string> = { Direta: 'Nomeação Direta · 1d8 a 2d8', Parcial: 'Recitação Parcial · 3d8 a 5d8', Completa: 'Recitação Completa · 6d8' };
-const TECH_NOMENCLATURE_LABEL: Record<NomenclatureKind, string> = { Direta: 'Ativação Padrão · 1d8 a 2d8', Parcial: 'Ativação Forçada · 3d8 a 5d8', Completa: 'Liberação Total de Núcleo · 6d8' };
+/** Escalas de Recitação (Cap. VI): dano, dano crítico e custo de PF são fixos. */
+export const NOMENCLATURE_DICE: Record<NomenclatureKind, string> = { Direta: '1d6', Parcial: '2d8', Completa: '6d8' };
+export const NOMENCLATURE_CRIT_DICE: Record<NomenclatureKind, string> = { Direta: '2d6', Parcial: '4d8', Completa: '12d8' };
+export const NOMENCLATURE_COST: Record<NomenclatureKind, number> = { Direta: 2, Parcial: 5, Completa: 12 };
+export const NOMENCLATURE_LABEL: Record<NomenclatureKind, string> = { Direta: 'Nomeação Direta (Nome Curto) · 1d6 · 2 PF', Parcial: 'Recitação Parcial (O Chamado) · 2d8 · 5 PF', Completa: 'Recitação Completa (Verdadeira) · 6d8 · 12 PF' };
+const TECH_NOMENCLATURE_LABEL: Record<NomenclatureKind, string> = { Direta: 'Ativação Padrão · 1d6 · 2 PF', Parcial: 'Ativação Forçada · 2d8 · 5 PF', Completa: 'Liberação Total de Núcleo · 6d8 · 12 PF' };
 export function nomenclatureLabel(lineage: string, plural = false) {
   return isTechAgent(lineage) ? (plural ? 'Habilidades de Núcleo' : 'Habilidade de Núcleo') : (plural ? 'Nomenclaturas' : 'Nomenclatura');
 }
 export function nomenclatureLevelLabel(lineage: string, kind: NomenclatureKind | undefined) {
   return (isTechAgent(lineage) ? TECH_NOMENCLATURE_LABEL : NOMENCLATURE_LABEL)[kind ?? 'Direta'];
 }
-export function cappedNomenclatureDice(kind: NomenclatureKind | undefined, dice: number | undefined) { const r = NOMENCLATURE_RANGES[kind ?? 'Direta']; return r.includes(dice ?? 0) ? dice! : r[0]!; }
 
 export type Attr = 'corpo' | 'mente' | 'espirito';
 export const ATTR_LABEL: Record<Attr, string> = { corpo: 'CORPO', mente: 'MENTE', espirito: 'ESPÍRITO' };
@@ -66,21 +68,27 @@ export const weaponAttrFor = (lineage: string): Attr => lineage === 'Humano' || 
 export function rollDice(count: number, sides: number) { return Array.from({ length: count }, () => 1 + Math.floor(Math.random() * sides)); }
 export function parseDice(expr: string) { const m = expr.match(/^(\d+)d(\d+)$/); return m ? { count: Number(m[1]), sides: Number(m[2]) } : null; }
 
-/** Acerto: 1d20 + dado do atributo do atacante vs Esquiva (empate favorece o atacante). 20 natural acerta criticamente; 1 natural sempre falha. */
+/**
+ * Acerto: 1d20 + dado do atributo do atacante vs Esquiva (empate favorece o atacante).
+ * 1 natural é SEMPRE falha crítica. 20 natural só é crítico se o total superar ou igualar a Esquiva (senão não acerta).
+ * Sem Esquiva informada (rolagem solta na ficha), o 20 natural vem como crítico provisório.
+ */
 export function attackRoll(attrValue: number, esquiva?: number) {
   const d20 = 1 + Math.floor(Math.random() * 20);
   const attrDie = dieFor(attrValue) ?? 4;
   const attrRoll = 1 + Math.floor(Math.random() * attrDie);
   const total = d20 + attrRoll;
-  const crit = d20 === 20;
+  const nat20 = d20 === 20;
   const fumble = d20 === 1;
-  const hit = crit ? true : fumble ? false : esquiva === undefined ? null : total >= esquiva;
-  return { d20, attrDie, attrRoll, dice: [d20, attrRoll], expression: `1d20 + 1d${attrDie}`, modifier: 0, total, hit, crit, fumble };
+  const reaches = esquiva === undefined ? null : total >= esquiva;
+  const crit = !fumble && nat20 && (reaches === null || reaches);
+  const hit = fumble ? false : reaches;
+  return { d20, attrDie, attrRoll, dice: [d20, attrRoll], expression: `1d20 + 1d${attrDie}`, modifier: 0, total, hit, crit, nat20, fumble };
 }
-/** Dano: no crítico dobra apenas os dados; o atributo é somado uma única vez. */
-export function damageRoll(dice: string, bonus: number, crit: boolean) {
+/** Dano: no crítico dobra (ou triplica) apenas os dados; valores fixos entram uma única vez. */
+export function damageRoll(dice: string, bonus: number, crit: boolean, mult = 2) {
   const p = parseDice(dice); if (!p) return { dice: [] as number[], bonus, total: bonus, expression: dice };
-  const count = crit ? p.count * 2 : p.count; const rolled = rollDice(count, p.sides);
+  const count = crit ? p.count * mult : p.count; const rolled = rollDice(count, p.sides);
   return { dice: rolled, bonus, total: rolled.reduce((a, b) => a + b, 0) + bonus, expression: `${count}d${p.sides}${bonus ? ` + ${bonus}` : ''}` };
 }
 /** Bônus de dano do Karma: 50% = +3, 70% = +5 em todo ataque. */
@@ -108,11 +116,42 @@ export function absorbActionLabel(lineage: string) {
   return isTechAgent(lineage) ? 'Poder do Núcleo' : 'Absorver PF';
 }
 export function initiativeRoll(corpo: number) { const dice = rollDice(Math.max(1, corpo), 20); return { dice, total: Math.max(...dice) + corpo }; }
+/** Forçar o Fluxo (ação livre): rola de novo os d20 de Espírito; ganha PF = metade da soma (para baixo) e recebe Karma = metade dos PF gerados. */
+export function forceFlux(espirito: number) {
+  const dice = rollDice(Math.max(1, espirito), 20);
+  const total = dice.reduce((a, b) => a + b, 0);
+  const pf = Math.floor(total / 2);
+  return { dice, total, pf, karma: Math.floor(pf / 2), expression: `${dice.length}d20` };
+}
+/** Descanso considerável (Cap. IX): recupera PV e reduz Karma. */
+export const REST_TYPES = {
+  padrao: { label: 'Padrão (dormir, se acalmar, tempo de qualidade)', pv: '2d8', karma: '2d6' },
+  vida: { label: 'Focado em vida (ala médica, tratamento)', pv: '2d12', karma: '1d6' },
+  karma: { label: 'Focado em Karma (psiquiátrico, conversa, conversão)', pv: '1d8', karma: '3d6' },
+} as const;
+export type RestType = keyof typeof REST_TYPES;
+/** Sofrimento de Karma só sobe de duas formas: Nomenclatura que reduza Karma ou descanso. */
+export function restRoll(type: RestType) {
+  const r = REST_TYPES[type];
+  const pv = roll(r.pv)!; const karma = roll(r.karma)!;
+  return { pv, karma, label: r.label };
+}
+/** Pressão de Combate: penalidade na Esquiva por ataque evitado na Dança de Batalha (2 inimigos: 0 · 3 ou 4: 1 · 5 ou mais: 2). */
+export const danceStep = (enemies: number) => enemies >= 5 ? 2 : enemies >= 3 ? 1 : 0;
+/** Elo mínimo: Partilhar PFs (2) e Proteção Compartilhada (3). */
+export const PROTECTION_MIN_ELO = 3;
+export const ELO_ACTIONS: [string, string][] = [['Proteger o aliado de um perigo real', '+1'], ['Dividir um segredo ou trauma', '+1'], ['Salvar o aliado de morte ou Agonia', '+2'], ['Luta em dupla ou combo marcante', '+1']];
+/** Reação Contra-atacar: 1d20 + dado do atributo escolhido (normalmente o maior). */
+export function counterRoll(c: { corpo: number; mente: number; espirito: number }) {
+  const attr = (['corpo', 'mente', 'espirito'] as const).reduce((best, a) => c[a] > c[best] ? a : best, 'corpo' as Attr);
+  const r = attackRoll(c[attr]);
+  return { ...r, attr };
+}
 export function normalizeCharacter(c: Partial<Character> & { id: string }): Character { return { ...makeCharacter(), ...c, abilities: Array.isArray(c.abilities) ? c.abilities : [], sync: Array.isArray(c.sync) ? c.sync : [], nomenclatures: Array.isArray(c.nomenclatures) ? c.nomenclatures : [], inventory: Array.isArray(c.inventory) ? c.inventory : [], weapon_type: c.weapon_type ?? '', weapon_dice: c.weapon_dice ?? '', initiative: c.initiative ?? null } as Character; }
 
 // Persistent rule state shares the existing JSON abilities field; no table changes.
-export type SheetState = { excess: number; rounds: number; agony: boolean; failures: number; stable: boolean; dead: boolean; standard: boolean; agonyDt: number; coins: number; anchorBroken: boolean; weaponMode: 'linhagem' | 'comum'; path: 'arma' | 'nomenclatura' | ''; weaponRank: number; milestones: string[]; techniqueUpgrades: Record<string, { improved?: 'dano' | 'alcance'; mastered?: boolean; favorite?: string }>; attributeFloor: Partial<Record<Attr, number>>; attributeBudget: number; highestStage: number; specialEffect: string };
-export const emptySheetState: SheetState = { excess: 0, rounds: 0, agony: false, failures: 0, stable: false, dead: false, standard: false, agonyDt: 6, coins: 0, anchorBroken: false, weaponMode: 'linhagem', path: '', weaponRank: 0, milestones: [], techniqueUpgrades: {}, attributeFloor: {}, attributeBudget: 0, highestStage: 0, specialEffect: '' };
+export type SheetState = { excess: number; rounds: number; agony: boolean; failures: number; stable: boolean; dead: boolean; standard: boolean; agonyDt: number; coins: number; anchorBroken: boolean; weaponMode: 'linhagem' | 'comum'; path: 'arma' | 'nomenclatura' | ''; weaponRank: number; nomRank: number; milestones: string[]; milestoneChoices: Record<string, string>; techniqueUpgrades: Record<string, { improved?: 'dano' | 'alcance'; mastered?: boolean; favorite?: string }>; attributeFloor: Partial<Record<Attr, number>>; attributeBudget: number; highestStage: number; specialEffect: string };
+export const emptySheetState: SheetState = { excess: 0, rounds: 0, agony: false, failures: 0, stable: false, dead: false, standard: false, agonyDt: 6, coins: 0, anchorBroken: false, weaponMode: 'linhagem', path: '', weaponRank: 0, nomRank: 0, milestones: [], milestoneChoices: {}, techniqueUpgrades: {}, attributeFloor: {}, attributeBudget: 0, highestStage: 0, specialEffect: '' };
 export function sheetState(c: Character): SheetState {
   try { return { ...emptySheetState, ...JSON.parse(c.abilities.find(a => a.kind === 'state')?.description ?? '{}') } as SheetState; }
   catch { return { ...emptySheetState }; }
@@ -195,6 +234,10 @@ export function agonyLeave(c: Character): Character {
   if (agonyStatus(c).dead) return c;
   return { ...c, pv_current: 1, abilities: withSheetState(c, { agony: false, failures: 0, agonyDt: 6 }) };
 }
+/** Nomenclatura do Sacrifício: só na 3ª tentativa da Agonia (ou quando a morte é a única saída). Sucesso garantido, Morte Definitiva. */
+export function agonySacrifice(c: Character): Character {
+  return { ...c, pv_current: 0, abilities: withSheetState(c, { agony: true, failures: AGONY_MAX_FAILURES, dead: true }) };
+}
 /** Ao curar de 0 PV para mais de 0, a Agonia termina e as marcações zeram. Morte nunca é desfeita aqui. */
 export function reconcileAgony(prev: Character | undefined, next: Character): Character {
   if (!prev || prev.pv_current > 0 || next.pv_current <= 0) return next;
@@ -242,14 +285,14 @@ export function joinStory(story: string, notes: string) { return notes ? `${stor
 export type LineageStage = { name: string; passive: string; desc: string };
 export const LINEAGE_STAGES: Record<string, LineageStage[]> = {
   'Arcadiano': [
-    { name: 'Senshi', passive: 'Despertar do Ego', desc: 'Ao acertar um ataque, recupera 2 PF. A Arma de Ego desperta como catalisador elemental.' },
-    { name: 'Shoji / Harmonia', passive: 'Ressonância Elemental', desc: 'Ao acertar um ataque, recupera 4 PF. Conexão profunda com a arma; risco de possessão se o foco vacilar.' },
-    { name: 'Narande', passive: 'Ego Supremo', desc: 'Ao acertar um ataque, recupera 8 PF. A Arma Verdadeira age como um segundo cérebro.' },
+    { name: 'Senshi', passive: 'Despertar do Ego', desc: 'Quando tem êxito em um acerto, recupera 2 PF no ataque. A Arma de Ego desperta como catalisador elemental.' },
+    { name: 'Shoji / Harmonia', passive: 'Ressonância Elemental', desc: 'Quando tem êxito em um acerto, recupera 4 PF no ataque. Surge o Eco da arma; risco de Possessão se houver conflito ético ou fraqueza.' },
+    { name: 'Narande', passive: 'Ego Supremo', desc: 'Quando tem êxito em um acerto, recupera 8 PF no ataque. A Arma Verdadeira age como um segundo cérebro de combate.' },
   ],
   'Humano': [
-    { name: 'Libertado', passive: 'Leitura do Fluxo', desc: 'Ao ler parcialmente o Fluxo de um alvo, recebe +3 de Dano e +3 de Bloqueio contra ele.' },
-    { name: 'Moldador / Arquiteto', passive: 'Manipulação Direta', desc: 'Ao ler o Fluxo de um alvo, recebe +5 de Dano e +5 de Bloqueio contra ele.' },
-    { name: 'Mestre / Domínio', passive: 'Soberania Humana', desc: 'Ao ler o Fluxo de um alvo, recebe +8 de Dano e +8 de Bloqueio contra ele.' },
+    { name: 'Libertado', passive: 'Leitura do Fluxo', desc: 'Gasta uma ação padrão para ler o fluxo parcial de um alvo (uma vez por alvo, sem acumular): +3 de dano e +3 de bloqueio contra ele.' },
+    { name: 'Moldador / Arquiteto', passive: 'Manipulação Direta', desc: 'Ação padrão para ler o fluxo parcial do alvo (uma vez por alvo, sem acumular): +5 de dano e +5 de bloqueio contra ele.' },
+    { name: 'Mestre / Domínio', passive: 'Soberania Humana', desc: 'Ação padrão para ler o fluxo parcial do alvo (uma vez por alvo, sem acumular): +8 de dano e +8 de bloqueio contra ele.' },
   ],
   'Gaki': [
     { name: 'Senciente', passive: 'Fome de Karma', desc: 'Recupera 4 PV por alvo consumido após a luta. Teste de Mente contra o Karma; ferimentos aumentam a DT definida pelo Mestre.' },
@@ -269,24 +312,49 @@ export function stageIndexFor(lineage: string, stage: string) {
 }
 
 
-// v8 upgrades are layered over capped base dice, never replace the base tables.
-export const NOMENCLATURE_COST: Record<NomenclatureKind, number> = { Direta: 2, Parcial: 5, Completa: 12 };
+// Evoluções do Códice (GS 5/7/10) entram por cima da tabela fixa de dano; nunca a substituem.
+/** Dados, custo e bônus de uma Nomenclatura conforme o caminho Nomenclatura (Aprimorada 5 GS · Dominada 7 GS · Favorita 10 GS). */
 export function techniqueRules(c: Character, n: Nomenclature) {
   const kind = n.kind ?? 'Direta';
-  const upgrade = sheetState(c).techniqueUpgrades[n.name] ?? {};
-  return { cost: Math.max(0, (Number.isFinite(n.cost) ? n.cost : NOMENCLATURE_COST[kind]) - (upgrade.mastered && kind !== 'Direta' ? 2 : 0)), bonus: upgrade.mastered && kind !== 'Direta' ? c.espirito : 0, extraDice: upgrade.improved === 'dano' ? ['1d6'] : [], upgrade };
+  const st = sheetState(c);
+  const rank = st.nomRank;
+  const upgrade = st.techniqueUpgrades[n.name] ?? {};
+  const die = dieFor(c.espirito) ?? 4;
+  return {
+    kind, rank, upgrade,
+    dice: NOMENCLATURE_DICE[kind], critDice: NOMENCLATURE_CRIT_DICE[kind],
+    cost: Math.max(0, NOMENCLATURE_COST[kind] - (rank >= 2 && kind !== 'Direta' ? 2 : 0)),
+    /** Aprimorada: dado de ESPÍRITO no dano. Dominada: dado + valor fixo. */
+    extraDice: rank >= 1 ? [`1d${die}`] : [] as string[],
+    bonus: rank >= 2 ? c.espirito : 0,
+  };
 }
+/** Dano de uma Nomenclatura. Direta/Parcial: crítico dobra todos os dados (inclusive o de ESPÍRITO). Completa: crítico é sempre 12d8 puro. */
+export function nomenclatureDamage(c: Character, n: Nomenclature, crit: boolean, extraBonus = 0, mult = 2) {
+  const t = techniqueRules(c, n);
+  if (crit && t.kind === 'Completa') return damageRoll(NOMENCLATURE_CRIT_DICE.Completa, extraBonus, false);
+  return upgradedDamage(t.dice, t.bonus + extraBonus, crit, t.extraDice, mult);
+}
+/** Arma / Corpo: atributo da linhagem (Humano MENTE, Arcadiano ESPÍRITO, Gaki CORPO). Desarmado e arma comum somam sempre CORPO e nunca evoluem. */
 export function weaponRules(c: Character, type = c.weapon_type, common = sheetState(c).weaponMode === 'comum') {
   const unarmed = weaponByKey(type)?.attr === 'corpo';
   const attr: Attr = unarmed || common ? 'corpo' : weaponAttrFor(c.lineage);
   const rank = common || unarmed ? 0 : sheetState(c).weaponRank;
-  return { attr, bonus: rank === 1 ? 0 : c[attr], extraDice: rank > 0 ? [`1d${dieFor(c[attr]) ?? 4}`] : [], rank };
+  /** Sem evolução: valor fixo. Evoluído (rank 1): dado do atributo no lugar do fixo. Dominado (rank 2): dado + valor fixo. */
+  return { attr, bonus: rank === 1 ? 0 : c[attr], extraDice: rank > 0 ? [`1d${dieFor(c[attr]) ?? 4}`] : [] as string[], rank };
 }
-export function upgradedDamage(dice: string, bonus: number, crit: boolean, extraDice: string[] = []) {
-  const base = damageRoll(dice, bonus, crit);
-  const extras = extraDice.map(expr => damageRoll(expr, 0, crit));
+/** Quem escolheu Arma / Corpo Estilizada no marco de 10 GS pode gastar 10 PF para Crítico Triplo. */
+export function canTripleCrit(c: Character) {
+  const st = sheetState(c);
+  return Object.entries(st.milestoneChoices).some(([k, v]) => k.endsWith(':10') && v === 'arma');
+}
+export const TRIPLE_CRIT_COST = 10;
+export function upgradedDamage(dice: string, bonus: number, crit: boolean, extraDice: string[] = [], mult = 2) {
+  const base = damageRoll(dice, bonus, crit, mult);
+  const extras = extraDice.map(expr => damageRoll(expr, 0, crit, mult));
   return { ...base, dice: [...base.dice, ...extras.flatMap(r => r.dice)], total: base.total + extras.reduce((sum, r) => sum + r.total, 0), expression: [base.expression, ...extras.map(r => r.expression)].join(' + ') };
 }
+/** Bloqueio Parcial: 1 dado de ESPÍRITO + Bloqueio. Bloqueio contra Completa: d20 × ESPÍRITO (maior) + Bloqueio. */
 export function protectRoll(espirito: number, bloqueio: number, kind: NomenclatureKind) {
   const dice = rollDice(kind === 'Completa' ? Math.max(1, espirito) : 1, kind === 'Completa' ? 20 : dieFor(espirito) ?? 4);
   return { dice, modifier: bloqueio, total: (kind === 'Completa' ? Math.max(...dice) : dice[0] ?? 0) + bloqueio, expression: kind === 'Completa' ? `${dice.length}d20 (maior) + ${bloqueio}` : `1d${dieFor(espirito) ?? 4} + ${bloqueio}` };
@@ -318,11 +386,34 @@ export function v8SheetPatch(c: Character, patch: Partial<Character>): Partial<C
   return patch;
 }
 export function milestoneKey(c: Character, gs: number) { return `${stageIndexFor(c.lineage, c.stage)}:${gs}`; }
-export function applyMilestone(c: Character, gs: 5 | 7 | 10, path: 'arma' | 'nomenclatura', technique?: string, improvement: 'dano' | 'alcance' = 'dano', effect = '') {
+/** Opções de cada marco. Estágio 1: Arma / Corpo ou Nomenclatura, escolhido a cada marco (sem trava). Estágio 2: três temas livres. Depois: livre com o Mestre. */
+export type MilestoneChoice = 'arma' | 'nomenclatura' | 'mimetismo' | 'vinganca' | 'nomenclatura_avancada' | 'livre';
+export const milestoneOptions = (stage: number): { id: MilestoneChoice; label: string }[] =>
+  stage === 0 ? [{ id: 'arma', label: 'Arma / Corpo' }, { id: 'nomenclatura', label: 'Nomenclatura' }]
+  : stage === 1 ? [{ id: 'mimetismo', label: 'Mimetismo do Fluxo' }, { id: 'vinganca', label: 'Vingança Karmática' }, { id: 'nomenclatura_avancada', label: 'Nomenclatura Avançada' }]
+  : [{ id: 'livre', label: 'Livre, combinado com o Mestre' }];
+/** Marcos que exigem escolher uma Nomenclatura: Favorita (10 GS, estágio 1) e a segunda Favorita (5 GS, Nomenclatura Avançada). */
+export function milestoneNeedsTechnique(c: Character, gs: 5 | 7 | 10, choice: string) {
+  const stage = stageIndexFor(c.lineage, c.stage);
+  return (stage === 0 && choice === 'nomenclatura' && gs === 10) || (stage === 1 && choice === 'nomenclatura_avancada' && gs === 5);
+}
+export function applyMilestone(c: Character, gs: 5 | 7 | 10, choice: string, technique?: string, effect = '') {
   const state = sheetState(c);
   const key = milestoneKey(c, gs);
-  if (c.gs < gs || state.milestones.includes(key) || (state.path && state.path !== path) || (path === 'nomenclatura' && !c.nomenclatures.some(n => n.name === technique))) return null;
+  const stage = stageIndexFor(c.lineage, c.stage);
+  if (c.gs < gs || state.milestones.includes(key) || !milestoneOptions(stage).some(o => o.id === choice)) return null;
+  if (milestoneNeedsTechnique(c, gs, choice) && !c.nomenclatures.some(n => n.name === technique)) return null;
   const upgrades = { ...state.techniqueUpgrades };
-  if (path === 'nomenclatura' && technique) upgrades[technique] = { ...upgrades[technique], ...(gs === 5 ? { improved: improvement } : gs === 7 ? { mastered: true } : { favorite: effect }) };
-  return { ...c, gs: gs === 10 ? 0 : c.gs, abilities: withSheetState(c, { path, weaponRank: path === 'arma' ? Math.max(state.weaponRank, gs === 5 ? 1 : 2) : state.weaponRank, milestones: [...state.milestones, key], techniqueUpgrades: upgrades, specialEffect: gs === 10 && path === 'arma' ? effect : state.specialEffect }) };
+  if (milestoneNeedsTechnique(c, gs, choice) && technique) upgrades[technique] = { ...upgrades[technique], favorite: effect || upgrades[technique]?.favorite || 'Versão Favorita' };
+  const rank = gs === 5 ? 1 : 2;
+  const armaRank = choice === 'arma' ? Math.max(state.weaponRank, rank) : state.weaponRank;
+  const nomRank = choice === 'nomenclatura' ? Math.max(state.nomRank, rank) : state.nomRank;
+  return { ...c, gs: gs === 10 ? 0 : c.gs, abilities: withSheetState(c, { weaponRank: armaRank, nomRank, milestones: [...state.milestones, key], milestoneChoices: { ...state.milestoneChoices, [key]: choice }, techniqueUpgrades: upgrades, specialEffect: gs === 10 && choice === 'arma' && effect ? effect : state.specialEffect }) };
+}
+/** Limites de atributo do estágio atual (Cap. II): teto 3/4/5, pontos totais e quantos podem estar no teto. */
+export function attributeInfo(c: Character) {
+  const st = sheetState(c); const stage = stageIndexFor(c.lineage, c.stage);
+  const spent = c.corpo + c.mente + c.espirito;
+  const budget = st.attributeBudget || Math.max(6 + stage, spent);
+  return { cap: stage + 3, stage: stage + 1, spent, budget, free: Math.max(0, budget - spent) };
 }
