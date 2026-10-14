@@ -73,7 +73,7 @@ export function parseDice(expr: string) { const m = expr.match(/^(\d+)d(\d+)$/);
  * 1 natural é SEMPRE falha crítica. 20 natural só é crítico se o total superar ou igualar a Esquiva (senão não acerta).
  * Sem Esquiva informada (rolagem solta na ficha), o 20 natural vem como crítico provisório.
  */
-export function attackRoll(attrValue: number, esquiva?: number) {
+export function attackRoll(attrValue: number, esquiva?: number, critThreshold = 20) {
   const d20 = 1 + Math.floor(Math.random() * 20);
   const attrDie = dieFor(attrValue) ?? 4;
   const attrRoll = 1 + Math.floor(Math.random() * attrDie);
@@ -81,9 +81,9 @@ export function attackRoll(attrValue: number, esquiva?: number) {
   const nat20 = d20 === 20;
   const fumble = d20 === 1;
   const reaches = esquiva === undefined ? null : total >= esquiva;
-  const crit = !fumble && nat20 && (reaches === null || reaches);
+  const crit = !fumble && d20 >= critThreshold && (reaches === null || reaches);
   const hit = fumble ? false : reaches;
-  return { d20, attrDie, attrRoll, dice: [d20, attrRoll], expression: `1d20 + 1d${attrDie}`, modifier: 0, total, hit, crit, nat20, fumble };
+  return { d20, attrDie, attrRoll, dice: [d20, attrRoll], expression: `1d20 + 1d${attrDie}`, modifier: 0, total, hit, crit, nat20, fumble, critThreshold };
 }
 /** Dano: no crítico dobra (ou triplica) apenas os dados; valores fixos entram uma única vez. */
 export function damageRoll(dice: string, bonus: number, crit: boolean, mult = 2) {
@@ -349,6 +349,9 @@ export function canTripleCrit(c: Character) {
   return Object.entries(st.milestoneChoices).some(([k, v]) => k.endsWith(':10') && v === 'arma');
 }
 export const TRIPLE_CRIT_COST = 10;
+/** Arma / Corpo Estilizada (10 GS): por 10 PF, declarados ANTES de saber se acerta, a faixa de crítico do d20 desce 1 por ponto de MENTE (Mente 3 → crítico em 17+). Vale só para o d20, não para a soma. */
+export const STYLIZED_CRIT_COST = 10;
+export const stylizedCritThreshold = (mente: number) => Math.max(2, 20 - mente);
 export function upgradedDamage(dice: string, bonus: number, crit: boolean, extraDice: string[] = [], mult = 2) {
   const base = damageRoll(dice, bonus, crit, mult);
   const extras = extraDice.map(expr => damageRoll(expr, 0, crit, mult));

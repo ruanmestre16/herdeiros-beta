@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Stepper } from './Controls';
 import {
   ELO_ACTIONS, LINEAGE_STAGES, NOMENCLATURE_COST, NOMENCLATURE_DICE, NOMENCLATURE_CRIT_DICE, REST_TYPES, TRIPLE_CRIT_COST, WEAPONS,
-  attackRoll, absorbPf, canTripleCrit, combinedRoll, nomenclatureDamage, nomenclatureLabel, nomenclatureLevelLabel, applyMilestone, milestoneKey, milestoneNeedsTechnique, milestoneOptions, restRoll, stageIndexFor,
+  attackRoll, absorbPf, canTripleCrit, combinedRoll, STYLIZED_CRIT_COST, stylizedCritThreshold, nomenclatureDamage, nomenclatureLabel, nomenclatureLevelLabel, applyMilestone, milestoneKey, milestoneNeedsTechnique, milestoneOptions, restRoll, stageIndexFor,
   damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, weaponRules, techniqueRules, upgradedDamage, isTechAgent, absorbActionLabel, attrLabelFor, sheetState, withSheetState,
   SHARE_MIN_SYNC, PROTECTION_MIN_ELO, syncLevelWith, pfShareBlock,
   agonyStatus, agonyEnter, agonyFailure, agonyUndo, agonyLeave, agonySacrifice, AGONY_MAX_FAILURES,
@@ -163,6 +163,7 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
   const [last, setLast] = useState<{ d20: number; attrDie: number; attrRoll: number; total: number; crit: boolean; fumble: boolean; tripled: boolean } | null>(null);
   const [dmg, setDmg] = useState<{ total: number; dice: number[]; bonus: number; crit: boolean } | null>(null);
   const [triple, setTriple] = useState(false);
+  const [stylized, setStylized] = useState(false);
   const st = sheetState(character);
   const type = weaponByKey(character.weapon_type);
   const dice = type ? type.dice[0]! : '';
@@ -171,6 +172,8 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
   const karma = karmaDamageBonus(character);
   const bonus = wr.bonus + karma;
   const tripleOk = !!type && type.attr !== 'corpo' && !common && canTripleCrit(character) && character.pf_current >= TRIPLE_CRIT_COST;
+  const stylizedThreshold = stylizedCritThreshold(character.mente);
+  const stylizedOk = !!type && type.attr !== 'corpo' && !common && canTripleCrit(character) && character.pf_current >= STYLIZED_CRIT_COST;
   const damageText = type ? [dice, ...wr.extraDice, ...(wr.bonus ? [`${attrLabelFor(wr.attr, character.lineage)} (${character[wr.attr]})`] : [])].join(' + ') : '';
   return <div className="weapon-block">
     <span className="field-kicker">{character.lineage === 'Humano' ? 'ARMA DE VÍNCULO · VONTADE, HISTÓRIA E IDENTIDADE' : 'ARMA'}</span>
@@ -185,12 +188,15 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
     </div>
     {type && <p className="weapon-summary">Ataque <strong>1d20 + 1d{dieFor(character[wr.attr]) ?? 4} ({attrLabelFor(wr.attr, character.lineage)})</strong> · Dano <strong>{damageText}</strong>{karma ? <strong className="text-karma"> + {karma} Karma</strong> : null}<br /><span>{type.note}{wr.rank === 1 ? ' Evoluída: o dado do atributo substitui o valor fixo.' : wr.rank >= 2 ? ' Dominada: dado + valor fixo do atributo.' : ''}{common && type.attr !== 'corpo' ? ' Arma comum não recebe evoluções.' : ''}</span></p>}
     {tripleOk && <label className="anchor-toggle mt-3"><input type="checkbox" checked={triple} onChange={e => setTriple(e.target.checked)} /> Crítico Triplo (−{TRIPLE_CRIT_COST} PF, dados ×3 se for crítico)</label>}
+    {stylizedOk && <label className="anchor-toggle mt-3"><input type="checkbox" checked={stylized} onChange={e => setStylized(e.target.checked)} /> Arma Estilizada (−{STYLIZED_CRIT_COST} PF, crítico no d20 a partir de {stylizedThreshold} — gasta antes de saber se acerta)</label>}
     <div className="quick-actions mt-3">
       <Button variant="outline" disabled={!type} onClick={() => {
-        const r = attackRoll(character[wr.attr]); const tripled = triple && tripleOk;
-        if (tripled) update({ pf_current: character.pf_current - TRIPLE_CRIT_COST });
+        const stylizedOn = stylized && stylizedOk;
+        const r = attackRoll(character[wr.attr], undefined, stylizedOn ? stylizedThreshold : 20); const tripled = triple && tripleOk;
+        const cost = (tripled ? TRIPLE_CRIT_COST : 0) + (stylizedOn ? STYLIZED_CRIT_COST : 0);
+        if (cost) update({ pf_current: character.pf_current - cost });
         setLast({ ...r, tripled }); setDmg(null);
-        addRoll({ expression: r.expression, dice: r.dice, modifier: r.modifier, total: r.total, source: `Ataque com arma${r.fumble ? ' — FALHA CRÍTICA' : r.crit ? ' — CRÍTICO' : ''}`, crit: r.crit });
+        addRoll({ expression: r.expression, dice: r.dice, modifier: r.modifier, total: r.total, source: `Ataque com arma${stylizedOn ? ` (Estilizada: crítico ${stylizedThreshold}+ no d20)` : ''}${r.fumble ? ' — FALHA CRÍTICA' : r.crit ? ' — CRÍTICO' : ''}`, crit: r.crit });
       }}><Swords /> Atacar (1d20 + 1d{dieFor(character[wr.attr]) ?? 4})</Button>
       <Button variant="outline" disabled={!type || !last || last.fumble} onClick={() => {
         const crit = !!last?.crit;
@@ -198,7 +204,7 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
         addRoll({ expression: d.expression, dice: d.dice, modifier: bonus, total: d.total, source: `Dano da arma${crit ? ` — CRÍTICO (dados ${last?.tripled ? '×3' : 'dobrados'})` : ''}`, crit });
       }} className={last?.crit ? 'action-critical' : ''}><Dices /> Rolar dano{last?.crit ? ' crítico' : ''}</Button>
     </div>
-    {last && <div className={`combat-banner ${last.fumble ? 'banner-miss' : last.crit ? 'banner-crit' : 'banner-neutral'}`}><strong>{last.fumble ? 'FALHA CRÍTICA! 1 NATURAL' : last.crit ? 'CRÍTICO! 20 NATURAL' : `ATAQUE: ${last.total}`}</strong><span>1d20 [{last.d20}] + 1d{last.attrDie} [{last.attrRoll}] = {last.total}{last.fumble ? ' · erra sempre, qualquer que seja a soma' : last.crit ? ' · só é crítico se o total superar ou igualar a Esquiva do alvo; dados de dano dobrados' : ' · compare com a Esquiva do alvo (empate favorece quem ataca)'}</span></div>}
+    {last && <div className={`combat-banner ${last.fumble ? 'banner-miss' : last.crit ? 'banner-crit' : 'banner-neutral'}`}><strong>{last.fumble ? 'FALHA CRÍTICA! 1 NATURAL' : last.crit ? `CRÍTICO! ${last.d20} NO D20` : `ATAQUE: ${last.total}`}</strong><span>1d20 [{last.d20}] + 1d{last.attrDie} [{last.attrRoll}] = {last.total}{last.fumble ? ' · erra sempre, qualquer que seja a soma' : last.crit ? ' · só é crítico se o total superar ou igualar a Esquiva do alvo; dados de dano dobrados' : ' · compare com a Esquiva do alvo (empate favorece quem ataca)'}</span></div>}
     {dmg && <div className={`roll-result ${dmg.crit ? 'result-critical' : ''}`}><span>Dano{dmg.crit ? ' CRÍTICO' : ''}: <strong>{dmg.total}</strong> ({dmg.dice.join(' + ')}{dmg.bonus ? ` + ${dmg.bonus}` : ''})</span></div>}
   </div>;
 }
