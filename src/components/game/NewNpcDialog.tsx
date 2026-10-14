@@ -8,13 +8,13 @@ import { derived, normalizeCharacter, karmaMaximum, LINEAGE_STAGES, type Charact
 export type GakiMonster = { style: 'Animalístico' | 'Humano'; threat: number };
 export type MonsterSheet = Character & { gaki?: GakiMonster };
 export const GAKI_STYLES: GakiMonster['style'][] = ['Animalístico', 'Humano'];
-/** Ameaça: 1–4 normal, 5–8 forte, 9–10 ameaça muito grande. */
-export const threatTier = (t: number) => t >= 9 ? 'Ameaça muito grande' : t >= 5 ? 'Forte' : 'Normal';
+/** Nível de Ameaça (Cap. VIII): NA 1 Fraco · NA 5 Perigoso · NA 20+ Lendário. */
+export const threatTier = (t: number) => t >= 20 ? 'Lendário' : t >= 5 ? 'Perigoso' : 'Fraco';
 
 type Step = 'choose' | 'monster' | 'lineage';
 export type NewNpcResult = { npc: Partial<Npc>; sheet: MonsterSheet };
 const LINEAGES = ['Humano', 'Arcadiano', 'Gaki'] as const;
-const defaultAttr = (threat: number) => Math.min(5, Math.max(1, Math.ceil(threat / 2)));
+const defaultAttr = (threat: number) => threat >= 20 ? 5 : threat >= 10 ? 4 : threat >= 5 ? 3 : threat >= 3 ? 2 : 1;
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) { return <label className="field"><span className="field-label">{label}</span>{children}</label>; }
 
@@ -66,7 +66,7 @@ export function NewNpcDialog({ close, create }: { close: () => void; create: (r:
         <div className="field-stack mt-5">
           <Field label="NOME DO GAKI"><input value={name} onChange={e => setName(e.target.value)} placeholder="Nome do monstro" /></Field>
           <Field label="ESTILO"><select value={style} onChange={e => setStyle(e.target.value as GakiMonster['style'])}>{GAKI_STYLES.map(s => <option key={s}>{s}</option>)}</select></Field>
-          <Stepper label={`NÍVEL DE AMEAÇA — ${threatTier(threat).toUpperCase()}`} hint="1–4 normal · 5–8 forte · 9–10 muito grande" value={threat} min={1} max={10} onChange={t => { setThreat(t); setAttrs({ corpo: defaultAttr(t), mente: defaultAttr(t), espirito: defaultAttr(t) }); }} />
+          <Stepper label={`NÍVEL DE AMEAÇA — ${threatTier(threat).toUpperCase()}`} hint="NA 1 fraco · NA 5 perigoso · NA 20+ lendário" value={threat} min={1} max={30} onChange={t => { setThreat(t); setAttrs({ corpo: defaultAttr(t), mente: defaultAttr(t), espirito: defaultAttr(t) }); }} />
           <Stepper label="PV" value={pv} min={1} max={999} tone="health" onChange={setPv} />
           <div className="npc-stats">
             {(['corpo', 'mente', 'espirito'] as const).map(a => <Stepper key={a} label={a.toUpperCase()} value={attrs[a]} min={1} max={5} onChange={v => setAttrs({ ...attrs, [a]: v })} />)}

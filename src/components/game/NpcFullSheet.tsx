@@ -3,7 +3,7 @@ import { Activity, Dices, Plus, Sparkles, Swords, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Meter, SectionHeading, Stepper } from './Controls';
 import {
-  derived, dieFor, rollDice, initiativeRoll, karmaMaximum, karmaStage, isTechAgent, attrLabelFor, nomenclatureLabel, resourceBarLabel, resourceStageLabel, forceActionLabel,
+  derived, dieFor, rollDice, initiativeRoll, karmaMaximum, karmaStage, isTechAgent, attrLabelFor, nomenclatureLabel, resourceBarLabel, resourceStageLabel, forceActionLabel, forceFlux, attackRoll, weaponAttrFor,
   splitStory, joinStory, stageIndexFor, LINEAGE_STAGES, type Character,
 } from '@/lib/game';
 import { SyncEditor, GakiPassive, WeaponPanel, NomenclaturesTab, AbilitiesTab, AbsorbPfAction, KarmaTest, AgonyPanel, hasAnchor, ANCHOR_NAME, type RollEntry } from './SheetExtras';
@@ -43,7 +43,7 @@ export function NpcFullSheet({ character, update, addRoll, setInitiative }: { ch
         </div>
         <TextInput label="Conceito" value={character.concept} onChange={concept => update({ concept })} placeholder="Quem é este personagem?" />
         <TextInput label="Modelo de arma" value={character.weapon} onChange={weapon => update({ weapon })} placeholder="Arma de vínculo, relíquia..." />
-        <Stepper label="GS (NÍVEL)" value={character.gs} min={1} onChange={gs => update({ gs })} />
+        <Stepper label="GS (GRAU DE SINCRONIA)" value={character.gs} min={0} max={10} onChange={gs => update({ gs })} />
         <SyncEditor character={character} update={update} />
       </div>
       {(() => { const st = (LINEAGE_STAGES[character.lineage] ?? [])[stageIndexFor(character.lineage, character.stage)]; return st ? <div className={`passive ${isTechAgent(character.lineage) ? 'passive-tech' : ''}`}><span className="field-kicker">PASSIVA DE LINHAGEM · {st.name.toUpperCase()}</span><strong>{st.passive}</strong><p>{st.desc}</p></div> : null; })()}
@@ -64,15 +64,15 @@ export function NpcFullSheet({ character, update, addRoll, setInitiative }: { ch
         <Stepper label="EXAUSTÃO" value={character.exhaustion} max={6} onChange={exhaustion => update({ exhaustion })} />
       </div>{karmaBox}</Panel>
       <Panel title="Ações rápidas"><div className="quick-actions">
-        <Button variant="outline" onClick={() => { const d = rollDice(1, 20)[0]; if (d === undefined) return; addRoll({ expression: '1d20', dice: [d], modifier: 0, total: d, source: `Ataque de ${character.name}` }); }}><Swords /> Ataque d20</Button>
+        <Button variant="outline" onClick={() => { const r = attackRoll(character[weaponAttrFor(character.lineage)]); addRoll({ expression: r.expression, dice: r.dice, modifier: 0, total: r.total, source: `Ataque de ${character.name}${r.fumble ? ' — FALHA CRÍTICA' : r.crit ? ' — CRÍTICO' : ''}`, crit: r.crit }); }}><Swords /> Ataque (d20 + dado)</Button>
         <Button variant="outline" onClick={() => { const r = initiativeRoll(character.corpo); setInitiative(r.total); addRoll({ expression: `${character.corpo}d20 (maior) + ${character.corpo}`, dice: r.dice, modifier: character.corpo, total: r.total, source: `Iniciativa: ${character.name}` }); }}><Activity /> Iniciativa</Button>
         <Button variant="outline" className={isTechAgent(character.lineage) ? 'action-force-nucleo' : 'action-force-karma'} onClick={() => {
-          const dice = rollDice(Math.max(1, character.espirito), 20); const total = dice.reduce((a, b) => a + b, 0); const gained = Math.floor(total / 2);
-          addRoll({ expression: `${dice.length}d20`, dice, modifier: 0, total, source: `${forceActionLabel(character.lineage)}: ${character.name} (+${gained} PF)` });
-          update({ pf_current: Math.min(character.pf_max, character.pf_current + gained), ...(monster ? {} : { karma: Math.min(kMax, character.karma + Math.ceil(gained / 2)) }) });
+          const f = forceFlux(character.espirito);
+          addRoll({ expression: f.expression, dice: f.dice, modifier: 0, total: f.total, source: `${forceActionLabel(character.lineage)}: ${character.name} (+${f.pf} PF)` });
+          update({ pf_current: Math.min(character.pf_max, character.pf_current + f.pf), ...(monster ? {} : { karma: Math.min(kMax, character.karma + f.karma) }) });
         }}><Sparkles /> {forceActionLabel(character.lineage)}</Button>
         <AbsorbPfAction character={character} update={update} addRoll={addRoll} />
-      </div>{!monster && <KarmaTest character={character} addRoll={addRoll} />}</Panel>
+      </div>{!monster && <KarmaTest character={character} addRoll={addRoll} update={update} />}</Panel>
     </div></div>}
 
     {tab === 'Nomenclaturas' && <NomenclaturesTab character={character} update={update} addRoll={addRoll} />}
