@@ -310,7 +310,7 @@ export function GsPanel({ character, update }: { character: Character; update: U
       const choice = done ? (st.milestoneChoices[key] ?? options[0]!.id) : (picks[gs] ?? options[0]!.id);
       const info = milestoneText(choice, gs);
       const needsTech = milestoneNeedsTechnique(character, gs, choice);
-      const askEffect = needsTech || (gs === 10 && choice === 'arma');
+      const askEffect = needsTech || (gs === 10 && (choice === 'arma' || choice === 'corpo'));
       return <div key={gs} className={`passive ${ready ? 'passive-ready' : ''}`}>
         <span className="field-kicker">{gs} GS · {done ? 'RESOLVIDO' : ready ? 'DISPONÍVEL' : 'BLOQUEADO'}</span>
         {ready && options.length > 1 && <Field label="O QUE EVOLUIR NESTE MARCO"><select value={choice} onChange={e => setPicks({ ...picks, [gs]: e.target.value })}>{options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select></Field>}
@@ -329,7 +329,7 @@ export function GsPanel({ character, update }: { character: Character; update: U
       </div>;
     })}
     {msg && <p role="status" className="auth-message">{msg}</p>}
-    {canAdvance && <Button variant="outline" className="action-flux" onClick={() => { update({ stage: stages[stage + 1]!.name }); setMsg('Avanço de estágio: ganhe +1 ponto de atributo (respeitando o teto do estágio) e aprenda uma nova Nomenclatura.'); }}><Sparkles /> Avançar para {stages[stage + 1]!.name}</Button>}
+    {canAdvance && <Button variant="outline" className="action-flux" onClick={() => { update({ stage: stages[stage + 1]!.name }); setMsg(character.lineage === 'Arcadiano' ? 'Avanço de estágio: ganhe +1 ponto de atributo (respeitando o teto do estágio) e aprenda duas novas Nomenclaturas.' : 'Avanço de estágio: ganhe +1 ponto de atributo (respeitando o teto do estágio) e aprenda uma nova Nomenclatura.'); }}><Sparkles /> Avançar para {stages[stage + 1]!.name}</Button>}
   </div>;
 }
 

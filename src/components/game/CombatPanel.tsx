@@ -314,7 +314,8 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     log([`${a.name} ataca ${t.name} (${o.label}${spent ? `, −${spent} PF` : ''}): d20 [${r.d20}] + 1d${r.attrDie} [${r.attrRoll}] (${attrLabelFor(o.hitAttr, a.pc?.lineage)}) = ${r.total}; reação: ${REACTION_NAME[reaction]}${reaction === 'esquivar' || reaction === 'danca' ? ` (Esquiva ${esqEff})` : ''}${blockText ? ` — ${blockText}` : ''} → ${outcome}${gain ? ` · +${gain} PF (passiva Arcadiana)` : ''}${tripleOn ? ' · Crítico Triplo preparado' : ''}`]);
     if (requestId && userId) {
       const channel = supabase.channel(`herdeiros-combat-actions-${campaign.id}`);
-      void channel.subscribe().then(async () => {
+      channel.subscribe(async (status) => {
+        if (status !== 'SUBSCRIBED') return;
         await channel.send({ type: 'broadcast', event: 'combat_attack_resolved', payload: { requestId, campaignId: campaign.id, userId } });
         await supabase.removeChannel(channel);
       });

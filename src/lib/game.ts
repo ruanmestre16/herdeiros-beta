@@ -387,9 +387,9 @@ export function v8SheetPatch(c: Character, patch: Partial<Character>): Partial<C
 }
 export function milestoneKey(c: Character, gs: number) { return `${stageIndexFor(c.lineage, c.stage)}:${gs}`; }
 /** Opções de cada marco. Estágio 1: Arma / Corpo ou Nomenclatura, escolhido a cada marco (sem trava). Estágio 2: três temas livres. Depois: livre com o Mestre. */
-export type MilestoneChoice = 'arma' | 'nomenclatura' | 'mimetismo' | 'vinganca' | 'nomenclatura_avancada' | 'livre';
+export type MilestoneChoice = 'arma' | 'corpo' | 'nomenclatura' | 'mimetismo' | 'vinganca' | 'nomenclatura_avancada' | 'livre';
 export const milestoneOptions = (stage: number): { id: MilestoneChoice; label: string }[] =>
-  stage === 0 ? [{ id: 'arma', label: 'Arma / Corpo' }, { id: 'nomenclatura', label: 'Nomenclatura' }]
+  stage === 0 ? [{ id: 'arma', label: 'Arma' }, { id: 'corpo', label: 'Corpo Moldado' }, { id: 'nomenclatura', label: 'Nomenclatura' }]
   : stage === 1 ? [{ id: 'mimetismo', label: 'Mimetismo do Fluxo' }, { id: 'vinganca', label: 'Vingança Karmática' }, { id: 'nomenclatura_avancada', label: 'Nomenclatura Avançada' }]
   : [{ id: 'livre', label: 'Livre, combinado com o Mestre' }];
 /** Marcos que exigem escolher uma Nomenclatura: Favorita (10 GS, estágio 1) e a segunda Favorita (5 GS, Nomenclatura Avançada). */
@@ -406,9 +406,9 @@ export function applyMilestone(c: Character, gs: 5 | 7 | 10, choice: string, tec
   const upgrades = { ...state.techniqueUpgrades };
   if (milestoneNeedsTechnique(c, gs, choice) && technique) upgrades[technique] = { ...upgrades[technique], favorite: effect || upgrades[technique]?.favorite || 'Versão Favorita' };
   const rank = gs === 5 ? 1 : 2;
-  const armaRank = choice === 'arma' ? Math.max(state.weaponRank, rank) : state.weaponRank;
+  const armaRank = choice === 'arma' || choice === 'corpo' ? Math.max(state.weaponRank, rank) : state.weaponRank;
   const nomRank = choice === 'nomenclatura' ? Math.max(state.nomRank, rank) : state.nomRank;
-  return { ...c, gs: gs === 10 ? 0 : c.gs, abilities: withSheetState(c, { weaponRank: armaRank, nomRank, milestones: [...state.milestones, key], milestoneChoices: { ...state.milestoneChoices, [key]: choice }, techniqueUpgrades: upgrades, specialEffect: gs === 10 && choice === 'arma' && effect ? effect : state.specialEffect }) };
+  return { ...c, gs: gs === 10 ? 0 : c.gs, abilities: withSheetState(c, { weaponRank: armaRank, nomRank, milestones: [...state.milestones, key], milestoneChoices: { ...state.milestoneChoices, [key]: choice }, techniqueUpgrades: upgrades, specialEffect: gs === 10 && (choice === 'arma' || choice === 'corpo') && effect ? effect : state.specialEffect }) };
 }
 /** Limites de atributo do estágio atual (Cap. II): teto 3/4/5, pontos totais e quantos podem estar no teto. */
 export function attributeInfo(c: Character) {
