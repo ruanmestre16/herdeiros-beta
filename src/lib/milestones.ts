@@ -19,18 +19,18 @@ const TEXTS: Record<string, ByGs> = {
     10: { title: 'Nomenclatura Favorita', text: 'Escolha uma Nomenclatura: ela evolui para uma versão superior (mais dados, efeito novo ou alcance maior), gastando PF a mais. O efeito é definido com o Mestre.' },
   },
   mimetismo: {
-    5: { title: 'Mimetismo · O Registro e o Inventário', text: 'A linhagem que escolher poderá registrar técnicas vistas em combate. Guarda até MENTE + ESPÍRITO habilidades copiadas. Ao presenciar uma técnica, gasta 3 PF para tentar gravá-la, sem teste de MENTE + ESPÍRITO. Receber o ataque diretamente facilita; técnicas de aliados exigem Elo alto ou dano proposital.' },
+    5: { title: 'Mimetismo · O Registro e o Inventário', text: 'A linhagem que escolher poderá registrar técnicas vistas em combate. Guarda até MENTE + ESPÍRITO habilidades copiadas. Ao presenciar uma técnica, faz um teste de MENTE + ESPÍRITO contra a DT do Mestre gastando 5 PF para gravá-la. Se falhar, a oportunidade se fecha permanentemente para aquela técnica. Receber o ataque diretamente facilita; técnicas de aliados exigem Elo alto ou dano proposital.' },
     7: { title: 'Mimetismo Dominado', text: 'Ativar a habilidade copiada junto com o ataque custa só 3 PF. Antes de atacar, declara o efeito e faz teste de MENTE + ESPÍRITO. O efeito é sempre em escala reduzida e adaptada.' },
     10: { title: 'Mimetismo Absoluto', text: 'Gastando 12 PF, dispensa testes: a execução é garantida e a técnica replica em escala máxima.' },
   },
   vinganca: {
     5: { title: 'Vingança Karmática', text: 'A linhagem que escolher poderá canalizar a dor recebida em retaliação. Gasta 3 PF antes do ataque. Se acertar, devolve 1/3 de todo o dano recebido até ali como dano bônus. Se errar, os PF são gastos e o bônus se perde.' },
-    7: { title: 'Vingança Karmática Aprimorada', text: 'Gasta 3 PF antes do ataque. Devolve 1/2 do dano acumulado que tomou como dano fixo bônus no golpe. Se errar, os PF são consumidos.' },
+    7: { title: 'Vingança Karmática Aprimorada', text: 'Gasta 5 PF antes do ataque. Devolve 1/2 do dano acumulado que tomou como dano fixo bônus no golpe. Se errar, os PF são consumidos.' },
     10: { title: 'Vingança Karmática Absoluta', text: 'Gasta 12 PF e não exige nenhum teste. Descarrega 100% do dano recebido no combate no próximo ataque e aplica ao alvo Karma igual à metade do dano devolvido.' },
   },
   nomenclatura_avancada: {
     5: { title: 'Nomenclatura Favorita Dupla', text: 'A linhagem que escolher poderá levar o Fluxo a outro patamar. Elege uma segunda Nomenclatura Favorita, evoluída para a versão superior com dados extras, alcance ou efeitos combinados com o Mestre.' },
-    7: { title: 'A Voz e o Eco da Arma', text: 'Uma vez por cena, como ação livre e por 3 PF, usa a habilidade inerente da arma (ou possessão, ou poder especial). Se errar o ataque, o efeito se desfaz e os PF são consumidos do mesmo jeito.' },
+    7: { title: 'A Voz e o Eco da Arma', text: 'Uma vez por cena, como ação livre e por 5 PF, usa a habilidade inerente da arma (ou possessão, ou poder especial). Só é possível usar até uma versão parcial da técnica da arma, nunca uma completa. Se errar o ataque, o efeito se desfaz e os PF são consumidos do mesmo jeito.' },
     10: { title: 'Fusão de Nomenclaturas', text: 'Gasta 12 PF para fundir duas Nomenclaturas conhecidas numa técnica sinérgica inédita. O ataque precisa acertar; se errar, os 12 PF são consumidos. Dano e efeito são definidos com o Mestre.' },
   },
   livre: {
