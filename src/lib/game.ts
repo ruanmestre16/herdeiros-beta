@@ -343,15 +343,15 @@ export function weaponRules(c: Character, type = c.weapon_type, common = sheetSt
   /** Sem evolução: valor fixo. Evoluído (rank 1): dado do atributo no lugar do fixo. Dominado (rank 2): dado + valor fixo. */
   return { attr, bonus: rank === 1 ? 0 : c[attr], extraDice: rank > 0 ? [`1d${dieFor(c[attr]) ?? 4}`] : [] as string[], rank };
 }
-/** Quem escolheu Arma / Corpo Estilizada no marco de 10 GS pode gastar 10 PF para Crítico Triplo. */
+/** Quem escolheu Arma / Corpo Estilizada no marco de 10 GS pode gastar 10 PF para o efeito único de crítico: dados ×3 no crítico E margem de crítico reduzida. */
 export function canTripleCrit(c: Character) {
   const st = sheetState(c);
   return Object.entries(st.milestoneChoices).some(([k, v]) => k.endsWith(':10') && v === 'arma');
 }
+/** Custo ÚNICO (10 PF) do Crítico Triplo + margem de crítico, declarado ANTES de saber se acerta. */
 export const TRIPLE_CRIT_COST = 10;
-/** Arma / Corpo Estilizada (10 GS): por 10 PF, declarados ANTES de saber se acerta, a faixa de crítico do d20 desce 1 por ponto de MENTE (Mente 3 → crítico em 17+). Vale só para o d20, não para a soma. */
-export const STYLIZED_CRIT_COST = 10;
-export const stylizedCritThreshold = (mente: number) => Math.max(2, 20 - mente);
+/** Parte do mesmo efeito: a faixa de crítico do d20 desce 1 por ponto do ATRIBUTO DE ATAQUE da linhagem (MENTE no Humano, ESPÍRITO no Arcadiano, CORPO no Gaki; valor 3 → crítico em 17+). Vale só para o d20, não para a soma. */
+export const stylizedCritThreshold = (attackAttrValue: number) => Math.max(2, 20 - attackAttrValue);
 export function upgradedDamage(dice: string, bonus: number, crit: boolean, extraDice: string[] = [], mult = 2) {
   const base = damageRoll(dice, bonus, crit, mult);
   const extras = extraDice.map(expr => damageRoll(expr, 0, crit, mult));
@@ -389,12 +389,24 @@ export function v8SheetPatch(c: Character, patch: Partial<Character>): Partial<C
   return patch;
 }
 export function milestoneKey(c: Character, gs: number) { return `${stageIndexFor(c.lineage, c.stage)}:${gs}`; }
-/** Opções de cada marco. Estágio 1: Arma / Corpo ou Nomenclatura, escolhido a cada marco (sem trava). Estágio 2: três temas livres. Depois: livre com o Mestre. */
+/** Caminhos de cada estágio. Estágio 1: Arma, Corpo ou Nomenclatura. Estágio 2: Mimetismo, Vingança ou Nomenclatura Avançada. O caminho é definido no marco de 5 GS (ver milestoneOptionsFor). Depois do Estágio 3: livre com o Mestre. */
 export type MilestoneChoice = 'arma' | 'corpo' | 'nomenclatura' | 'mimetismo' | 'vinganca' | 'nomenclatura_avancada' | 'livre';
 export const milestoneOptions = (stage: number): { id: MilestoneChoice; label: string }[] =>
   stage === 0 ? [{ id: 'arma', label: 'Arma' }, { id: 'corpo', label: 'Corpo Moldado' }, { id: 'nomenclatura', label: 'Nomenclatura' }]
   : stage === 1 ? [{ id: 'mimetismo', label: 'Mimetismo do Fluxo' }, { id: 'vinganca', label: 'Vingança Karmática' }, { id: 'nomenclatura_avancada', label: 'Nomenclatura Avançada' }]
   : [{ id: 'livre', label: 'Livre, combinado com o Mestre' }];
+/** Caminho definido no marco de 5 GS do estágio atual (null se o marco de 5 ainda não foi resolvido). */
+export function milestonePath(c: Character): MilestoneChoice | null {
+  const st = sheetState(c); const stage = stageIndexFor(c.lineage, c.stage);
+  return (st.milestoneChoices[`${stage}:5`] as MilestoneChoice | undefined) ?? null;
+}
+/** Opções válidas de cada marco: no 5 GS o jogador escolhe o caminho; nos de 7 e 10 só vale o caminho já definido (os outros ficam fechados). Depois do Estágio 3 é livre. */
+export function milestoneOptionsFor(c: Character, gs: 5 | 7 | 10) {
+  const stage = stageIndexFor(c.lineage, c.stage); const all = milestoneOptions(stage);
+  if (stage >= 2 || gs === 5) return all;
+  const path = milestonePath(c);
+  return path ? all.filter(o => o.id === path) : [];
+}
 /** Marcos que exigem escolher uma Nomenclatura: Favorita (10 GS, estágio 1) e a segunda Favorita (5 GS, Nomenclatura Avançada). */
 export function milestoneNeedsTechnique(c: Character, gs: 5 | 7 | 10, choice: string) {
   const stage = stageIndexFor(c.lineage, c.stage);
@@ -404,7 +416,7 @@ export function applyMilestone(c: Character, gs: 5 | 7 | 10, choice: string, tec
   const state = sheetState(c);
   const key = milestoneKey(c, gs);
   const stage = stageIndexFor(c.lineage, c.stage);
-  if (c.gs < gs || state.milestones.includes(key) || !milestoneOptions(stage).some(o => o.id === choice)) return null;
+  if (c.gs < gs || state.milestones.includes(key) || !milestoneOptionsFor(c, gs).some(o => o.id === choice)) return null;
   if (milestoneNeedsTechnique(c, gs, choice) && !c.nomenclatures.some(n => n.name === technique)) return null;
   const upgrades = { ...state.techniqueUpgrades };
   if (milestoneNeedsTechnique(c, gs, choice) && technique) upgrades[technique] = { ...upgrades[technique], favorite: effect || upgrades[technique]?.favorite || 'Versão Favorita' };

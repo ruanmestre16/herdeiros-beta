@@ -1,4 +1,4 @@
-/** Textos dos marcos de GS (Cap. VII). Neutros: qualquer jogador escolhe o que quiser em cada marco. */
+/** Textos dos marcos de GS (Cap. VII). O caminho é definido no marco de 5 GS; os marcos de 7 e 10 seguem o mesmo caminho. */
 export type MilestoneText = { title: string; text: string };
 type ByGs = Record<5 | 7 | 10, MilestoneText>;
 
@@ -6,7 +6,7 @@ const TEXTS: Record<string, ByGs> = {
   arma: {
     5: { title: 'Arma Evoluída', text: 'O dado do atributo da arma entra no dano no lugar do valor fixo. Ex.: 1d8 + 1d6 em vez de 1d8 + 2. Opção de Vínculo de Fluxo: gastando 2 PF, o dano de Fluxo conta como dano normal contra Gakis.' },
     7: { title: 'Arma Dominada', text: 'Soma o dado do atributo e também o valor fixo do atributo. Ex.: 1d8 + 1d6 + 2.' },
-    10: { title: 'Arma Estilizada', text: 'A arma ganha um efeito especial definido com o Mestre e libera o Crítico Triplo: 10 PF declarados antes do ataque; se for crítico (20 natural), os dados de dano são multiplicados por 3.' },
+    10: { title: 'Arma Estilizada', text: 'A arma ganha um efeito especial definido com o Mestre e libera o Crítico Triplo: 10 PF declarados antes do ataque. A margem de crítico do d20 passa a ser 20 menos o atributo de ataque e, se o ataque for crítico, os dados de dano são multiplicados por 3.' },
   },
   corpo: {
     5: { title: 'Corpo Evoluído', text: 'O dado de CORPO entra no dano no lugar do valor fixo de CORPO nos ataques de Corpo Moldado.' },
@@ -19,14 +19,14 @@ const TEXTS: Record<string, ByGs> = {
     10: { title: 'Nomenclatura Favorita', text: 'Escolha uma Nomenclatura: ela evolui para uma versão superior (mais dados, efeito novo ou alcance maior), gastando PF a mais. O efeito é definido com o Mestre.' },
   },
   mimetismo: {
-    5: { title: 'Mimetismo · O Registro e o Inventário', text: 'A linhagem que escolher poderá registrar técnicas vistas em combate. Guarda até MENTE + ESPÍRITO habilidades copiadas. Ao presenciar uma técnica, teste de MENTE + ESPÍRITO contra a DT do Mestre para gravá-la; se falhar, a chance daquela técnica se fecha. Receber o ataque diretamente facilita; técnicas de aliados exigem Elo alto.' },
+    5: { title: 'Mimetismo · O Registro e o Inventário', text: 'A linhagem que escolher poderá registrar técnicas vistas em combate. Guarda até MENTE + ESPÍRITO habilidades copiadas. Ao presenciar uma técnica, gasta 3 PF para tentar gravá-la, sem teste de MENTE + ESPÍRITO. Receber o ataque diretamente facilita; técnicas de aliados exigem Elo alto ou dano proposital.' },
     7: { title: 'Mimetismo Dominado', text: 'Ativar a habilidade copiada junto com o ataque custa só 3 PF. Antes de atacar, declara o efeito e faz teste de MENTE + ESPÍRITO. O efeito é sempre em escala reduzida e adaptada.' },
     10: { title: 'Mimetismo Absoluto', text: 'Gastando 12 PF, dispensa testes: a execução é garantida e a técnica replica em escala máxima.' },
   },
   vinganca: {
     5: { title: 'Vingança Karmática', text: 'A linhagem que escolher poderá canalizar a dor recebida em retaliação. Gasta 3 PF antes do ataque. Se acertar, devolve 1/3 de todo o dano recebido até ali como dano bônus. Se errar, os PF são gastos e o bônus se perde.' },
     7: { title: 'Vingança Karmática Aprimorada', text: 'Gasta 3 PF antes do ataque. Devolve 1/2 do dano acumulado que tomou como dano fixo bônus no golpe. Se errar, os PF são consumidos.' },
-    10: { title: 'Vingança Karmática Absoluta', text: 'Descarrega 100% do dano recebido no combate no próximo ataque e aplica ao alvo Karma igual à metade do dano devolvido.' },
+    10: { title: 'Vingança Karmática Absoluta', text: 'Gasta 12 PF e não exige nenhum teste. Descarrega 100% do dano recebido no combate no próximo ataque e aplica ao alvo Karma igual à metade do dano devolvido.' },
   },
   nomenclatura_avancada: {
     5: { title: 'Nomenclatura Favorita Dupla', text: 'A linhagem que escolher poderá levar o Fluxo a outro patamar. Elege uma segunda Nomenclatura Favorita, evoluída para a versão superior com dados extras, alcance ou efeitos combinados com o Mestre.' },
