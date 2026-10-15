@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Stepper } from './Controls';
 import {
   ELO_ACTIONS, LINEAGE_STAGES, NOMENCLATURE_COST, NOMENCLATURE_DICE, NOMENCLATURE_CRIT_DICE, REST_TYPES, TRIPLE_CRIT_COST, WEAPONS,
-  attackRoll, absorbPf, canTripleCrit, combinedRoll, stylizedCritThreshold, nomenclatureDamage, nomenclatureLabel, nomenclatureLevelLabel, applyMilestone, milestoneKey, milestoneNeedsTechnique, milestoneOptions, milestoneOptionsFor, milestonePath, restRoll, stageIndexFor,
+  attackRoll, absorbPf, canTripleCrit, combinedRoll, stylizedCritThreshold, nomenclatureDamage, nomenclatureLabel, nomenclatureLevelLabel, applyMilestone, milestoneKey, milestoneNeedsTechnique, milestoneOptions, milestoneOptionsFor, milestonePath, nomenclatureFamilies, techniqueKey, restRoll, stageIndexFor,
   damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, weaponRules, techniqueRules, upgradedDamage, isTechAgent, absorbActionLabel, attrLabelFor, sheetState, withSheetState,
   SHARE_MIN_SYNC, PROTECTION_MIN_ELO, syncLevelWith, pfShareBlock,
   agonyStatus, agonyEnter, agonyFailure, agonyUndo, agonyLeave, agonySacrifice, AGONY_MAX_FAILURES,
@@ -234,14 +234,15 @@ function parseNomenclatureText(text: string): ParsedTechnique[] {
 
 /** Nomenclaturas: nome e tipo. Dano, crítico e custo de PF seguem a escala de Recitação (Direta 1d6/2 PF · Parcial 2d8/5 PF · Completa 6d8/12 PF). */
 export function NomenclaturesTab({ character, update, addRoll }: { character: Character; update: Update; addRoll: AddRoll }) {
-  const [draft, setDraft] = useState<{ name: string; kind: NomenclatureKind } | null>(null);
+  const [draft, setDraft] = useState<{ name: string; kind: NomenclatureKind; family: string } | null>(null);
+  const families = nomenclatureFamilies(character);
   const [pasteText, setPasteText] = useState('');
   const [result, setResult] = useState<{ name: string; attack: number; d20: number; attrDie: number; attrRoll: number; crit: boolean; fumble: boolean; damage?: number; dice?: number[] } | null>(null);
   const parsed = draft ? parseNomenclatureText(pasteText) : [];
   const closeDraft = () => { setDraft(null); setPasteText(''); };
   const kinds: NomenclatureKind[] = ['Direta', 'Parcial', 'Completa'];
   return <div className="single-section">
-    <div className="section-heading"><div className="flex items-center gap-3"><span className="section-number">01</span><h2>{nomenclatureLabel(character.lineage, true)}</h2></div><Button size="sm" onClick={() => setDraft({ name: '', kind: 'Direta' })}><Plus /> Nova {nomenclatureLabel(character.lineage)}</Button></div>
+    <div className="section-heading"><div className="flex items-center gap-3"><span className="section-number">01</span><h2>{nomenclatureLabel(character.lineage, true)}</h2></div><Button size="sm" onClick={() => setDraft({ name: '', kind: 'Direta', family: '' })}><Plus /> Nova {nomenclatureLabel(character.lineage)}</Button></div>
     {draft && <div className="game-panel mb-5">
       <div className="panel-head"><h3>Nova {nomenclatureLabel(character.lineage)}</h3></div>
       <div className="field-stack">
@@ -252,25 +253,25 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
           ? `Reconhecido: ${parsed.map(p => `${p.kind} · ${p.name} · ${NOMENCLATURE_DICE[p.kind]} (crítico ${NOMENCLATURE_CRIT_DICE[p.kind]}) · ${NOMENCLATURE_COST[p.kind]} PF`).join('  |  ')}`
           : 'Nada reconhecido ainda. Confira se cada versão começa com uma linha como "DIRETA — 2 PF".'}</p>}
         {parsed.length > 0 && <div className="flex gap-2"><Button onClick={() => {
-          update({ nomenclatures: [...character.nomenclatures, ...parsed.map(p => ({ name: p.name, cost: NOMENCLATURE_COST[p.kind], kind: p.kind, ...(p.effect ? { effect: p.effect } : {}) }))] });
+          const family = draft!.family || (parsed.find(p => p.kind === 'Direta') ?? parsed[0]!).name;
+          update({ nomenclatures: [...character.nomenclatures, ...parsed.map(p => ({ name: p.name, cost: NOMENCLATURE_COST[p.kind], kind: p.kind, family, ...(p.effect ? { effect: p.effect } : {}) }))] });
           closeDraft();
         }}><Plus /> Salvar {parsed.length} {parsed.length > 1 ? 'versões' : 'versão'} do texto</Button></div>}
         <Field label="NOME DA TÉCNICA"><input value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} placeholder="Nome da técnica" /></Field>
+        <Field label="FAZ PARTE DE"><select value={draft.family} onChange={e => setDraft({ ...draft, family: e.target.value })}><option value="">Nova nomenclatura</option>{families.map(f => <option key={f.key} value={f.key}>{f.name} (outra versão dela)</option>)}</select></Field>
         <Field label={`TIPO DE ${nomenclatureLabel(character.lineage).toUpperCase()}`}><select value={draft.kind} onChange={e => setDraft({ ...draft, kind: e.target.value as NomenclatureKind })}>
           {kinds.map(k => <option key={k} value={k}>{nomenclatureLevelLabel(character.lineage, k)}</option>)}
         </select></Field>
         <p className="empty-copy">Dano <strong>{NOMENCLATURE_DICE[draft.kind]}</strong> (crítico {NOMENCLATURE_CRIT_DICE[draft.kind]}) · custo <strong className="text-flux">{NOMENCLATURE_COST[draft.kind]} PF</strong>. Os valores são fixos pelo Códice.</p>
-        <div className="flex gap-2"><Button disabled={!draft.name.trim()} onClick={() => { update({ nomenclatures: [...character.nomenclatures, { name: draft.name.trim(), cost: NOMENCLATURE_COST[draft.kind], kind: draft.kind }] }); closeDraft(); }}><Plus /> Salvar técnica</Button><Button variant="ghost" onClick={closeDraft}>Cancelar</Button></div>
+        <div className="flex gap-2"><Button disabled={!draft.name.trim()} onClick={() => { update({ nomenclatures: [...character.nomenclatures, { name: draft.name.trim(), cost: NOMENCLATURE_COST[draft.kind], kind: draft.kind, family: draft.family || draft.name.trim() }] }); closeDraft(); }}><Plus /> Salvar técnica</Button><Button variant="ghost" onClick={closeDraft}>Cancelar</Button></div>
       </div>
     </div>}
     {result && <div className={`combat-banner mb-5 ${result.fumble ? 'banner-miss' : result.crit ? 'banner-crit' : 'banner-neutral'}`}><strong>{result.fumble ? `FALHA CRÍTICA! ${result.name}` : result.crit ? `CRÍTICO! ${result.name}` : `${result.name}: ataque ${result.attack}`}</strong><span>1d20 [{result.d20}] + 1d{result.attrDie} [{result.attrRoll}] ({attrLabelFor('espirito', character.lineage)}) = {result.attack}{result.damage !== undefined ? ` · dano ${result.damage} (${result.dice?.join(' + ')})${result.crit ? ' — crítico' : ''}` : ''}</span></div>}
-    <div className="item-list">{character.nomenclatures.map((item, i) => {
+    <div className="item-list">{families.map(g => { const gFav = techniqueRules(character, g.items[0]!.item).upgrade.favorite; return <div className="nomen-family" key={g.key}><div className="nomen-head"><strong>{g.name}{gFav ? ' ★' : ''}</strong><span>uma nomenclatura · {g.items.length} {g.items.length > 1 ? 'versões' : 'versão'}</span></div>{gFav && <p className="empty-copy">★ Nomenclatura Favorita: {gFav}</p>}{g.items.map(({ item, index: i }) => {
       const t = techniqueRules(character, item);
       const parts = [t.dice, ...t.extraDice, ...(t.bonus ? [String(t.bonus)] : [])].join(' + ');
-      const favorite = t.upgrade.favorite;
       return <div className="editable-row" key={i}>
-        <div className="nomen-head"><strong>{item.name}{favorite ? ' ★' : ''}</strong><span>{nomenclatureLevelLabel(character.lineage, t.kind)} · dano {parts} (crítico {t.kind === 'Completa' ? `${t.critDice} puro` : `${t.critDice}${t.extraDice.length ? ` + ${t.extraDice.map(e => `2${e.slice(1)}`).join(' + ')}` : ''}${t.bonus ? ` + ${t.bonus}` : ''}`}) · <span className="text-flux">{t.cost} PF</span></span></div>
-        {favorite && <p className="empty-copy">★ Nomenclatura Favorita: {favorite}</p>}
+        <div className="nomen-head"><strong>{item.name}</strong><span>{nomenclatureLevelLabel(character.lineage, t.kind)} · dano {parts} (crítico {t.kind === 'Completa' ? `${t.critDice} puro` : `${t.critDice}${t.extraDice.length ? ` + ${t.extraDice.map(e => `2${e.slice(1)}`).join(' + ')}` : ''}${t.bonus ? ` + ${t.bonus}` : ''}`}) · <span className="text-flux">{t.cost} PF</span></span></div>
         {item.effect && <p className="empty-copy" style={{ whiteSpace: 'pre-line' }}>{item.effect}</p>}
         <div className="row-actions">
           <Button size="sm" variant="outline" disabled={character.pf_current < t.cost} onClick={() => {
@@ -284,11 +285,12 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
             setResult({ ...result, damage: d.total, dice: d.dice });
             addRoll({ expression: d.expression, dice: d.dice, modifier: d.bonus, total: d.total, source: `${nomenclatureLabel(character.lineage)} · ${item.name} — ${nomenclatureLevelLabel(character.lineage, t.kind)} · dano${result.crit ? ' CRÍTICO' : ''}`, crit: result.crit });
           }}><Dices /> Rolar dano</Button>
+          <select aria-label="Nomenclatura a que esta versão pertence" value={techniqueKey(item)} onChange={e => update({ nomenclatures: character.nomenclatures.map((n, j) => j === i ? { ...n, family: e.target.value === '__own' ? n.name : e.target.value } : n) })}>{families.map(f => <option key={f.key} value={f.key}>Faz parte de: {f.name}</option>)}<option value="__own">Separar como nomenclatura própria</option></select>
           <Button size="icon" variant="ghost" title="Excluir técnica" aria-label="Excluir técnica" onClick={() => update({ nomenclatures: character.nomenclatures.filter((_, j) => j !== i) })}><Trash2 /></Button>
         </div>
         {character.pf_current < t.cost && <p className="empty-copy">PF insuficientes: use Forçar o Fluxo (ação livre) para gerar PF, ao custo de Karma.</p>}
       </div>;
-    })}{!character.nomenclatures.length && <p className="empty-copy">Ainda não há {nomenclatureLabel(character.lineage, true).toLowerCase()} nesta ficha.</p>}</div>
+    })}</div>; })}{!character.nomenclatures.length && <p className="empty-copy">Ainda não há {nomenclatureLabel(character.lineage, true).toLowerCase()} nesta ficha.</p>}</div>
   </div>;
 }
 
@@ -322,7 +324,7 @@ export function GsPanel({ character, update }: { character: Character; update: U
         {pathLocked ? <p>Resolva primeiro o marco de 5 GS: ele define o caminho deste ciclo.</p> : <><strong>{info.title}</strong>
         <p>{info.text}</p></>}
         {ready && <div className="field-stack mt-3">
-          {needsTech && <Field label="NOMENCLATURA ESCOLHIDA"><select value={technique} onChange={e => setTechnique(e.target.value)}><option value="">Escolher</option>{character.nomenclatures.map(n => <option key={n.name} value={n.name}>{n.name}</option>)}</select></Field>}
+          {needsTech && <Field label="NOMENCLATURA ESCOLHIDA"><select value={technique} onChange={e => setTechnique(e.target.value)}><option value="">Escolher</option>{nomenclatureFamilies(character).filter(f => !st.techniqueUpgrades[f.key]?.favorite).map(f => <option key={f.key} value={f.key}>{f.name} ({f.items.length} {f.items.length > 1 ? 'versões' : 'versão'})</option>)}</select></Field>}
           {askEffect && <Field label={needsTech ? 'O QUE A VERSÃO FAVORITA PASSA A FAZER (COM O MESTRE)' : 'EFEITO ESPECIAL (COM O MESTRE)'}><input value={effect} onChange={e => setEffect(e.target.value)} /></Field>}
           <Button variant="outline" disabled={needsTech && !technique} onClick={() => {
             const next = applyMilestone(character, gs, choice, technique, effect.trim());
