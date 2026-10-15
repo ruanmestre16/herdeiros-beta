@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Stepper } from './Controls';
 import {
   ELO_ACTIONS, LINEAGE_STAGES, NOMENCLATURE_COST, NOMENCLATURE_DICE, NOMENCLATURE_CRIT_DICE, REST_TYPES, TRIPLE_CRIT_COST, WEAPONS,
-  attackRoll, absorbPf, canTripleCrit, combinedRoll, STYLIZED_CRIT_COST, stylizedCritThreshold, nomenclatureDamage, nomenclatureLabel, nomenclatureLevelLabel, applyMilestone, milestoneKey, milestoneNeedsTechnique, milestoneOptions, restRoll, stageIndexFor,
+  attackRoll, absorbPf, canTripleCrit, combinedRoll, stylizedCritThreshold, nomenclatureDamage, nomenclatureLabel, nomenclatureLevelLabel, applyMilestone, milestoneKey, milestoneNeedsTechnique, milestoneOptions, milestoneOptionsFor, milestonePath, restRoll, stageIndexFor,
   damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, weaponRules, techniqueRules, upgradedDamage, isTechAgent, absorbActionLabel, attrLabelFor, sheetState, withSheetState,
   SHARE_MIN_SYNC, PROTECTION_MIN_ELO, syncLevelWith, pfShareBlock,
   agonyStatus, agonyEnter, agonyFailure, agonyUndo, agonyLeave, agonySacrifice, AGONY_MAX_FAILURES,
@@ -163,7 +163,6 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
   const [last, setLast] = useState<{ d20: number; attrDie: number; attrRoll: number; total: number; crit: boolean; fumble: boolean; tripled: boolean } | null>(null);
   const [dmg, setDmg] = useState<{ total: number; dice: number[]; bonus: number; crit: boolean } | null>(null);
   const [triple, setTriple] = useState(false);
-  const [stylized, setStylized] = useState(false);
   const st = sheetState(character);
   const type = weaponByKey(character.weapon_type);
   const dice = type ? type.dice[0]! : '';
@@ -172,8 +171,7 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
   const karma = karmaDamageBonus(character);
   const bonus = wr.bonus + karma;
   const tripleOk = !!type && type.attr !== 'corpo' && !common && canTripleCrit(character) && character.pf_current >= TRIPLE_CRIT_COST;
-  const stylizedThreshold = stylizedCritThreshold(character.mente);
-  const stylizedOk = !!type && type.attr !== 'corpo' && !common && canTripleCrit(character) && character.pf_current >= STYLIZED_CRIT_COST;
+  const stylizedThreshold = stylizedCritThreshold(character[wr.attr]);
   const damageText = type ? [dice, ...wr.extraDice, ...(wr.bonus ? [`${attrLabelFor(wr.attr, character.lineage)} (${character[wr.attr]})`] : [])].join(' + ') : '';
   return <div className="weapon-block">
     <span className="field-kicker">{character.lineage === 'Humano' ? 'ARMA DE VÍNCULO · VONTADE, HISTÓRIA E IDENTIDADE' : 'ARMA'}</span>
@@ -187,16 +185,15 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
       </select></Field>
     </div>
     {type && <p className="weapon-summary">Ataque <strong>1d20 + 1d{dieFor(character[wr.attr]) ?? 4} ({attrLabelFor(wr.attr, character.lineage)})</strong> · Dano <strong>{damageText}</strong>{karma ? <strong className="text-karma"> + {karma} Karma</strong> : null}<br /><span>{type.note}{wr.rank === 1 ? ' Evoluída: o dado do atributo substitui o valor fixo.' : wr.rank >= 2 ? ' Dominada: dado + valor fixo do atributo.' : ''}{common && type.attr !== 'corpo' ? ' Arma comum não recebe evoluções.' : ''}</span></p>}
-    {tripleOk && <label className="anchor-toggle mt-3"><input type="checkbox" checked={triple} onChange={e => setTriple(e.target.checked)} /> Crítico Triplo (−{TRIPLE_CRIT_COST} PF, dados ×3 se for crítico)</label>}
-    {stylizedOk && <label className="anchor-toggle mt-3"><input type="checkbox" checked={stylized} onChange={e => setStylized(e.target.checked)} /> Arma Estilizada (−{STYLIZED_CRIT_COST} PF, crítico no d20 a partir de {stylizedThreshold} — gasta antes de saber se acerta)</label>}
+    {tripleOk && <label className="anchor-toggle mt-3"><input type="checkbox" checked={triple} onChange={e => setTriple(e.target.checked)} /> Crítico Triplo (−{TRIPLE_CRIT_COST} PF: dados ×3 no crítico e crítico no d20 a partir de {stylizedThreshold} — gasta antes de saber se acerta)</label>}
     <div className="quick-actions mt-3">
       <Button variant="outline" disabled={!type} onClick={() => {
-        const stylizedOn = stylized && stylizedOk;
-        const r = attackRoll(character[wr.attr], undefined, stylizedOn ? stylizedThreshold : 20); const tripled = triple && tripleOk;
-        const cost = (tripled ? TRIPLE_CRIT_COST : 0) + (stylizedOn ? STYLIZED_CRIT_COST : 0);
+        const tripled = triple && tripleOk;
+        const r = attackRoll(character[wr.attr], undefined, tripled ? stylizedThreshold : 20);
+        const cost = tripled ? TRIPLE_CRIT_COST : 0;
         if (cost) update({ pf_current: character.pf_current - cost });
         setLast({ ...r, tripled }); setDmg(null);
-        addRoll({ expression: r.expression, dice: r.dice, modifier: r.modifier, total: r.total, source: `Ataque com arma${stylizedOn ? ` (Estilizada: crítico ${stylizedThreshold}+ no d20)` : ''}${r.fumble ? ' — FALHA CRÍTICA' : r.crit ? ' — CRÍTICO' : ''}`, crit: r.crit });
+        addRoll({ expression: r.expression, dice: r.dice, modifier: r.modifier, total: r.total, source: `Ataque com arma${tripled ? ` (Crítico Triplo: crítico ${stylizedThreshold}+ no d20)` : ''}${r.fumble ? ' — FALHA CRÍTICA' : r.crit ? ' — CRÍTICO' : ''}`, crit: r.crit });
       }}><Swords /> Atacar (1d20 + 1d{dieFor(character[wr.attr]) ?? 4})</Button>
       <Button variant="outline" disabled={!type || !last || last.fumble} onClick={() => {
         const crit = !!last?.crit;
@@ -308,20 +305,22 @@ export function GsPanel({ character, update }: { character: Character; update: U
   const canAdvance = character.gs === 0 && st.milestones.includes(milestoneKey(character, 10)) && stage < stages.length - 1;
   return <div className="field-stack">
     <div><div className="mb-2 flex items-center justify-between text-xs"><span className="field-kicker">GRAU DE SINCRONIA</span><span className="font-medium">{character.gs} <span className="text-muted-foreground">/ 10</span></span></div><div className="meter-track"><div className="meter-fill meter-flux" style={{ width: `${Math.min(100, character.gs * 10)}%` }} /></div></div>
-    <p className="muted-copy text-xs">O Mestre concede GS ao final de sessões, após grandes feitos ou superação de traumas. Os pontos não são gastos: o GS acumula (6, 7, 8...) e, ao chegar a 5, 7 e 10, libera um marco. Em cada marco você escolhe livremente o que evoluir. Ao resolver o marco de 10, o GS zera.</p>
+    <p className="muted-copy text-xs">O Mestre concede GS ao final de sessões, após grandes feitos ou superação de traumas. Os pontos não são gastos: o GS acumula (6, 7, 8...) e, ao chegar a 5, 7 e 10, libera um marco. No marco de 5 GS você define o caminho; os marcos de 7 e 10 seguem esse mesmo caminho e os outros ficam fechados. Ao resolver o marco de 10, o GS zera.</p>
     {([5, 7, 10] as const).map(gs => {
       const key = milestoneKey(character, gs);
       const done = st.milestones.includes(key);
-      const ready = character.gs >= gs && !done;
-      const choice = done ? (st.milestoneChoices[key] ?? options[0]!.id) : (picks[gs] ?? options[0]!.id);
+      const gsOptions = milestoneOptionsFor(character, gs);
+      const pathLocked = !done && gs !== 5 && stage < 2 && !milestonePath(character);
+      const ready = character.gs >= gs && !done && !pathLocked;
+      const choice = done ? (st.milestoneChoices[key] ?? options[0]!.id) : (picks[gs] ?? gsOptions[0]?.id ?? options[0]!.id);
       const info = milestoneText(choice, gs);
       const needsTech = milestoneNeedsTechnique(character, gs, choice);
       const askEffect = needsTech || (gs === 10 && (choice === 'arma' || choice === 'corpo'));
       return <div key={gs} className={`passive ${ready ? 'passive-ready' : ''}`}>
         <span className="field-kicker">{gs} GS · {done ? 'RESOLVIDO' : ready ? 'DISPONÍVEL' : 'BLOQUEADO'}</span>
-        {ready && options.length > 1 && <Field label="O QUE EVOLUIR NESTE MARCO"><select value={choice} onChange={e => setPicks({ ...picks, [gs]: e.target.value })}>{options.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select></Field>}
-        <strong>{info.title}</strong>
-        <p>{info.text}</p>
+        {ready && gsOptions.length > 1 && <Field label={gs === 5 ? 'CAMINHO (DEFINIDO AQUI, VALE PARA 7 E 10 GS)' : 'O QUE EVOLUIR NESTE MARCO'}><select value={choice} onChange={e => setPicks({ ...picks, [gs]: e.target.value })}>{gsOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select></Field>}
+        {pathLocked ? <p>Resolva primeiro o marco de 5 GS: ele define o caminho deste ciclo.</p> : <><strong>{info.title}</strong>
+        <p>{info.text}</p></>}
         {ready && <div className="field-stack mt-3">
           {needsTech && <Field label="NOMENCLATURA ESCOLHIDA"><select value={technique} onChange={e => setTechnique(e.target.value)}><option value="">Escolher</option>{character.nomenclatures.map(n => <option key={n.name} value={n.name}>{n.name}</option>)}</select></Field>}
           {askEffect && <Field label={needsTech ? 'O QUE A VERSÃO FAVORITA PASSA A FAZER (COM O MESTRE)' : 'EFEITO ESPECIAL (COM O MESTRE)'}><input value={effect} onChange={e => setEffect(e.target.value)} /></Field>}

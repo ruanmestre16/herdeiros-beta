@@ -2,8 +2,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, Crosshair, Dices, RotateCcw, Shield, Skull, Sparkles, Swords, Users } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  NOMENCLATURE_CRIT_DICE, PROTECTION_MIN_ELO, STYLIZED_CRIT_COST, stylizedCritThreshold, TRIPLE_CRIT_COST, WEAPONS,
-  attackRoll, canTripleCrit, counterRoll, damageRoll, danceStep, derived, dieFor, forceFlux, initiativeRoll, nomenclatureLabel, nomenclatureLevelLabel, attrLabelFor,
+  NOMENCLATURE_CRIT_DICE, PROTECTION_MIN_ELO, stylizedCritThreshold, TRIPLE_CRIT_COST, WEAPONS,
+  attackRoll, canTripleCrit, weaponAttrFor, counterRoll, damageRoll, danceStep, derived, dieFor, forceFlux, initiativeRoll, nomenclatureLabel, nomenclatureLevelLabel, attrLabelFor,
   karmaDamageBonus, karmaMaximum, weaponByKey, weaponRules, techniqueRules, upgradedDamage, protectRoll, syncLevelWith, stageIndexFor, isHuman, agonyStatus, agonyLabel, forceActionLabel, isTechAgent,
   type Attr, type Campaign, type Character, type NomenclatureKind, type Npc,
 } from '@/lib/game';
@@ -39,7 +39,6 @@ type AttackIntent = {
   dice: string;
   mode: 'single';
   triple?: boolean;
-  stylized?: boolean;
   senderUserId: string;
   senderName: string;
   createdAt: number;
@@ -125,7 +124,6 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   /** Passiva do Humano: fluxo parcial lido (atacante>alvo). */
   const [read, setRead] = useState<Record<string, boolean>>({});
   const [triple, setTriple] = useState(false);
-  const [stylized, setStylized] = useState(false);
   const [notice, setNotice] = useState('');
   const [mode, setMode] = useState<'single' | 'full' | 'half'>('single');
   const [area, setArea] = useState<null | { attackerId: string; option: AttackOption; dice: string; d20: number; attrDie: number; attrRoll: number; total: number; crit: boolean; fumble: boolean; results: { id: string; name: string; esquiva: number; hit: boolean; crit: boolean }[]; damage?: { raw: number; applied: number; lines: string[] } }>(null);
@@ -154,8 +152,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   const selectedSkill = option?.nomenclature ? attacker?.pc?.nomenclatures[Number(option.id.slice(4))] : undefined;
   const reactionAvailable = (c: Combatant) => reactions[c.id] !== campaign.round;
   const tripleAvailable = !!attacker?.pc && !option?.nomenclature && canTripleCrit(attacker.pc) && attacker.pf >= TRIPLE_CRIT_COST + (option?.pfCost ?? 0);
-  const stylizedAvailable = !!attacker?.pc && !option?.nomenclature && canTripleCrit(attacker.pc) && attacker.pf >= STYLIZED_CRIT_COST + (option?.pfCost ?? 0);
-  const stylizedThreshold = attacker?.pc ? stylizedCritThreshold(attacker.pc.mente) : 20;
+  const stylizedThreshold = attacker?.pc ? stylizedCritThreshold(attacker.pc[option?.hitAttr ?? weaponAttrFor(attacker.pc.lineage)]) : 20;
   const humanReadBonus = (a: Combatant, t: Combatant) => a.pc && isHuman(a.pc.lineage) && read[`${a.id}>${t.id}`] ? (READ_BONUS[stageIndexFor(a.pc.lineage, a.pc.stage)] ?? 3) : 0;
 
   /** Reações possíveis do alvo contra este ataque (Cap. V): Parcial só contra Parcial, Completa só contra Completa, Dança só no corpo a corpo. */
@@ -204,7 +201,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     const requestId = crypto.randomUUID();
     const intent: AttackIntent = {
       requestId, campaignId: campaign.id, attackerId: attacker.id, targetId: target.id, optionId: option.id,
-      dice, mode: 'single', triple: triple && tripleAvailable, stylized: stylized && stylizedAvailable, senderUserId: userId!, senderName: attacker.name, createdAt: Date.now(),
+      dice, mode: 'single', triple: triple && tripleAvailable, senderUserId: userId!, senderName: attacker.name, createdAt: Date.now(),
     };
     const channel = supabase.channel(`herdeiros-combat-actions-${campaign.id}`);
     await channel.subscribe();
@@ -263,14 +260,13 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
    * Resolve um ataque contra a reação escolhida pelo alvo (Cap. V).
    * Sem Reação disponível o alvo não consegue se defender: o ataque acerta (1 natural continua sendo falha crítica).
    */
-  function resolveAttack(a: Combatant, t: Combatant, o: AttackOption, diceToResolve: string, requested: Reaction, requestId?: string, wantTriple = false, wantStylized = false) {
+  function resolveAttack(a: Combatant, t: Combatant, o: AttackOption, diceToResolve: string, requested: Reaction, requestId?: string, wantTriple = false) {
     setNotice('');
     const fail = (msg: string) => { setNotice(msg); return false; };
     if (o.pfCost > a.pf) return fail('PF insuficientes para esta técnica.');
     if (lostAction[a.id]) return fail(`${a.name} sacrificou ${lostAction[a.id] === 'all' ? 'a ação inteira' : 'a ação padrão'} neste turno (Bloqueio usado na rodada anterior).`);
     const tripleOn = wantTriple && !o.nomenclature && !!a.pc && canTripleCrit(a.pc) && a.pf - o.pfCost >= TRIPLE_CRIT_COST;
-    const stylizedOn = wantStylized && !o.nomenclature && !!a.pc && canTripleCrit(a.pc) && a.pf - o.pfCost - (tripleOn ? TRIPLE_CRIT_COST : 0) >= STYLIZED_CRIT_COST;
-    const critThreshold = stylizedOn && a.pc ? stylizedCritThreshold(a.pc.mente) : 20;
+    const critThreshold = tripleOn && a.pc ? stylizedCritThreshold(a.pc[o.hitAttr]) : 20;
     const dn = dance[t.id];
     const dancing = !!dn && dn.round === campaign.round && !dn.broken && o.melee;
     const available = reactionAvailable(t);
@@ -312,12 +308,12 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     }
     if (reaction === 'danca') setDance(prev => { const cur = dn && dn.round === campaign.round ? dn : { round: campaign.round, enemies: danceEnemies, evaded: 0, broken: false }; return { ...prev, [t.id]: hit ? { ...cur, broken: true } : { ...cur, evaded: cur.evaded + 1 } }; });
     const gain = hit ? arcadianGain(a) : 0;
-    const spent = o.pfCost + (tripleOn ? TRIPLE_CRIT_COST : 0) + (stylizedOn ? STYLIZED_CRIT_COST : 0);
+    const spent = o.pfCost + (tripleOn ? TRIPLE_CRIT_COST : 0);
     if (spent || gain) setResources(a, null, Math.min(a.pfMax, a.pf - spent + gain));
     setPending({ attackerId: a.id, targetId: t.id, option: o, dice: diceToResolve, d20: r.d20, attrDie: r.attrDie, attrRoll: r.attrRoll, total: r.total, esquiva: esqEff, hit, crit, fumble: r.fumble, reaction, block, blockText, triple: tripleOn, ...(countered ? { countered } : {}) });
     addRoll({ expression: r.expression, dice: r.dice, modifier: r.modifier, total: r.total, source: `${a.name} → ${t.name}${r.fumble ? ' — FALHA CRÍTICA' : crit ? ' — CRÍTICO' : ''}`, crit });
     const outcome = r.fumble ? 'FALHA CRÍTICA (1 natural)' : countered ? `CONTRA-ATACADO (${countered.text} supera ${r.total})` : hit ? (crit ? 'CRÍTICO! ATAQUE ACERTOU' : 'ATAQUE ACERTOU') : (reaction === 'danca' ? 'ALVO EVITOU (Dança de Batalha)' : 'ALVO ESQUIVOU');
-    log([`${a.name} ataca ${t.name} (${o.label}${spent ? `, −${spent} PF` : ''}): d20 [${r.d20}] + 1d${r.attrDie} [${r.attrRoll}] (${attrLabelFor(o.hitAttr, a.pc?.lineage)}) = ${r.total}; reação: ${REACTION_NAME[reaction]}${reaction === 'esquivar' || reaction === 'danca' ? ` (Esquiva ${esqEff})` : ''}${blockText ? ` — ${blockText}` : ''} → ${outcome}${gain ? ` · +${gain} PF (passiva Arcadiana)` : ''}${tripleOn ? ' · Crítico Triplo preparado' : ''}${stylizedOn ? ` · Arma Estilizada (crítico ${critThreshold}+ no d20)` : ''}`]);
+    log([`${a.name} ataca ${t.name} (${o.label}${spent ? `, −${spent} PF` : ''}): d20 [${r.d20}] + 1d${r.attrDie} [${r.attrRoll}] (${attrLabelFor(o.hitAttr, a.pc?.lineage)}) = ${r.total}; reação: ${REACTION_NAME[reaction]}${reaction === 'esquivar' || reaction === 'danca' ? ` (Esquiva ${esqEff})` : ''}${blockText ? ` — ${blockText}` : ''} → ${outcome}${gain ? ` · +${gain} PF (passiva Arcadiana)` : ''}${tripleOn ? ` · Crítico Triplo (dados ×3 e crítico ${critThreshold}+ no d20)` : ''}`]);
     if (requestId && userId) {
       const channel = supabase.channel(`herdeiros-combat-actions-${campaign.id}`);
       channel.subscribe(async (status) => {
@@ -331,7 +327,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
 
   function rollAttack() {
     if (!masterMode || !attacker || !target || !option) return;
-    resolveAttack(attacker, target, option, dice, reactionValid, undefined, triple && tripleAvailable, stylized && stylizedAvailable);
+    resolveAttack(attacker, target, option, dice, reactionValid, undefined, triple && tripleAvailable);
   }
 
   function resolveIncomingIntent(intent: AttackIntent, reaction: Reaction) {
@@ -340,7 +336,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     if (!a || !t || !a.pc || a.id !== current?.id || !campaign.combat_active) return;
     const selected = optionsFor(a).find(o => o.id === intent.optionId);
     if (!selected) return;
-    const resolved = resolveAttack(a, t, selected, intent.dice, reaction, intent.requestId, !!intent.triple, !!intent.stylized);
+    const resolved = resolveAttack(a, t, selected, intent.dice, reaction, intent.requestId, !!intent.triple);
     if (resolved) setIncomingIntents(prev => prev.filter(item => item.requestId !== intent.requestId));
   }
 
@@ -448,8 +444,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
             <div className="min-w-0"><h4 className="field-kicker mb-3">ARMAS</h4>
               <label className="field"><span className="field-label">ARMA</span><select aria-label="Arma de ataque" value={option && !option.nomenclature ? option.id : ''} onChange={e => selectOption(e.target.value)} disabled={!masterMode && !isMyTurn}><option value="" disabled>Selecionar arma</option>{weapons.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select></label>
               {canRead && <Button className="mt-3" variant="outline" disabled={!!read[readKey]} onClick={() => { setRead(prev => ({ ...prev, [readKey]: true })); log([`${attacker.name} gasta a ação padrão e lê o fluxo parcial de ${target.name}: +${READ_BONUS[stageIndexFor(attacker.pc!.lineage, attacker.pc!.stage)] ?? 3} de dano e de bloqueio contra ele.`]); }}><Sparkles /> {read[readKey] ? 'Fluxo do alvo já lido' : 'Ler fluxo parcial (ação padrão)'}</Button>}
-              {tripleAvailable && <label className="anchor-toggle mt-3"><input type="checkbox" checked={triple} onChange={e => setTriple(e.target.checked)} /> Crítico Triplo (−{TRIPLE_CRIT_COST} PF, dados ×3 se crítico)</label>}
-              {stylizedAvailable && <label className="anchor-toggle mt-3"><input type="checkbox" checked={stylized} onChange={e => setStylized(e.target.checked)} /> Arma Estilizada (−{STYLIZED_CRIT_COST} PF, crítico no d20 a partir de {stylizedThreshold} — gasta antes de saber se acerta)</label>}
+              {tripleAvailable && <label className="anchor-toggle mt-3"><input type="checkbox" checked={triple} onChange={e => setTriple(e.target.checked)} /> Crítico Triplo (−{TRIPLE_CRIT_COST} PF: dados ×3 no crítico e crítico no d20 a partir de {stylizedThreshold} — gasta antes de saber se acerta)</label>}
               {option && !option.nomenclature && (masterMode ? attackButtons() : <Button className="mt-3" disabled={!playerCanChooseAttack || !!sentIntentId || option.pfCost > attacker.pf} onClick={() => void sendAttackIntent()}><Swords /> {sentIntentId ? 'Ataque enviado ao Mestre' : 'Enviar ataque ao Mestre'}</Button>)}
             </div>
             <div className="min-w-0"><h4 className="field-kicker mb-3">{nomenclatureLabel(lineage, true).toUpperCase()}</h4>
