@@ -7,7 +7,8 @@ export type Character = {
    abilities: { name: string; description: string; kind?: 'scar' | 'state'; scarType?: string; benefit?: string }[]; weapon_type: string; weapon_dice: string; initiative: number | null;
 };
 export type NomenclatureKind = 'Direta' | 'Parcial' | 'Completa';
-export type Nomenclature = { name: string; cost: number; effect?: string; kind?: NomenclatureKind; dice?: number };
+/** Uma nomenclatura tem até três versões (Direta, Parcial, Completa). `family` liga as versões à mesma nomenclatura; sem ela, a versão é uma nomenclatura própria (chave = nome). */
+export type Nomenclature = { name: string; cost: number; effect?: string; kind?: NomenclatureKind; dice?: number; family?: string };
 export type Npc = { id: string; name: string; kind: string; hidden: boolean; pv_current: number; pv_max: number; pf_current: number; pf_max: number; corpo: number; mente: number; espirito: number; esquiva: number; bloqueio: number; notes: string; initiative: number | null };
 export type Campaign = { id: string; name: string; code: string; scene: string; round: number; turn_index: number; combat_active: boolean; log: string[] };
 export const dieFor = (n: number) => [0, 4, 6, 8, 10, 12][Math.max(1, Math.min(5, n))];
@@ -313,12 +314,25 @@ export function stageIndexFor(lineage: string, stage: string) {
 
 
 // Evoluções do Códice (GS 5/7/10) entram por cima da tabela fixa de dano; nunca a substituem.
+/** Chave da nomenclatura: todas as versões (Direta, Parcial, Completa) da mesma nomenclatura compartilham a chave. */
+export const techniqueKey = (n: Nomenclature) => (n.family?.trim() || n.name);
+const KIND_ORDER: Record<NomenclatureKind, number> = { Direta: 0, Parcial: 1, Completa: 2 };
+/** Agrupa as versões por nomenclatura: Direta + Parcial + Completa contam como UMA nomenclatura com três estágios. */
+export function nomenclatureFamilies(c: Pick<Character, 'nomenclatures'>) {
+  const map = new Map<string, { key: string; name: string; items: { item: Nomenclature; index: number }[] }>();
+  c.nomenclatures.forEach((item, index) => {
+    const key = techniqueKey(item);
+    const group = map.get(key) ?? { key, name: key, items: [] };
+    group.items.push({ item, index }); map.set(key, group);
+  });
+  return [...map.values()].map(g => ({ ...g, items: [...g.items].sort((a, b) => KIND_ORDER[a.item.kind ?? 'Direta'] - KIND_ORDER[b.item.kind ?? 'Direta']) }));
+}
 /** Dados, custo e bônus de uma Nomenclatura conforme o caminho Nomenclatura (Aprimorada 5 GS · Dominada 7 GS · Favorita 10 GS). */
 export function techniqueRules(c: Character, n: Nomenclature) {
   const kind = n.kind ?? 'Direta';
   const st = sheetState(c);
   const rank = st.nomRank;
-  const upgrade = st.techniqueUpgrades[n.name] ?? {};
+  const upgrade = st.techniqueUpgrades[techniqueKey(n)] ?? st.techniqueUpgrades[n.name] ?? {};
   const die = dieFor(c.espirito) ?? 4;
   return {
     kind, rank, upgrade,
@@ -417,8 +431,9 @@ export function applyMilestone(c: Character, gs: 5 | 7 | 10, choice: string, tec
   const key = milestoneKey(c, gs);
   const stage = stageIndexFor(c.lineage, c.stage);
   if (c.gs < gs || state.milestones.includes(key) || !milestoneOptionsFor(c, gs).some(o => o.id === choice)) return null;
-  if (milestoneNeedsTechnique(c, gs, choice) && !c.nomenclatures.some(n => n.name === technique)) return null;
+  if (milestoneNeedsTechnique(c, gs, choice) && !c.nomenclatures.some(n => techniqueKey(n) === technique)) return null;
   const upgrades = { ...state.techniqueUpgrades };
+  if (milestoneNeedsTechnique(c, gs, choice) && technique && upgrades[technique]?.favorite) return null; // uma nomenclatura só pode ser Favorita uma vez
   if (milestoneNeedsTechnique(c, gs, choice) && technique) upgrades[technique] = { ...upgrades[technique], favorite: effect || upgrades[technique]?.favorite || 'Versão Favorita' };
   const rank = gs === 5 ? 1 : 2;
   const armaRank = choice === 'arma' || choice === 'corpo' ? Math.max(state.weaponRank, rank) : state.weaponRank;
