@@ -151,8 +151,8 @@ export function counterRoll(c: { corpo: number; mente: number; espirito: number 
 export function normalizeCharacter(c: Partial<Character> & { id: string }): Character { return { ...makeCharacter(), ...c, abilities: Array.isArray(c.abilities) ? c.abilities : [], sync: Array.isArray(c.sync) ? c.sync : [], nomenclatures: Array.isArray(c.nomenclatures) ? c.nomenclatures : [], inventory: Array.isArray(c.inventory) ? c.inventory : [], weapon_type: c.weapon_type ?? '', weapon_dice: c.weapon_dice ?? '', initiative: c.initiative ?? null } as Character; }
 
 // Persistent rule state shares the existing JSON abilities field; no table changes.
-export type SheetState = { excess: number; rounds: number; agony: boolean; failures: number; stable: boolean; dead: boolean; standard: boolean; agonyDt: number; coins: number; anchorBroken: boolean; weaponMode: 'linhagem' | 'comum'; path: 'arma' | 'nomenclatura' | ''; weaponRank: number; nomRank: number; milestones: string[]; milestoneChoices: Record<string, string>; techniqueUpgrades: Record<string, { improved?: 'dano' | 'alcance'; mastered?: boolean; favorite?: string }>; attributeFloor: Partial<Record<Attr, number>>; attributeBudget: number; highestStage: number; specialEffect: string };
-export const emptySheetState: SheetState = { excess: 0, rounds: 0, agony: false, failures: 0, stable: false, dead: false, standard: false, agonyDt: 6, coins: 0, anchorBroken: false, weaponMode: 'linhagem', path: '', weaponRank: 0, nomRank: 0, milestones: [], milestoneChoices: {}, techniqueUpgrades: {}, attributeFloor: {}, attributeBudget: 0, highestStage: 0, specialEffect: '' };
+export type SheetState = { excess: number; rounds: number; agony: boolean; failures: number; stable: boolean; dead: boolean; standard: boolean; agonyDt: number; coins: number; anchorBroken: boolean; weaponMode: 'linhagem' | 'comum'; path: 'arma' | 'nomenclatura' | ''; weaponRank: number; nomRank: number; milestones: string[]; milestoneChoices: Record<string, string>; techniqueUpgrades: Record<string, { improved?: 'dano' | 'alcance'; mastered?: boolean; favorite?: string }>; attributeFloor: Partial<Record<Attr, number>>; attributeBudget: number; highestStage: number; specialEffect: string; fluxLink: boolean; mimic: { name: string; effect: string }[]; mimicClosed: string[] };
+export const emptySheetState: SheetState = { excess: 0, rounds: 0, agony: false, failures: 0, stable: false, dead: false, standard: false, agonyDt: 6, coins: 0, anchorBroken: false, weaponMode: 'linhagem', path: '', weaponRank: 0, nomRank: 0, milestones: [], milestoneChoices: {}, techniqueUpgrades: {}, attributeFloor: {}, attributeBudget: 0, highestStage: 0, specialEffect: '', fluxLink: false, mimic: [], mimicClosed: [] };
 export function sheetState(c: Character): SheetState {
   try { return { ...emptySheetState, ...JSON.parse(c.abilities.find(a => a.kind === 'state')?.description ?? '{}') } as SheetState; }
   catch { return { ...emptySheetState }; }
@@ -366,6 +366,33 @@ export function canTripleCrit(c: Character) {
 export const TRIPLE_CRIT_COST = 10;
 /** Parte do mesmo efeito: a faixa de crítico do d20 desce 1 por ponto do ATRIBUTO DE ATAQUE da linhagem (MENTE no Humano, ESPÍRITO no Arcadiano, CORPO no Gaki; valor 3 → crítico em 17+). Vale só para o d20, não para a soma. */
 export const stylizedCritThreshold = (attackAttrValue: number) => Math.max(2, 20 - attackAttrValue);
+/** Ataque Extra do Corpo Moldado (7 GS): 2d20 ficando com o MENOR + dado do atributo; qualquer 1 natural nos d20 é falha crítica. Refinado (10 GS): um d20 normal. */
+export function extraAttackRoll(attrValue: number, esquiva?: number, refined = false, critThreshold = 20) {
+  const d20s = rollDice(refined ? 1 : 2, 20);
+  const d20 = Math.min(...d20s);
+  const attrDie = dieFor(attrValue) ?? 4;
+  const attrRoll = rollDice(1, attrDie)[0] ?? 1;
+  const total = d20 + attrRoll;
+  const fumble = d20s.some(d => d === 1);
+  const reaches = esquiva === undefined ? null : total >= esquiva;
+  const hit = fumble ? false : reaches;
+  const crit = !fumble && d20 >= critThreshold && (reaches === null || reaches);
+  return { d20, d20s, attrDie, attrRoll, dice: [...d20s, attrRoll], expression: refined ? `1d20 + 1d${attrDie}` : `2d20 (menor) + 1d${attrDie}`, modifier: 0, total, hit, crit, nat20: d20 === 20, fumble, critThreshold };
+}
+/** Nível (0 a 3) de cada caminho de GS: 1 = marco de 5 GS, 2 = 7 GS, 3 = 10 GS. Estágio 1 (arma/corpo/nomenclatura) e Estágio 2 (mimetismo/vingança/avançada). */
+export function pathLevels(c: Character) {
+  const st = sheetState(c);
+  const lvl = (stage: number, choice: string) => { let n = 0; ([5, 7, 10] as const).forEach((g, i) => { if (st.milestoneChoices[`${stage}:${g}`] === choice) n = i + 1; }); return n; };
+  return { arma: lvl(0, 'arma'), corpo: lvl(0, 'corpo'), nomenclatura: lvl(0, 'nomenclatura'), mimetismo: lvl(1, 'mimetismo'), vinganca: lvl(1, 'vinganca'), avancada: lvl(1, 'nomenclatura_avancada') };
+}
+/** Custos fixos das habilidades de caminho (PF). */
+export const FLUX_LINK_COST = 2; export const EXTRA_COST = 3; export const EXTRA_REFINED_COST = 10; export const CHAMADO_COST = 5; export const FUSION_COST = 12; export const MIMIC_RECORD_COST = 5;
+export const mimicUseCost = (level: number) => level >= 3 ? 12 : 3;
+/** Vingança Karmática: 5 GS devolve 1/3 do dano recebido (3 PF) · 7 GS devolve 1/2 (5 PF) · 10 GS devolve 100% (12 PF, sem teste) e aplica Karma = metade do dano devolvido. */
+export const vengeanceCost = (level: number) => level >= 3 ? 12 : level === 2 ? 5 : 3;
+export const vengeanceShares = (taken: number) => ({ third: Math.floor(taken / 3), half: Math.floor(taken / 2), full: taken });
+export const vengeanceBonus = (level: number, taken: number) => level >= 3 ? taken : level === 2 ? Math.floor(taken / 2) : level === 1 ? Math.floor(taken / 3) : 0;
+export const mimicCapacity = (c: Pick<Character, 'mente' | 'espirito'>) => c.mente + c.espirito;
 export function upgradedDamage(dice: string, bonus: number, crit: boolean, extraDice: string[] = [], mult = 2) {
   const base = damageRoll(dice, bonus, crit, mult);
   const extras = extraDice.map(expr => damageRoll(expr, 0, crit, mult));
