@@ -6,7 +6,7 @@ import {
   ELO_ACTIONS, LINEAGE_STAGES, NOMENCLATURE_COST, NOMENCLATURE_DICE, NOMENCLATURE_CRIT_DICE, REST_TYPES, TRIPLE_CRIT_COST, WEAPONS,
   attackRoll, absorbPf, canTripleCrit, combinedRoll, stylizedCritThreshold, nomenclatureDamage, nomenclatureLabel, nomenclatureLevelLabel, applyMilestone, milestoneKey, milestoneNeedsTechnique, milestoneOptions, milestoneOptionsFor, milestonePath, nomenclatureFamilies, techniqueKey, restRoll, stageIndexFor,
   damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, weaponRules, techniqueRules, upgradedDamage, isTechAgent, absorbActionLabel, attrLabelFor, sheetState, withSheetState,
-  SHARE_MIN_SYNC, PROTECTION_MIN_ELO, syncLevelWith, pfShareBlock,
+  SHARE_MIN_SYNC, PROTECTION_MIN_ELO, syncLevelWith, pfShareBlock, pathLevels, mimicCapacity, FLUX_LINK_COST, MIMIC_RECORD_COST, mimicUseCost, vengeanceCost, EXTRA_COST, EXTRA_REFINED_COST, CHAMADO_COST,
   agonyStatus, agonyEnter, agonyFailure, agonyUndo, agonyLeave, agonySacrifice, AGONY_MAX_FAILURES,
   type Attr, type Character, type NomenclatureKind, type RestType,
 } from '@/lib/game';
@@ -337,6 +337,55 @@ export function GsPanel({ character, update }: { character: Character; update: U
     })}
     {msg && <p role="status" className="auth-message">{msg}</p>}
     {canAdvance && <Button variant="outline" className="action-flux" onClick={() => { update({ stage: stages[stage + 1]!.name }); setMsg(character.lineage === 'Arcadiano' ? 'Avanço de estágio: ganhe +1 ponto de atributo (respeitando o teto do estágio) e aprenda duas novas Nomenclaturas.' : 'Avanço de estágio: ganhe +1 ponto de atributo (respeitando o teto do estágio) e aprenda uma nova Nomenclatura.'); }}><Sparkles /> Avançar para {stages[stage + 1]!.name}</Button>}
+  </div>;
+}
+
+/** Caminhos de GS na ficha: Vínculo de Fluxo (liga por 2 PF e fica ligado até o fim da cena) e o registro do Mimetismo. As demais habilidades (Ataque Extra, O Chamado, Vingança, Fusão) têm botões no painel de combate. */
+export function PathPanel({ character, update, addRoll }: { character: Character; update: Update; addRoll: AddRoll }) {
+  const st = sheetState(character);
+  const lv = pathLevels(character);
+  const cap = mimicCapacity(character);
+  const [name, setName] = useState('');
+  const [effect, setEffect] = useState('');
+  const [dt, setDt] = useState(10);
+  const [replace, setReplace] = useState('');
+  const [msg, setMsg] = useState('');
+  const set = (patch: Partial<typeof st>, extra: Partial<Character> = {}) => update({ ...extra, abilities: withSheetState(character, patch) });
+  const full = st.mimic.length >= cap;
+  const closed = st.mimicClosed.some(n => n.toLowerCase() === name.trim().toLowerCase());
+  if (!lv.arma && !lv.corpo && !lv.mimetismo && !lv.vinganca && !lv.avancada) return <p className="empty-copy">Os caminhos de GS aparecem aqui conforme você resolve os marcos.</p>;
+  return <div className="field-stack">
+    {lv.arma >= 1 && <div className={`passive ${st.fluxLink ? 'passive-ready' : ''}`}>
+      <span className="field-kicker">VÍNCULO DE FLUXO · {st.fluxLink ? 'LIGADO' : 'DESLIGADO'}</span>
+      <p>A Arma de Vínculo causa dano de Fluxo, que conta como dano normal contra Gakis. Ligar custa {FLUX_LINK_COST} PF e a arma fica ligada até o fim da cena. Desligada, Gakis resistem ao golpe (dano menor, definido pelo Mestre). Contra Humanos e Arcadianos o dano é o mesmo.</p>
+      <div className="flex flex-wrap gap-2">
+        {!st.fluxLink && <Button variant="outline" disabled={character.pf_current < FLUX_LINK_COST} onClick={() => set({ fluxLink: true }, { pf_current: character.pf_current - FLUX_LINK_COST })}><Sparkles /> Ligar Vínculo de Fluxo (−{FLUX_LINK_COST} PF)</Button>}
+        {st.fluxLink && <Button variant="ghost" onClick={() => set({ fluxLink: false })}>Encerrar cena (desligar)</Button>}
+      </div>
+    </div>}
+    {lv.corpo >= 2 && <div className="passive"><span className="field-kicker">CORPO MOLDADO</span><p>Ataque Extra ({EXTRA_COST} PF){lv.corpo >= 3 ? `, Ataque Extra Refinado (${EXTRA_REFINED_COST} PF) e O Chamado (${CHAMADO_COST} PF)` : ''}: botões no painel de combate, perto do ataque.</p></div>}
+    {lv.vinganca >= 1 && <div className="passive"><span className="field-kicker text-karma">VINGANÇA KARMÁTICA · NÍVEL {lv.vinganca}</span><p>Gasta {vengeanceCost(lv.vinganca)} PF antes do ataque e devolve {lv.vinganca >= 3 ? '100%' : lv.vinganca === 2 ? '1/2' : '1/3'} do dano recebido no combate. O contador aparece no combate assim que você toma dano.</p></div>}
+    {lv.avancada >= 3 && <div className="passive"><span className="field-kicker">FUSÃO DE NOMENCLATURAS</span><p>Botão no painel de combate, perto do ataque.</p></div>}
+    {lv.mimetismo >= 1 && <div className="passive"><span className="field-kicker">MIMETISMO DO FLUXO · REGISTRO ({st.mimic.length} / {cap})</span>
+      <p>Ao presenciar uma técnica, gaste {MIMIC_RECORD_COST} PF e faça um teste de MENTE + {attrLabelFor('espirito', character.lineage)} contra a DT do Mestre para gravá-la. Receber o ataque diretamente facilita (DT menor); técnicas de aliados exigem Elo alto ou dano proposital. Se falhar, a oportunidade se fecha para sempre para aquela técnica.</p>
+      {st.mimic.map((m, i) => <div className="editable-row" key={i}><strong>{m.name}</strong>{m.effect && <p className="empty-copy">{m.effect}</p>}<Button size="icon" variant="ghost" title="Esquecer técnica" aria-label="Esquecer técnica" onClick={() => set({ mimic: st.mimic.filter((_, j) => j !== i) })}><Trash2 /></Button></div>)}
+      {!st.mimic.length && <p className="empty-copy">Nenhuma técnica registrada.</p>}
+      <Field label="TÉCNICA VISTA"><input value={name} onChange={e => setName(e.target.value)} placeholder="Nome da técnica" /></Field>
+      <Field label="O QUE ELA FAZ (VERSÃO ADAPTADA)"><input value={effect} onChange={e => setEffect(e.target.value)} placeholder="Ex.: raio elétrico" /></Field>
+      <Stepper label="DT DO MESTRE" value={dt} min={1} max={60} onChange={setDt} />
+      {full && <Field label="SUBSTITUIR QUAL TÉCNICA ANTIGA?"><select value={replace} onChange={e => setReplace(e.target.value)}><option value="">Escolher</option>{st.mimic.map(m => <option key={m.name} value={m.name}>{m.name}</option>)}</select></Field>}
+      {closed && <p className="empty-copy">A oportunidade de gravar esta técnica já se fechou.</p>}
+      <Button variant="outline" disabled={!name.trim() || closed || (full && !replace) || character.pf_current < MIMIC_RECORD_COST} onClick={() => {
+        const r = combinedRoll(character, ['mente', 'espirito']);
+        const ok = r.total >= dt; const pf = character.pf_current - MIMIC_RECORD_COST;
+        addRoll({ expression: r.expression, dice: r.dice, modifier: 0, total: r.total, source: `Mimetismo · gravar "${name.trim()}" (DT ${dt}) — ${ok ? 'gravada' : 'oportunidade fechada'}` });
+        if (ok) { const list = full ? st.mimic.filter(m => m.name !== replace) : st.mimic; set({ mimic: [...list, { name: name.trim(), effect: effect.trim() }] }, { pf_current: pf }); setMsg(`Técnica "${name.trim()}" gravada (${r.total} contra DT ${dt}).`); setEffect(''); setReplace(''); }
+        else { set({ mimicClosed: [...st.mimicClosed, name.trim()] }, { pf_current: pf }); setMsg(`Falhou (${r.total} contra DT ${dt}): a oportunidade se fechou permanentemente para "${name.trim()}".`); setEffect(''); }
+        setName('');
+      }}><Dices /> Gravar técnica (−{MIMIC_RECORD_COST} PF · MENTE + {attrLabelFor('espirito', character.lineage)})</Button>
+      {msg && <p role="status" className="auth-message">{msg}</p>}
+      {lv.mimetismo >= 2 && <p className="muted-copy text-xs">Em combate, junto com o ataque: {lv.mimetismo >= 3 ? `${mimicUseCost(3)} PF, sem testes, escala máxima.` : `${mimicUseCost(2)} PF e teste de MENTE + ESPÍRITO, escala reduzida.`}</p>}
+    </div>}
   </div>;
 }
 
