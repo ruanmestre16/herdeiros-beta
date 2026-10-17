@@ -14,10 +14,28 @@ const MAX_DICE = 40;
 const ACCENT: Record<number, string> = { 4: '#3db89a', 6: '#bea9eb', 8: '#c9a227', 10: '#e08fb0', 12: '#7fb2e5', 20: '#f0e8d4' };
 const STAGE_W = 320; const STAGE_H = 190;
 const POS_KEY = 'herdeiros-dice-pos';
+const COLOR_KEY = 'herdeiros-dice-color';
+/** Temas de cor do dado. "Clássico" mantém uma cor por tipo de dado; os demais pintam todos os dados da mesma cor. */
+const THEMES: { key: string; label: string; color: string | null }[] = [
+  { key: 'classico', label: 'Clássico', color: null },
+  { key: 'fluxo', label: 'Fluxo', color: '#c9a227' },
+  { key: 'karma', label: 'Karma', color: '#8e5bd6' },
+  { key: 'azul', label: 'Azul', color: '#3f8fe0' },
+  { key: 'vermelho', label: 'Vermelho', color: '#e0505d' },
+  { key: 'verde', label: 'Verde', color: '#3db89a' },
+  { key: 'rosa', label: 'Rosa', color: '#e08fb0' },
+];
+const HEX = /^#[0-9a-fA-F]{6}$/;
+const toRgb = (h: string): [number, number, number] => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
+/** Mistura duas cores (t = parte da segunda). */
+function mixHex(a: string, b: string, t: number) {
+  const x = toRgb(a), y = toRgb(b);
+  return '#' + x.map((v, i) => Math.round(v * (1 - t) + y[i]! * t).toString(16).padStart(2, '0')).join('');
+}
 
 type DieRoll = { sides: number; value: number };
 type Agg = 'sum' | 'max';
-export type DiceRollMsg = { id: string; userId: string; name: string; label: string; dice: DieRoll[]; agg: Agg; bonus: number; ts: number };
+export type DiceRollMsg = { id: string; userId: string; name: string; label: string; dice: DieRoll[]; agg: Agg; bonus: number; ts: number; color?: string };
 
 const rollSide = (sides: number) => 1 + Math.floor(Math.random() * sides);
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
@@ -40,7 +58,7 @@ function sanitize(raw: unknown): DiceRollMsg | null {
     if (!(SIDES as readonly number[]).includes(sides) || !Number.isInteger(value) || value < 1 || value > sides) return null;
     dice.push({ sides, value });
   }
-  return { id: m.id.slice(0, 64), userId: String(m.userId ?? '').slice(0, 64), name: String(m.name ?? 'Jogador').slice(0, 40), label: String(m.label ?? 'Rolagem').slice(0, 80), dice, agg: m.agg === 'max' ? 'max' : 'sum', bonus: Number.isFinite(Number(m.bonus)) ? clamp(Math.trunc(Number(m.bonus)), -99, 99) : 0, ts: Number(m.ts) || Date.now() };
+  return { id: m.id.slice(0, 64), userId: String(m.userId ?? '').slice(0, 64), name: String(m.name ?? 'Jogador').slice(0, 40), label: String(m.label ?? 'Rolagem').slice(0, 80), dice, agg: m.agg === 'max' ? 'max' : 'sum', bonus: Number.isFinite(Number(m.bonus)) ? clamp(Math.trunc(Number(m.bonus)), -99, 99) : 0, ts: Number(m.ts) || Date.now(), ...(typeof m.color === 'string' && HEX.test(m.color) ? { color: m.color } : {}) };
 }
 
 // ---------- geometria e desenho dos dados ----------
@@ -58,7 +76,7 @@ function shape(sides: number, r: number): { outer: Pt[]; inner: Pt[] } {
 }
 type Body = { x: number; y: number; vx: number; vy: number; a: number; w: number; r: number; sides: number; value: number; settleAt: number; done: boolean; shown: number; nextFlip: number };
 
-function DiceStage({ roll, onSettled }: { roll: DiceRollMsg | null; onSettled: (id: string) => void }) {
+function DiceStage({ roll, idleColor, onSettled }: { roll: DiceRollMsg | null; idleColor: string | null; onSettled: (id: string) => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
   useEffect(() => {
     const canvas = ref.current; if (!canvas) return;
@@ -73,6 +91,7 @@ function DiceStage({ roll, onSettled }: { roll: DiceRollMsg | null; onSettled: (
       a: Math.random() * Math.PI * 2, w: (Math.random() - 0.5) * 26, r, sides: d.sides, value: d.value,
       settleAt: 1.25 + Math.min(0.9, i * 0.06), done: false, shown: rollSide(d.sides), nextFlip: 0,
     }));
+    if (!roll) bodies.push({ x: STAGE_W / 2, y: STAGE_H / 2, vx: 0, vy: 0, a: -0.15, w: 0, r: 36, sides: 20, value: 17, settleAt: 0, done: true, shown: 17, nextFlip: 0 });
     const separate = (a: Body, b: Body, bounce: boolean) => {
       const dx = b.x - a.x, dy = b.y - a.y; const dist = Math.hypot(dx, dy) || 0.01; const min = (a.r + b.r) * 0.95;
       if (dist >= min) return;
@@ -89,25 +108,26 @@ function DiceStage({ roll, onSettled }: { roll: DiceRollMsg | null; onSettled: (
       g.addColorStop(0, '#1d1a26'); g.addColorStop(1, '#0d0b12'); ctx.fillStyle = g; ctx.fillRect(0, 0, STAGE_W, STAGE_H);
       if (!bodies.length) { ctx.fillStyle = '#6f6a7d'; ctx.font = '13px "DM Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Escolha os dados e jogue', STAGE_W / 2, STAGE_H / 2 + 4); return; }
       for (const b of bodies) {
-        const color = ACCENT[b.sides] ?? '#c9a227'; const sh = shape(b.sides, b.r);
+        const color = (roll ? roll.color : idleColor) ?? ACCENT[b.sides] ?? '#c9a227'; const sh = shape(b.sides, b.r);
         ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.a);
         ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = b.done ? 5 : 12; ctx.shadowOffsetY = b.done ? 2 : 6;
         ctx.beginPath(); sh.outer.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.closePath();
         const crit = b.done && b.sides === 20 && b.value === 20; const fumble = b.done && b.sides === 20 && b.value === 1;
-        ctx.fillStyle = crit ? '#3a2e0d' : fumble ? '#3a1217' : '#17141f'; ctx.fill();
+        const gr = ctx.createLinearGradient(-b.r, -b.r, b.r, b.r); gr.addColorStop(0, crit ? '#6b5413' : fumble ? '#5a1c24' : mixHex(color, '#0d0b12', 0.6)); gr.addColorStop(1, crit ? '#2a2008' : fumble ? '#2a0c10' : mixHex(color, '#0d0b12', 0.9)); ctx.fillStyle = gr; ctx.fill();
         ctx.shadowColor = crit ? '#c9a227' : 'transparent'; ctx.shadowBlur = crit ? 14 : 0; ctx.shadowOffsetY = 0;
         ctx.lineWidth = 1.6; ctx.strokeStyle = fumble ? '#e0505d' : color; ctx.stroke();
         ctx.shadowColor = 'transparent'; ctx.lineWidth = 0.8; ctx.strokeStyle = `${color}88`;
         if (b.sides === 20 || b.sides === 12) { ctx.beginPath(); sh.inner.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.closePath(); ctx.stroke(); }
         else if (sh.inner.length === 2) { ctx.beginPath(); ctx.moveTo(sh.inner[0]![0], sh.inner[0]![1]); ctx.lineTo(sh.inner[1]![0], sh.inner[1]![1]); ctx.stroke(); }
-        ctx.fillStyle = crit ? '#ffe9a6' : fumble ? '#ff9aa3' : '#f0e8d4';
+        ctx.fillStyle = 'rgba(255,255,255,0.12)'; ctx.beginPath(); ctx.ellipse(-b.r * 0.28, -b.r * 0.42, b.r * 0.38, b.r * 0.15, -0.5, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = crit ? '#ffe9a6' : fumble ? '#ff9aa3' : mixHex(color, '#ffffff', 0.78);
         ctx.font = `bold ${Math.round(b.r * (b.shown > 9 ? 0.78 : 0.95))}px "DM Sans", sans-serif`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
         ctx.fillText(String(b.done ? b.value : b.shown), 0, b.sides === 4 ? b.r * 0.22 : 0);
         ctx.restore();
       }
       void t;
     };
-    if (!bodies.length) { draw(0); return; }
+    if (!roll) { draw(0); return; }
     let raf = 0; let last = performance.now(); const t0 = last; let notified = false;
     const loop = (now: number) => {
       const dt = Math.min(0.033, (now - last) / 1000); last = now; const t = (now - t0) / 1000;
@@ -132,7 +152,7 @@ function DiceStage({ roll, onSettled }: { roll: DiceRollMsg | null; onSettled: (
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [roll, onSettled]);
+  }, [roll, idleColor, onSettled]);
   return <canvas ref={ref} className="tdice-canvas" style={{ width: STAGE_W, height: STAGE_H }} aria-label="Mesa de dados" />;
 }
 
@@ -148,6 +168,8 @@ export function TabletopDice({ campaignId, userId, name, character }: { campaign
   const [history, setHistory] = useState<DiceRollMsg[]>([]);
   const [online, setOnline] = useState(false);
   const [autoOpen, setAutoOpen] = useState(true);
+  /** Cor dos meus dados (null = clássico). Vai junto com a rolagem, então todos da mesa veem os dados na cor de quem rolou. */
+  const [color, setColor] = useState<string | null>(null);
   const winRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ dx: number; dy: number } | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -156,6 +178,7 @@ export function TabletopDice({ campaignId, userId, name, character }: { campaign
 
   useEffect(() => {
     setMounted(true);
+    try { const c = localStorage.getItem(COLOR_KEY); if (c && HEX.test(c)) setColor(c); } catch { /* ignore */ }
     try { const raw = localStorage.getItem(POS_KEY); if (raw) { const p = JSON.parse(raw) as { x: number; y: number }; if (Number.isFinite(p.x) && Number.isFinite(p.y)) setPos({ x: clamp(p.x, 0, Math.max(0, window.innerWidth - 120)), y: clamp(p.y, 0, Math.max(0, window.innerHeight - 80)) }); } } catch { /* ignore */ }
   }, []);
 
@@ -177,10 +200,11 @@ export function TabletopDice({ campaignId, userId, name, character }: { campaign
   }, [campaignId, userId, show]);
 
   const onSettled = useCallback((id: string) => setSettledId(id), []);
+  function pickColor(c: string | null) { setColor(c); try { if (c) localStorage.setItem(COLOR_KEY, c); else localStorage.removeItem(COLOR_KEY); } catch { /* ignore */ } }
 
   function launch(dice: number[], label: string, agg: Agg = 'sum', extra = 0) {
     if (!dice.length || dice.length > MAX_DICE) return;
-    const msg: DiceRollMsg = { id: crypto.randomUUID(), userId: userId ?? 'local', name, label, dice: dice.map(sides => ({ sides, value: rollSide(sides) })), agg, bonus: extra, ts: Date.now() };
+    const msg: DiceRollMsg = { id: crypto.randomUUID(), userId: userId ?? 'local', name, label, dice: dice.map(sides => ({ sides, value: rollSide(sides) })), agg, bonus: extra, ts: Date.now(), ...(color ? { color } : {}) };
     show(msg); setOpen(true);
     const ch = channelRef.current;
     if (ch && online) void ch.send({ type: 'broadcast', event: 'dice_roll', payload: msg });
@@ -223,7 +247,11 @@ export function TabletopDice({ campaignId, userId, name, character }: { campaign
       <button type="button" className="tdice-x" onClick={() => setOpen(false)} aria-label="Fechar a janela de dados"><X size={16} /></button>
     </div>
     <div className="tdice-body">
-      <DiceStage roll={current} onSettled={onSettled} />
+      <DiceStage roll={current} idleColor={color} onSettled={onSettled} />
+      <div className="tdice-colors" role="radiogroup" aria-label="Cor dos dados">
+        {THEMES.map(t => <button type="button" key={t.key} role="radio" aria-checked={color === t.color} title={t.label} aria-label={`Dado ${t.label}`} className={`tdice-swatch ${color === t.color ? 'on' : ''}`} style={t.color ? { background: t.color } : undefined} onClick={() => pickColor(t.color)}>{t.color ? '' : 'C'}</button>)}
+        <label className="tdice-swatch tdice-custom" title="Cor personalizada" aria-label="Cor personalizada do dado"><input type="color" value={color ?? '#c9a227'} onChange={e => pickColor(e.target.value)} /></label>
+      </div>
       <div className="tdice-result" aria-live="polite">
         {current ? <>
           <span className="tdice-who">{current.name} · {current.label}</span>
@@ -248,7 +276,7 @@ export function TabletopDice({ campaignId, userId, name, character }: { campaign
         {presets.length ? presets.map(p => <Button key={p.key} variant="outline" size="sm" className="justify-start" onClick={() => launch(p.dice, p.label, p.agg, p.bonus)}><Dices /> {p.label}</Button>) : <small className="muted-copy">Abra uma ficha para rolar com os dados dela.</small>}
       </div>}
       {history.length > 0 && <div className="tdice-history"><span className="field-kicker">ÚLTIMAS ROLAGENS DA MESA</span>
-        {history.map(h => <button type="button" key={h.id} className="tdice-row" onClick={() => show(h)}><span>{h.name} · {h.label}</span><strong>{total(h)}</strong></button>)}
+        {history.map(h => <button type="button" key={h.id} className="tdice-row" onClick={() => show(h)}><span><i className="tdice-dot" style={{ background: h.color ?? '#c9a227' }} />{h.name} · {h.label}</span><strong>{total(h)}</strong></button>)}
       </div>}
       <label className="tdice-auto"><input type="checkbox" checked={autoOpen} onChange={e => setAutoOpen(e.target.checked)} /> Abrir a janela quando alguém da mesa rolar</label>
     </div>
