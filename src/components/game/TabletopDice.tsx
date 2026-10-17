@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Dices, GripHorizontal, Minus, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { attrLabelFor, dieFor, weaponAttrFor, type Attr, type Character } from '@/lib/game';
+import { NOMENCLATURE_CRIT_DICE, attrLabelFor, dieFor, parseDice, techniqueRules, weaponAttrFor, weaponByKey, weaponRules, type Attr, type Character } from '@/lib/game';
 
 /**
  * Janela de dados da mesa (estilo mesa virtual): arrastável, com dados rolando numa telinha.
@@ -76,8 +76,12 @@ function shape(sides: number, r: number): { outer: Pt[]; inner: Pt[] } {
 }
 type Body = { x: number; y: number; vx: number; vy: number; a: number; w: number; r: number; sides: number; value: number; settleAt: number; done: boolean; shown: number; nextFlip: number };
 
-function DiceStage({ roll, idleColor, onSettled }: { roll: DiceRollMsg | null; idleColor: string | null; onSettled: (id: string) => void }) {
+/** A cor (tint) só repinta os dados que já estão na mesa: trocar de cor nunca refaz a rolagem. */
+function DiceStage({ roll, tint, onSettled }: { roll: DiceRollMsg | null; tint: string | null; onSettled: (id: string) => void }) {
   const ref = useRef<HTMLCanvasElement>(null);
+  const tintRef = useRef<string | null>(tint);
+  tintRef.current = tint;
+  const redrawRef = useRef<(() => void) | null>(null);
   useEffect(() => {
     const canvas = ref.current; if (!canvas) return;
     const ctx = canvas.getContext('2d'); if (!ctx) return;
@@ -108,7 +112,7 @@ function DiceStage({ roll, idleColor, onSettled }: { roll: DiceRollMsg | null; i
       g.addColorStop(0, '#1d1a26'); g.addColorStop(1, '#0d0b12'); ctx.fillStyle = g; ctx.fillRect(0, 0, STAGE_W, STAGE_H);
       if (!bodies.length) { ctx.fillStyle = '#6f6a7d'; ctx.font = '13px "DM Sans", sans-serif'; ctx.textAlign = 'center'; ctx.fillText('Escolha os dados e jogue', STAGE_W / 2, STAGE_H / 2 + 4); return; }
       for (const b of bodies) {
-        const color = (roll ? roll.color : idleColor) ?? ACCENT[b.sides] ?? '#c9a227'; const sh = shape(b.sides, b.r);
+        const color = tintRef.current ?? ACCENT[b.sides] ?? '#c9a227'; const sh = shape(b.sides, b.r);
         ctx.save(); ctx.translate(b.x, b.y); ctx.rotate(b.a);
         ctx.shadowColor = 'rgba(0,0,0,.55)'; ctx.shadowBlur = b.done ? 5 : 12; ctx.shadowOffsetY = b.done ? 2 : 6;
         ctx.beginPath(); sh.outer.forEach(([px, py], i) => (i ? ctx.lineTo(px, py) : ctx.moveTo(px, py))); ctx.closePath();
@@ -127,8 +131,10 @@ function DiceStage({ roll, idleColor, onSettled }: { roll: DiceRollMsg | null; i
       }
       void t;
     };
+    redrawRef.current = () => draw(0);
     if (!roll) { draw(0); return; }
-    let raf = 0; let last = performance.now(); const t0 = last; let notified = false;
+    let raf = 0; let last = performance.now(); const t0 = last; let notified = false; let lastT = 0;
+    redrawRef.current = () => draw(lastT);
     const loop = (now: number) => {
       const dt = Math.min(0.033, (now - last) / 1000); last = now; const t = (now - t0) / 1000;
       for (const b of bodies) {
@@ -146,13 +152,14 @@ function DiceStage({ roll, idleColor, onSettled }: { roll: DiceRollMsg | null; i
       for (let i = 0; i < bodies.length; i++) for (let j = i + 1; j < bodies.length; j++) separate(bodies[i]!, bodies[j]!, true);
       const all = bodies.every(b => b.done);
       if (all) { for (let k = 0; k < 12; k++) for (let i = 0; i < bodies.length; i++) for (let j = i + 1; j < bodies.length; j++) separate(bodies[i]!, bodies[j]!, false); for (const b of bodies) { b.x = clamp(b.x, b.r, STAGE_W - b.r); b.y = clamp(b.y, b.r, STAGE_H - b.r); } }
-      draw(t);
+      lastT = t; draw(t);
       if (all && !notified) { notified = true; if (roll) onSettled(roll.id); }
       if (!all || t < 4) raf = requestAnimationFrame(loop);
     };
     raf = requestAnimationFrame(loop);
     return () => cancelAnimationFrame(raf);
-  }, [roll, idleColor, onSettled]);
+  }, [roll, onSettled]);
+  useEffect(() => { redrawRef.current?.(); }, [tint]);
   return <canvas ref={ref} className="tdice-canvas" style={{ width: STAGE_W, height: STAGE_H }} aria-label="Mesa de dados" />;
 }
 
@@ -213,6 +220,20 @@ export function TabletopDice({ campaignId, userId, name, character }: { campaign
   const manualLabel = SIDES.filter(s => (counts[s] ?? 0) > 0).map(s => `${counts[s]}d${s}`).join(' + ') + (bonus ? ` ${bonus > 0 ? '+' : '−'} ${Math.abs(bonus)}` : '');
   const setCount = (s: number, delta: number) => setCounts(c => ({ ...c, [s]: clamp((c[s] ?? 0) + delta, 0, 20) }));
 
+  /** "NdS" -> lista de lados (só d4..d20); mult dobra a quantidade (crítico). */
+  const expand = (exprs: string[], mult = 1): number[] => exprs.flatMap(e => { const p = parseDice(e); return p ? Array.from({ length: p.count * mult }, () => p.sides) : []; }).filter(sd => (SIDES as readonly number[]).includes(sd));
+  const nomRolls = (n: NonNullable<Character['nomenclatures']>[number]) => {
+    const t = techniqueRules(character!, n);
+    const normal = { dice: expand([t.dice, ...t.extraDice]), bonus: t.bonus };
+    const crit = t.kind === 'Completa' ? { dice: expand([NOMENCLATURE_CRIT_DICE.Completa]), bonus: 0 } : { dice: expand([t.dice, ...t.extraDice], 2), bonus: t.bonus };
+    return { t, normal, crit };
+  };
+  const weaponRoll = (() => {
+    if (!character) return null;
+    const type = weaponByKey(character.weapon_type); if (!type) return null;
+    const wr = weaponRules(character);
+    return { name: type.label, normal: { dice: expand([...type.dice, ...wr.extraDice]), bonus: wr.bonus }, crit: { dice: expand([...type.dice, ...wr.extraDice], 2), bonus: wr.bonus } };
+  })();
   const presets = character ? (() => {
     const atk = weaponAttrFor(character.lineage) as Attr; const lin = character.lineage;
     const die = (a: Attr) => dieFor(character[a]) ?? 4;
@@ -247,7 +268,7 @@ export function TabletopDice({ campaignId, userId, name, character }: { campaign
       <button type="button" className="tdice-x" onClick={() => setOpen(false)} aria-label="Fechar a janela de dados"><X size={16} /></button>
     </div>
     <div className="tdice-body">
-      <DiceStage roll={current} idleColor={color} onSettled={onSettled} />
+      <DiceStage roll={current} tint={!current || current.userId === (userId ?? 'local') ? color : (current.color ?? null)} onSettled={onSettled} />
       <div className="tdice-colors" role="radiogroup" aria-label="Cor dos dados">
         {THEMES.map(t => <button type="button" key={t.key} role="radio" aria-checked={color === t.color} title={t.label} aria-label={`Dado ${t.label}`} className={`tdice-swatch ${color === t.color ? 'on' : ''}`} style={t.color ? { background: t.color } : undefined} onClick={() => pickColor(t.color)}>{t.color ? '' : 'C'}</button>)}
         <label className="tdice-swatch tdice-custom" title="Cor personalizada" aria-label="Cor personalizada do dado"><input type="color" value={color ?? '#c9a227'} onChange={e => pickColor(e.target.value)} /></label>
@@ -273,7 +294,29 @@ export function TabletopDice({ campaignId, userId, name, character }: { campaign
           <Button disabled={!manualDice.length} onClick={() => launch(manualDice, manualLabel || 'Rolagem manual', 'sum', bonus)}><Dices /> Jogar dados{manualDice.length ? ` (${manualDice.length})` : ''}</Button>
         </div>
       </div> : <div className="tdice-presets">
-        {presets.length ? presets.map(p => <Button key={p.key} variant="outline" size="sm" className="justify-start" onClick={() => launch(p.dice, p.label, p.agg, p.bonus)}><Dices /> {p.label}</Button>) : <small className="muted-copy">Abra uma ficha para rolar com os dados dela.</small>}
+        {presets.length ? <>
+          <span className="field-kicker">TESTES E ATAQUE</span>
+          {presets.map(p => <Button key={p.key} variant="outline" size="sm" className="justify-start" onClick={() => launch(p.dice, p.label, p.agg, p.bonus)}><Dices /> {p.label}</Button>)}
+          {weaponRoll && weaponRoll.normal.dice.length > 0 && <>
+            <span className="field-kicker">ARMA · {weaponRoll.name.toUpperCase()}</span>
+            <div className="tdice-pair">
+              <Button variant="outline" size="sm" onClick={() => launch(weaponRoll.normal.dice, `Dano · ${weaponRoll.name}`, 'sum', weaponRoll.normal.bonus)}><Dices /> Dano</Button>
+              <Button variant="outline" size="sm" onClick={() => launch(weaponRoll.crit.dice, `Dano crítico · ${weaponRoll.name}`, 'sum', weaponRoll.crit.bonus)}><Dices /> Crítico</Button>
+            </div>
+          </>}
+          {character && character.nomenclatures.length > 0 && <>
+            <span className="field-kicker">NOMENCLATURAS</span>
+            {character.nomenclatures.map((n, i) => { const r = nomRolls(n); const spDie = dieFor(character.espirito) ?? 4; return <div className="tdice-nom" key={`${n.name}-${i}`}>
+              <span><strong>{n.name}</strong><small>{r.t.kind} · {r.t.cost} PF · {r.t.dice}{r.t.extraDice.length ? ` + ${r.t.extraDice.join(' + ')}` : ''}{r.t.bonus ? ` + ${r.t.bonus}` : ''}</small></span>
+              <div className="tdice-pair">
+                <Button variant="outline" size="sm" title="Teste de acerto: 1d20 + dado de ESPÍRITO" onClick={() => launch([20, spDie], `Acerto · ${n.name}`, 'sum', 0)}>Acerto</Button>
+                <Button variant="outline" size="sm" title="Dano da Nomenclatura (quando acerta)" onClick={() => launch(r.normal.dice, `Dano · ${n.name}`, 'sum', r.normal.bonus)}>Dano</Button>
+                <Button variant="outline" size="sm" title="Dano em crítico" onClick={() => launch(r.crit.dice, `Crítico · ${n.name}`, 'sum', r.crit.bonus)}>Crítico</Button>
+              </div>
+            </div>; })}
+          </>}
+          <small className="muted-copy">Estes botões só rolam os dados para a mesa ver; os PF e o dano na vida continuam sendo controlados na ficha e no combate.</small>
+        </> : <small className="muted-copy">Abra uma ficha para rolar com os dados dela.</small>}
       </div>}
       {history.length > 0 && <div className="tdice-history"><span className="field-kicker">ÚLTIMAS ROLAGENS DA MESA</span>
         {history.map(h => <button type="button" key={h.id} className="tdice-row" onClick={() => show(h)}><span><i className="tdice-dot" style={{ background: h.color ?? '#c9a227' }} />{h.name} · {h.label}</span><strong>{total(h)}</strong></button>)}
