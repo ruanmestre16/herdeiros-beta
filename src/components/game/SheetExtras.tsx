@@ -340,6 +340,19 @@ export function GsPanel({ character, update }: { character: Character; update: U
   </div>;
 }
 
+/** Vínculo de Fluxo (Arma de Vínculo, 5 GS): caixa de marcar. Marcar liga e gasta 2 PF; fica ligado até o fim da cena ou do combate (o Mestre encerra) ou até você desmarcar. Desmarcar e marcar de novo conta como ligar em outra cena e gasta 2 PF de novo. O estado é o mesmo do painel de combate. */
+export function FluxLinkToggle({ character, update }: { character: Character; update: Update }) {
+  const st = sheetState(character);
+  if (pathLevels(character).arma < 1) return null;
+  const cannot = !st.fluxLink && character.pf_current < FLUX_LINK_COST;
+  return <label className="anchor-toggle" title="A Arma de Vínculo causa dano de Fluxo, que conta como dano normal contra Gakis.">
+    <input type="checkbox" checked={st.fluxLink} disabled={cannot} onChange={e => e.target.checked
+      ? update({ pf_current: character.pf_current - FLUX_LINK_COST, abilities: withSheetState(character, { fluxLink: true }) })
+      : update({ abilities: withSheetState(character, { fluxLink: false }) })} />
+    {' '}Vínculo de Fluxo {st.fluxLink ? 'LIGADO' : 'desligado'} · marcar gasta {FLUX_LINK_COST} PF e vale até o fim da cena ou do combate{cannot ? ' (PF insuficientes)' : ''}
+  </label>;
+}
+
 /** Caminhos de GS na ficha: Vínculo de Fluxo (liga por 2 PF e fica ligado até o fim da cena) e o registro do Mimetismo. As demais habilidades (Ataque Extra, O Chamado, Vingança, Fusão) têm botões no painel de combate. */
 export function PathPanel({ character, update, addRoll }: { character: Character; update: Update; addRoll: AddRoll }) {
   const st = sheetState(character);
@@ -358,10 +371,7 @@ export function PathPanel({ character, update, addRoll }: { character: Character
     {lv.arma >= 1 && <div className={`passive ${st.fluxLink ? 'passive-ready' : ''}`}>
       <span className="field-kicker">VÍNCULO DE FLUXO · {st.fluxLink ? 'LIGADO' : 'DESLIGADO'}</span>
       <p>A Arma de Vínculo causa dano de Fluxo, que conta como dano normal contra Gakis. Ligar custa {FLUX_LINK_COST} PF e a arma fica ligada até o fim da cena. Desligada, Gakis resistem ao golpe (dano menor, definido pelo Mestre). Contra Humanos e Arcadianos o dano é o mesmo.</p>
-      <div className="flex flex-wrap gap-2">
-        {!st.fluxLink && <Button variant="outline" disabled={character.pf_current < FLUX_LINK_COST} onClick={() => set({ fluxLink: true }, { pf_current: character.pf_current - FLUX_LINK_COST })}><Sparkles /> Ligar Vínculo de Fluxo (−{FLUX_LINK_COST} PF)</Button>}
-        {st.fluxLink && <Button variant="ghost" onClick={() => set({ fluxLink: false, ecoUsed: false })}>Encerrar cena (desligar)</Button>}
-      </div>
+      <FluxLinkToggle character={character} update={update} />
     </div>}
     {lv.corpo >= 2 && <div className="passive"><span className="field-kicker">CORPO MOLDADO</span><p>Ataque Extra ({EXTRA_COST} PF){lv.corpo >= 3 ? `, Ataque Extra Refinado (${EXTRA_REFINED_COST} PF) e O Chamado (${CHAMADO_COST} PF)` : ''}: botões no painel de combate, perto do ataque.</p></div>}
     {lv.vinganca >= 1 && <div className="passive"><span className="field-kicker text-karma">VINGANÇA KARMÁTICA · NÍVEL {lv.vinganca}</span><p>Gasta {vengeanceCost(lv.vinganca)} PF antes do ataque e devolve {lv.vinganca >= 3 ? '100%' : lv.vinganca === 2 ? '1/2' : '1/3'} do dano recebido no combate. O contador aparece no combate assim que você toma dano.</p></div>}

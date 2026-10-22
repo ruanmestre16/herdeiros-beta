@@ -508,7 +508,12 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     setPcInitiative?.(c.id, r.total);
     addRoll({ expression: `${c.corpo}d20 (maior) + ${c.corpo}`, dice: r.dice, modifier: c.corpo, total: r.total, source: `Iniciativa: ${c.name}` });
   }
+  /** Fim da cena: desliga o Vínculo de Fluxo e libera a Voz e Eco de todos os personagens da mesa. */
+  function endSceneAbilities() {
+    party.forEach(pc => { const st = sheetState(pc); if (st.fluxLink || st.ecoUsed) patchSheet?.(pc, { abilities: withSheetState(pc, { fluxLink: false, ecoUsed: false }) }); });
+  }
   function toggleCombat() {
+    if (campaign.combat_active) endSceneAbilities();
     combatants.forEach(c => { if (c.pc) resetStandard?.(c.pc); });
     setReactions({}); setReactions2({}); setActs({}); setLostAction({}); setCompletaLast({}); setDance({}); setPending(null); setNotice('');
     saveCampaign({ ...campaign, combat_active: !campaign.combat_active, round: 1, turn_index: 0, log: [`${campaign.combat_active ? 'Combate encerrado' : 'Combate iniciado'} — ${new Date().toLocaleTimeString('pt-BR')}`, ...campaign.log] });
@@ -548,6 +553,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
         <div className="combat-controls">
           <Button disabled={!combatants.length} onClick={toggleCombat}>{campaign.combat_active ? 'Encerrar combate' : 'Iniciar combate'}</Button>
           <Button variant="outline" disabled={!campaign.combat_active} onClick={nextTurn}>Próximo turno <ArrowRight /></Button>
+          {masterMode && <Button variant="ghost" title="Desliga o Vínculo de Fluxo e libera a Voz e Eco de todos: a cena acabou" onClick={endSceneAbilities}>Encerrar cena</Button>}
           <Button variant="ghost" title="Limpar iniciativas para uma nova rolagem" onClick={() => { combatants.forEach(c => c.npc ? saveNpc({ ...c.npc, initiative: null }) : updateSheet(c.id, null, null, true)); }}><RotateCcw /> Limpar iniciativas</Button>
         </div>
       </section>
