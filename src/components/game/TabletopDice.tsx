@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Dices, GripHorizontal, Minus, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { NOMENCLATURE_CRIT_DICE, attrLabelFor, dieFor, parseDice, techniqueRules, weaponAttrFor, weaponByKey, weaponRules, type Attr, type Character } from '@/lib/game';
+import { NOMENCLATURE_CRIT_DICE, absorbActionLabel, absorbFromDice, attrLabelFor, dieFor, forceActionLabel, forceFluxFromDice, karmaDamageBonus, karmaMaximum, parseDice, techniqueRules, weaponAttrFor, weaponByKey, weaponRules, withSheetState, type Attr, type Character } from '@/lib/game';
+import type { RollEntry } from './SheetExtras';
 
 /**
  * Janela de dados da mesa (estilo mesa virtual): arrastável, com dados rolando numa telinha.
@@ -35,13 +36,16 @@ function mixHex(a: string, b: string, t: number) {
 
 type DieRoll = { sides: number; value: number };
 type Agg = 'sum' | 'max';
-export type DiceRollMsg = { id: string; userId: string; name: string; label: string; dice: DieRoll[]; agg: Agg; bonus: number; ts: number; color?: string };
+export type DiceRollMsg = { id: string; userId: string; name: string; label: string; dice: DieRoll[]; agg: Agg; bonus: number; ts: number; color?: string; result?: number; note?: string };
+/** Efeito de uma rolagem na ficha de quem rolou (PF, Karma, iniciativa…). Só é aplicado quando os dados terminam de cair. */
+type Fx = { note?: string; result?: number; block?: string; apply?: (c: Character) => Partial<Character>; log?: RollEntry };
 
 const rollSide = (sides: number) => 1 + Math.floor(Math.random() * sides);
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 function total(m: DiceRollMsg) {
   const vals = m.dice.map(d => d.value);
+  if (typeof m.result === 'number') return m.result;
   const base = m.agg === 'max' ? Math.max(0, ...vals) : vals.reduce((a, b) => a + b, 0);
   return base + m.bonus;
 }
@@ -58,7 +62,7 @@ function sanitize(raw: unknown): DiceRollMsg | null {
     if (!(SIDES as readonly number[]).includes(sides) || !Number.isInteger(value) || value < 1 || value > sides) return null;
     dice.push({ sides, value });
   }
-  return { id: m.id.slice(0, 64), userId: String(m.userId ?? '').slice(0, 64), name: String(m.name ?? 'Jogador').slice(0, 40), label: String(m.label ?? 'Rolagem').slice(0, 80), dice, agg: m.agg === 'max' ? 'max' : 'sum', bonus: Number.isFinite(Number(m.bonus)) ? clamp(Math.trunc(Number(m.bonus)), -99, 99) : 0, ts: Number(m.ts) || Date.now(), ...(typeof m.color === 'string' && HEX.test(m.color) ? { color: m.color } : {}) };
+  return { id: m.id.slice(0, 64), userId: String(m.userId ?? '').slice(0, 64), name: String(m.name ?? 'Jogador').slice(0, 40), label: String(m.label ?? 'Rolagem').slice(0, 80), dice, agg: m.agg === 'max' ? 'max' : 'sum', bonus: Number.isFinite(Number(m.bonus)) ? clamp(Math.trunc(Number(m.bonus)), -99, 99) : 0, ts: Number(m.ts) || Date.now(), ...(typeof m.color === 'string' && HEX.test(m.color) ? { color: m.color } : {}), ...(m.result !== undefined && m.result !== null && Number.isFinite(Number(m.result)) ? { result: clamp(Math.trunc(Number(m.result)), -9999, 9999) } : {}), ...(typeof m.note === 'string' && m.note ? { note: m.note.slice(0, 160) } : {}) };
 }
 
 // ---------- geometria e desenho dos dados ----------
@@ -163,7 +167,7 @@ function DiceStage({ roll, tint, onSettled }: { roll: DiceRollMsg | null; tint: 
   return <canvas ref={ref} className="tdice-canvas" style={{ width: STAGE_W, height: STAGE_H }} aria-label="Mesa de dados" />;
 }
 
-export function TabletopDice({ campaignId, userId, name, character }: { campaignId: string | null; userId: string | null; name: string; character?: Character }) {
+export function TabletopDice({ campaignId, userId, name, character, onApply, addRoll }: { campaignId: string | null; userId: string | null; name: string; character?: Character; /** Aplica uma mudança na ficha de quem rolou (PF, Karma, iniciativa). */ onApply?: (patch: Partial<Character>) => void; addRoll?: (e: RollEntry) => void }) {
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
@@ -177,6 +181,13 @@ export function TabletopDice({ campaignId, userId, name, character }: { campaign
   const [autoOpen, setAutoOpen] = useState(true);
   /** Cor dos meus dados (null = clássico). Vai junto com a rolagem, então todos da mesa veem os dados na cor de quem rolou. */
   const [color, setColor] = useState<string | null>(null);
+  /** Refletir o resultado na ficha (PF da absorção, Karma, iniciativa, custo de PF da Nomenclatura). */
+  const [reflect, setReflect] = useState(true);
+  const [warn, setWarn] = useState('');
+  const charRef = useRef<Character | undefined>(character); charRef.current = character;
+  const applyRef = useRef(onApply); applyRef.current = onApply;
+  const addRollRef = useRef(addRoll); addRollRef.current = addRoll;
+  const pendingFx = useRef(new Map<string, Fx>());
   const winRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ dx: number; dy: number } | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
@@ -206,12 +217,24 @@ export function TabletopDice({ campaignId, userId, name, character }: { campaign
     return () => { channelRef.current = null; setOnline(false); void supabase.removeChannel(channel); };
   }, [campaignId, userId, show]);
 
-  const onSettled = useCallback((id: string) => setSettledId(id), []);
+  const runEffect = useCallback((id: string) => {
+    const eff = pendingFx.current.get(id); if (!eff) return; pendingFx.current.delete(id);
+    const c = charRef.current; const apply = applyRef.current; if (!c || !apply || !eff.apply) return;
+    apply(eff.apply(c));
+    if (eff.log) addRollRef.current?.(eff.log);
+  }, []);
+  const onSettled = useCallback((id: string) => { setSettledId(id); runEffect(id); }, [runEffect]);
   function pickColor(c: string | null) { setColor(c); try { if (c) localStorage.setItem(COLOR_KEY, c); else localStorage.removeItem(COLOR_KEY); } catch { /* ignore */ } }
 
-  function launch(dice: number[], label: string, agg: Agg = 'sum', extra = 0) {
+  function launch(dice: number[], label: string, agg: Agg = 'sum', extra = 0, fx?: (v: number[]) => Fx) {
     if (!dice.length || dice.length > MAX_DICE) return;
-    const msg: DiceRollMsg = { id: crypto.randomUUID(), userId: userId ?? 'local', name, label, dice: dice.map(sides => ({ sides, value: rollSide(sides) })), agg, bonus: extra, ts: Date.now(), ...(color ? { color } : {}) };
+    setWarn('');
+    const values = dice.map(rollSide);
+    const live = reflect && !!applyRef.current && !!charRef.current;
+    const eff = fx ? fx(values) : null;
+    if (eff?.block && live) { setWarn(eff.block); return; }
+    const msg: DiceRollMsg = { id: crypto.randomUUID(), userId: userId ?? 'local', name, label, dice: dice.map((sides, i) => ({ sides, value: values[i] ?? 1 })), agg, bonus: extra, ts: Date.now(), ...(color ? { color } : {}), ...(eff?.result !== undefined ? { result: eff.result } : {}), ...(eff?.note ? { note: `${eff.note}${live && eff.apply ? ' · aplicado na ficha' : ''}` } : {}) };
+    if (live && eff?.apply) { pendingFx.current.set(msg.id, eff); window.setTimeout(() => runEffect(msg.id), 3600); }
     show(msg); setOpen(true);
     const ch = channelRef.current;
     if (ch && online) void ch.send({ type: 'broadcast', event: 'dice_roll', payload: msg });
@@ -237,13 +260,25 @@ export function TabletopDice({ campaignId, userId, name, character }: { campaign
   const presets = character ? (() => {
     const atk = weaponAttrFor(character.lineage) as Attr; const lin = character.lineage;
     const die = (a: Attr) => dieFor(character[a]) ?? 4;
-    return [
-      { key: 'atq', label: `Ataque · 1d20 + 1d${die(atk)} (${attrLabelFor(atk, lin)})`, dice: [20, die(atk)], agg: 'sum' as Agg, bonus: 0 },
-      ...(['corpo', 'mente', 'espirito'] as Attr[]).map(a => ({ key: `t-${a}`, label: `Teste de ${attrLabelFor(a, lin)} · 1d${die(a)}`, dice: [die(a)], agg: 'sum' as Agg, bonus: 0 })),
-      { key: 'ini', label: `Iniciativa · ${character.corpo}d20 (maior + ${character.corpo})`, dice: Array.from({ length: Math.max(1, character.corpo) }, () => 20), agg: 'max' as Agg, bonus: character.corpo },
-      { key: 'abs', label: `Absorção de PF · ${character.espirito}d20 (o maior define a faixa)`, dice: Array.from({ length: Math.max(1, character.espirito) }, () => 20), agg: 'sum' as Agg, bonus: 0 },
+    const d20s = (n: number) => Array.from({ length: Math.max(1, n) }, () => 20);
+    type Preset = { key: string; label: string; dice: number[]; agg: Agg; bonus: number; fx?: (v: number[]) => Fx };
+    const list: Preset[] = [
+      { key: 'atq', label: `Ataque · 1d20 + 1d${die(atk)} (${attrLabelFor(atk, lin)})`, dice: [20, die(atk)], agg: 'sum', bonus: 0 },
+      ...(['corpo', 'mente', 'espirito'] as Attr[]).map((a): Preset => ({ key: `t-${a}`, label: `Teste de ${attrLabelFor(a, lin)} · 1d${die(a)}`, dice: [die(a)], agg: 'sum', bonus: 0 })),
+      { key: 'ini', label: `Iniciativa · ${character.corpo}d20 (maior + ${character.corpo})`, dice: d20s(character.corpo), agg: 'max', bonus: character.corpo,
+        fx: v => { const t = Math.max(0, ...v) + character.corpo; return { note: `Iniciativa ${t} registrada`, apply: () => ({ initiative: t }), log: { expression: `${v.length}d20 (maior ${Math.max(0, ...v)}) + ${character.corpo}`, dice: v, modifier: character.corpo, total: t, source: 'Iniciativa' } }; } },
+      { key: 'abs', label: `${absorbActionLabel(lin)} · ${Math.max(1, character.espirito)}d20 (o maior define a faixa)`, dice: d20s(character.espirito), agg: 'sum', bonus: 0,
+        fx: v => { const r = absorbFromDice(v, character.espirito); return { result: r.total, note: `+${r.total} PF (maior ${r.highest}: ${r.band}; soma ${r.sum} vira ${r.diceTotal}, mais ${r.espirito} de Espírito)`,
+          apply: c => { const cap = c.espirito * 20; const sum = c.pf_current + r.total; return { pf_current: Math.min(cap, sum), abilities: withSheetState(c, { excess: Math.max(0, sum - cap), rounds: 0 }) }; },
+          log: { expression: `${r.count}d20 (soma ${r.sum}, maior ${r.highest}) + ${r.espirito}`, dice: v, modifier: r.espirito, total: r.total, source: `${absorbActionLabel(lin)} · ${r.band}`, crit: r.crit } }; } },
+      { key: 'flux', label: `${forceActionLabel(lin)} · ${Math.max(1, character.espirito)}d20 (metade vira PF)`, dice: d20s(character.espirito), agg: 'sum', bonus: 0,
+        fx: v => { const f = forceFluxFromDice(v); return { result: f.pf, note: `+${f.pf} PF e +${f.karma} Karma`,
+          apply: c => ({ pf_current: Math.min(c.pf_max, c.pf_current + f.pf), karma: Math.min(karmaMaximum(c.mente, c.espirito), c.karma + f.karma) }),
+          log: { expression: `${v.length}d20 = ${f.total}, metade`, dice: v, modifier: 0, total: f.pf, source: `${forceActionLabel(lin)} · +${f.karma} Karma` } }; } },
     ];
+    return list;
   })() : [];
+  const karmaBonus = character ? karmaDamageBonus(character) : 0;
 
   // ---- arrastar a janela ----
   function onDown(e: React.PointerEvent<HTMLDivElement>) {
@@ -276,7 +311,7 @@ export function TabletopDice({ campaignId, userId, name, character }: { campaign
       <div className="tdice-result" aria-live="polite">
         {current ? <>
           <span className="tdice-who">{current.name} · {current.label}</span>
-          {settled ? <><strong className="tdice-total">{total(current)}</strong><small>{breakdown(current)}{current.bonus ? ` · bônus ${current.bonus > 0 ? '+' : '−'}${Math.abs(current.bonus)}` : ''}{current.agg === 'max' ? ' · vale o maior dado' : ''}</small></> : <small>rolando…</small>}
+          {settled ? <><strong className="tdice-total">{total(current)}</strong><small>{breakdown(current)}{current.bonus ? ` · bônus ${current.bonus > 0 ? '+' : '−'}${Math.abs(current.bonus)}` : ''}{current.agg === 'max' ? ' · vale o maior dado' : ''}</small>{current.note && <small className="tdice-note">{current.note}</small>}</> : <small>rolando…</small>}
         </> : <small>Nenhuma rolagem ainda.</small>}
       </div>
       <div className="tdice-tabs" role="tablist">
@@ -296,12 +331,12 @@ export function TabletopDice({ campaignId, userId, name, character }: { campaign
       </div> : <div className="tdice-presets">
         {presets.length ? <>
           <span className="field-kicker">TESTES E ATAQUE</span>
-          {presets.map(p => <Button key={p.key} variant="outline" size="sm" className="justify-start" onClick={() => launch(p.dice, p.label, p.agg, p.bonus)}><Dices /> {p.label}</Button>)}
+          {presets.map(p => <Button key={p.key} variant="outline" size="sm" className="justify-start" onClick={() => launch(p.dice, p.label, p.agg, p.bonus, p.fx)}><Dices /> {p.label}</Button>)}
           {weaponRoll && weaponRoll.normal.dice.length > 0 && <>
             <span className="field-kicker">ARMA · {weaponRoll.name.toUpperCase()}</span>
             <div className="tdice-pair">
-              <Button variant="outline" size="sm" onClick={() => launch(weaponRoll.normal.dice, `Dano · ${weaponRoll.name}`, 'sum', weaponRoll.normal.bonus)}><Dices /> Dano</Button>
-              <Button variant="outline" size="sm" onClick={() => launch(weaponRoll.crit.dice, `Dano crítico · ${weaponRoll.name}`, 'sum', weaponRoll.crit.bonus)}><Dices /> Crítico</Button>
+              <Button variant="outline" size="sm" onClick={() => launch(weaponRoll.normal.dice, `Dano · ${weaponRoll.name}${karmaBonus ? ` (+${karmaBonus} Karma)` : ''}`, 'sum', weaponRoll.normal.bonus + karmaBonus)}><Dices /> Dano</Button>
+              <Button variant="outline" size="sm" onClick={() => launch(weaponRoll.crit.dice, `Dano crítico · ${weaponRoll.name}${karmaBonus ? ` (+${karmaBonus} Karma)` : ''}`, 'sum', weaponRoll.crit.bonus + karmaBonus)}><Dices /> Crítico</Button>
             </div>
           </>}
           {character && character.nomenclatures.length > 0 && <>
@@ -309,13 +344,19 @@ export function TabletopDice({ campaignId, userId, name, character }: { campaign
             {character.nomenclatures.map((n, i) => { const r = nomRolls(n); const spDie = dieFor(character.espirito) ?? 4; return <div className="tdice-nom" key={`${n.name}-${i}`}>
               <span><strong>{n.name}</strong><small>{r.t.kind} · {r.t.cost} PF · {r.t.dice}{r.t.extraDice.length ? ` + ${r.t.extraDice.join(' + ')}` : ''}{r.t.bonus ? ` + ${r.t.bonus}` : ''}</small></span>
               <div className="tdice-pair">
-                <Button variant="outline" size="sm" title="Teste de acerto: 1d20 + dado de ESPÍRITO" onClick={() => launch([20, spDie], `Acerto · ${n.name}`, 'sum', 0)}>Acerto</Button>
-                <Button variant="outline" size="sm" title="Dano da Nomenclatura (quando acerta)" onClick={() => launch(r.normal.dice, `Dano · ${n.name}`, 'sum', r.normal.bonus)}>Dano</Button>
-                <Button variant="outline" size="sm" title="Dano em crítico" onClick={() => launch(r.crit.dice, `Crítico · ${n.name}`, 'sum', r.crit.bonus)}>Crítico</Button>
+                <Button variant="outline" size="sm" title="Teste de acerto: 1d20 + dado de ESPÍRITO" onClick={() => launch([20, spDie], `Acerto · ${n.name}`, 'sum', 0, v => {
+                  if (character.pf_current < r.t.cost) return { block: `PF insuficientes para ${n.name} (${r.t.cost} PF). Use Forçar o Fluxo ou absorva PF.` };
+                  const d20 = v[0] ?? 0;
+                  return { note: `−${r.t.cost} PF${d20 === 20 ? ' · CRÍTICO se acertar' : d20 === 1 ? ' · FALHA CRÍTICA' : ''}`, apply: c => ({ pf_current: Math.max(0, c.pf_current - r.t.cost) }), log: { expression: `1d20 + 1d${spDie}`, dice: v, modifier: 0, total: (v[0] ?? 0) + (v[1] ?? 0), source: `Nomenclatura · ${n.name} · acerto (−${r.t.cost} PF)`, crit: d20 === 20 } };
+                })}>Acerto</Button>
+                <Button variant="outline" size="sm" title="Dano da Nomenclatura (quando acerta)" onClick={() => launch(r.normal.dice, `Dano · ${n.name}${karmaBonus ? ` (+${karmaBonus} Karma)` : ''}`, 'sum', r.normal.bonus + karmaBonus)}>Dano</Button>
+                <Button variant="outline" size="sm" title="Dano em crítico" onClick={() => launch(r.crit.dice, `Crítico · ${n.name}${karmaBonus ? ` (+${karmaBonus} Karma)` : ''}`, 'sum', r.crit.bonus + karmaBonus)}>Crítico</Button>
               </div>
             </div>; })}
           </>}
-          <small className="muted-copy">Estes botões só rolam os dados para a mesa ver; os PF e o dano na vida continuam sendo controlados na ficha e no combate.</small>
+          <label className="tdice-auto"><input type="checkbox" checked={reflect} disabled={!onApply} onChange={e => setReflect(e.target.checked)} /> Refletir na ficha (PF, Karma e iniciativa){!onApply ? ' · indisponível sem ficha sua' : ''}</label>
+          {warn && <small role="alert" className="tdice-warn">{warn}</small>}
+          <small className="muted-copy">Com isso ligado, a Absorção e o Forçar o Fluxo somam PF (e Karma) na ficha quando os dados param, a Iniciativa é registrada e o Acerto de uma Nomenclatura desconta o custo em PF. O dano das armas e Nomenclaturas só é mostrado: quem sofre o dano é controlado no combate.</small>
         </> : <small className="muted-copy">Abra uma ficha para rolar com os dados dela.</small>}
       </div>}
       {history.length > 0 && <div className="tdice-history"><span className="field-kicker">ÚLTIMAS ROLAGENS DA MESA</span>

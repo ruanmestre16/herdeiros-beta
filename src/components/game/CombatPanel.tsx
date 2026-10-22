@@ -3,7 +3,7 @@ import { ArrowRight, Crosshair, Dices, RotateCcw, Shield, Skull, Sparkles, Sword
 import { Button } from '@/components/ui/button';
 import {
   NOMENCLATURE_CRIT_DICE, PROTECTION_MIN_ELO, stylizedCritThreshold, TRIPLE_CRIT_COST, WEAPONS,
-  EXTRA_COST, EXTRA_REFINED_COST, CHAMADO_COST, FUSION_COST, FLUX_LINK_COST, mimicUseCost, vengeanceCost, vengeanceBonus, vengeanceShares, pathLevels, extraAttackRoll, combinedRoll, rollDice, sheetState, withSheetState,
+  ECO_COST, EXTRA_COST, EXTRA_REFINED_COST, CHAMADO_COST, FUSION_COST, FLUX_LINK_COST, mimicUseCost, vengeanceCost, vengeanceBonus, vengeanceShares, pathLevels, extraAttackRoll, combinedRoll, rollDice, sheetState, withSheetState,
   attackRoll, canTripleCrit, weaponAttrFor, counterRoll, damageRoll, danceStep, derived, dieFor, forceFlux, initiativeRoll, nomenclatureLabel, nomenclatureLevelLabel, attrLabelFor,
   karmaDamageBonus, karmaMaximum, weaponByKey, weaponRules, techniqueRules, upgradedDamage, protectRoll, syncLevelWith, stageIndexFor, isHuman, agonyStatus, agonyLabel, forceActionLabel, isTechAgent,
   type Attr, type Campaign, type Character, type NomenclatureKind, type Npc,
@@ -23,7 +23,7 @@ type AttackOption = {
   nomenclature: boolean; nomKind?: NomenclatureKind; melee: boolean; critFlat?: string; fusion?: boolean;
 };
 /** Habilidades de GS escolhidas antes do ataque: Ataque Extra, Vingança Karmática e Mimetismo. */
-type Special = { extra?: 'basic' | 'refined'; venge?: boolean; mimic?: string };
+type Special = { extra?: 'basic' | 'refined'; venge?: boolean; mimic?: string; eco?: boolean };
 type Reaction = 'esquivar' | 'bloquear' | 'contra-atacar' | 'danca' | 'parcial' | 'completa';
 type LostKind = 'standard' | 'all';
 type Dance = { round: number; enemies: number; evaded: number; broken: boolean };
@@ -135,6 +135,11 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   const [targetId, setTargetId] = useState('');
   /** Rodada em que cada combatente já usou a Reação (1 por rodada; volta quando chega a vez dele). */
   const [reactions, setReactions] = useState<Record<string, number>>({});
+  /** Segunda Reação da rodada (só quem tem a Arma Verdadeira ativa). */
+  const [reactions2, setReactions2] = useState<Record<string, number>>({});
+  /** Estrutura do turno: ação livre, padrão e de deslocamento já usadas por quem está no turno. */
+  const [acts, setActs] = useState<Record<string, { free: boolean; std: boolean; move: boolean }>>({});
+  const [eco, setEco] = useState(false);
   /** Bloqueio contra Completa não pode ser usado consecutivamente. */
   const [completaLast, setCompletaLast] = useState<Record<string, boolean>>({});
   /** Ação sacrificada por Bloqueio Parcial (padrão) ou Bloqueio contra Completa (ação inteira): vale no próximo turno do combatente. */
@@ -199,7 +204,11 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   const lineage = attacker?.pc?.lineage ?? '';
   const skillName = nomenclatureLabel(lineage);
   const selectedSkill = option?.nomenclature ? attacker?.pc?.nomenclatures[Number(option.id.slice(4))] : undefined;
-  const reactionAvailable = (c: Combatant) => reactions[c.id] !== campaign.round;
+  const hasTrueWeapon = (c: Combatant) => !!c.pc && sheetState(c.pc).trueWeapon;
+  const reactionAvailable = (c: Combatant) => reactions[c.id] !== campaign.round || (hasTrueWeapon(c) && reactions2[c.id] !== campaign.round);
+  const spendReaction = (c: Combatant) => { if (reactions[c.id] !== campaign.round) setReactions(prev => ({ ...prev, [c.id]: campaign.round })); else setReactions2(prev => ({ ...prev, [c.id]: campaign.round })); };
+  const blankActs = { free: false, std: false, move: false };
+  const toggleAct = (id: string, k: 'free' | 'std' | 'move') => setActs(prev => ({ ...prev, [id]: { ...(prev[id] ?? blankActs), [k]: !(prev[id] ?? blankActs)[k] } }));
   const weaponLike = !!option && !option.nomenclature && !option.fusion;
   const tripleAvailable = !!attacker?.pc && weaponLike && canTripleCrit(attacker.pc) && attacker.pf >= TRIPLE_CRIT_COST + (option?.pfCost ?? 0);
   const stylizedThreshold = attacker?.pc ? stylizedCritThreshold(attacker.pc[option?.hitAttr ?? weaponAttrFor(attacker.pc.lineage)]) : 20;
@@ -207,9 +216,10 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   const attSt = attacker?.pc ? sheetState(attacker.pc) : null;
   const extraReady = !!attacker && !!pl && pl.corpo >= 2 && weaponLike && lastHit[attacker.id]?.round === campaign.round && lastHit[attacker.id]?.targetId === target?.id && extraUsed[attacker.id] !== campaign.round;
   const mimicList = attSt && pl && pl.mimetismo >= 2 ? attSt.mimic : [];
-  const hasSpecial = !!pl && (pl.corpo >= 2 || pl.vinganca >= 1 || pl.mimetismo >= 2 || pl.avancada >= 3);
+  const hasSpecial = !!pl && (pl.corpo >= 2 || pl.vinganca >= 1 || pl.mimetismo >= 2 || pl.avancada >= 2);
+  const ecoReady = !!pl && pl.avancada >= 2 && weaponLike && !!attSt && !attSt.ecoUsed;
   const vengeNow = attacker && pl && pl.vinganca >= 1 ? vengeanceBonus(pl.vinganca, taken[attacker.id] ?? 0) : 0;
-  const special: Special = { ...(extraMode ? { extra: extraMode } : {}), ...(venge ? { venge: true } : {}), ...(mimicPick ? { mimic: mimicPick } : {}) };
+  const special: Special = { ...(extraMode ? { extra: extraMode } : {}), ...(venge ? { venge: true } : {}), ...(mimicPick ? { mimic: mimicPick } : {}), ...(eco ? { eco: true } : {}) };
   const humanReadBonus = (a: Combatant, t: Combatant) => a.pc && isHuman(a.pc.lineage) && read[`${a.id}>${t.id}`] ? (READ_BONUS[stageIndexFor(a.pc.lineage, a.pc.stage)] ?? 3) : 0;
 
   /** Reações possíveis do alvo contra este ataque (Cap. V): Parcial só contra Parcial, Completa só contra Completa, Dança só no corpo a corpo. */
@@ -342,6 +352,8 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     const mCost = mimicUseCost(lv.mimetismo);
     const mimicOn = !!mimicEntry && take(mCost);
     if (sp.mimic && !mimicOn) return fail('Mimetismo indisponível: escolha uma técnica registrada e tenha os PF.');
+    const ecoOn = !!sp.eco && weaponKind && lv.avancada >= 2 && !!a.pc && !sheetState(a.pc).ecoUsed && take(ECO_COST);
+    if (sp.eco && !ecoOn) return fail('A Voz e o Eco da Arma só pode ser usada 1x por cena e custa 5 PF.');
     const dn = dance[t.id];
     const dancing = !!dn && dn.round === campaign.round && !dn.broken && o.melee;
     const available = reactionAvailable(t);
@@ -374,17 +386,20 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
         blockText = `${p.expression} [${p.dice.join(', ')}] = ${p.total}${g && guardian ? ` + Proteção Compartilhada de ${guardian.name} (${g.expression} [${g.dice.join(', ')}] = ${g.total})` : ''}${readBlock ? ` + ${readBlock}` : ''}`;
       }
     }
-    if (reaction !== 'nenhuma' && !(reaction === 'danca' && dancing)) setReactions(prev => ({ ...prev, [t.id]: campaign.round }));
+    if (reaction !== 'nenhuma' && !(reaction === 'danca' && dancing)) spendReaction(t);
     if (reaction !== 'nenhuma') setCompletaLast(prev => ({ ...prev, [t.id]: reaction === 'completa' }));
     if (reaction === 'parcial') { setResources(t, null, t.pf - 4); setLostAction(prev => ({ ...prev, [t.id]: prev[t.id] ?? 'standard' })); }
     if (reaction === 'completa') {
       setLostAction(prev => ({ ...prev, [t.id]: 'all', ...(guardian ? { [guardian.id]: 'all' as LostKind } : {}) }));
-      if (guardian) { setReactions(prev => ({ ...prev, [guardian.id]: campaign.round })); setCompletaLast(prev => ({ ...prev, [guardian.id]: true })); }
+      if (guardian) { spendReaction(guardian); setCompletaLast(prev => ({ ...prev, [guardian.id]: true })); }
     }
     if (reaction === 'danca') setDance(prev => { const cur = dn && dn.round === campaign.round ? dn : { round: campaign.round, enemies: danceEnemies, evaded: 0, broken: false }; return { ...prev, [t.id]: hit ? { ...cur, broken: true } : { ...cur, evaded: cur.evaded + 1 } }; });
     const gain = hit ? arcadianGain(a) : 0;
-    const spent = o.pfCost + (tripleOn ? TRIPLE_CRIT_COST : 0) + (extraOn ? extraCost : 0) + (vengeOn ? vCost : 0) + (mimicOn ? mCost : 0);
-    if (spent || gain) setResources(a, null, Math.min(a.pfMax, a.pf - spent + gain));
+    const spent = o.pfCost + (tripleOn ? TRIPLE_CRIT_COST : 0) + (extraOn ? extraCost : 0) + (vengeOn ? vCost : 0) + (mimicOn ? mCost : 0) + (ecoOn ? ECO_COST : 0);
+    const newPf = Math.min(a.pfMax, a.pf - spent + gain);
+    if (ecoOn && a.pc && patchSheet) patchSheet(a.pc, { pf_current: newPf, abilities: withSheetState(a.pc, { ecoUsed: true }) });
+    else if (spent || gain) setResources(a, null, newPf);
+    if (!extraOn && current?.id === a.id) setActs(prev => ({ ...prev, [a.id]: { ...(prev[a.id] ?? { free: false, std: false, move: false }), std: true } }));
     if (extraOn) setExtraUsed(prev => ({ ...prev, [a.id]: campaign.round }));
     if (hit) setLastHit(prev => ({ ...prev, [a.id]: { targetId: t.id, round: campaign.round } }));
     if (vengeOn && lv.vinganca >= 3) setTaken(prev => ({ ...prev, [a.id]: 0 }));
@@ -402,7 +417,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     setPending({ attackerId: a.id, targetId: t.id, option: o, dice: diceToResolve, d20: r.d20, attrDie: r.attrDie, attrRoll: r.attrRoll, total: r.total, esquiva: esqEff, hit, crit, fumble: r.fumble, reaction, block, blockText, triple: tripleOn, vengeBonus: vBonus, vengeKarma: vengeOn && lv.vinganca >= 3 ? Math.floor(vBonus / 2) : 0, extra: extraOn, ...(countered ? { countered } : {}) });
     addRoll({ expression: r.expression, dice: r.dice, modifier: r.modifier, total: r.total, source: `${a.name} → ${t.name}${r.fumble ? ' — FALHA CRÍTICA' : crit ? ' — CRÍTICO' : ''}`, crit });
     const outcome = r.fumble ? 'FALHA CRÍTICA (1 natural)' : countered ? `CONTRA-ATACADO (${countered.text} supera ${r.total})` : hit ? (crit ? 'CRÍTICO! ATAQUE ACERTOU' : 'ATAQUE ACERTOU') : (reaction === 'danca' ? 'ALVO EVITOU (Dança de Batalha)' : 'ALVO ESQUIVOU');
-    log([`${a.name} ataca ${t.name} (${o.label}${spent ? `, −${spent} PF` : ''}): d20 [${r.d20}] + 1d${r.attrDie} [${r.attrRoll}] (${attrLabelFor(o.hitAttr, a.pc?.lineage)}) = ${r.total}; reação: ${REACTION_NAME[reaction]}${reaction === 'esquivar' || reaction === 'danca' ? ` (Esquiva ${esqEff})` : ''}${blockText ? ` — ${blockText}` : ''} → ${outcome}${gain ? ` · +${gain} PF (passiva Arcadiana)` : ''}${tripleOn ? ` · Crítico Triplo (dados ×3 e crítico ${critThreshold}+ no d20)` : ''}${extraOn ? ` · Ataque Extra${refined ? ' Refinado' : ' (2d20, o menor)'}` : ''}${vengeOn ? ` · Vingança Karmática (+${vBonus} de dano se acertar)` : ''}${mimicText ? ` · ${mimicText}` : ''}${linkNote}`]);
+    log([`${a.name} ataca ${t.name} (${o.label}${spent ? `, −${spent} PF` : ''}): d20 [${r.d20}] + 1d${r.attrDie} [${r.attrRoll}] (${attrLabelFor(o.hitAttr, a.pc?.lineage)}) = ${r.total}; reação: ${REACTION_NAME[reaction]}${reaction === 'esquivar' || reaction === 'danca' ? ` (Esquiva ${esqEff})` : ''}${blockText ? ` — ${blockText}` : ''} → ${outcome}${gain ? ` · +${gain} PF (passiva Arcadiana)` : ''}${tripleOn ? ` · Crítico Triplo (dados ×3 e crítico ${critThreshold}+ no d20)` : ''}${extraOn ? ` · Ataque Extra${refined ? ' Refinado' : ' (2d20, o menor)'}` : ''}${vengeOn ? ` · Vingança Karmática (+${vBonus} de dano se acertar)` : ''}${mimicText ? ` · ${mimicText}` : ''}${ecoOn ? ` · A Voz e o Eco da Arma ativada (até uma versão parcial da técnica)${hit ? '' : ' — errou: o poder se desfaz'}` : ''}${linkNote}`]);
     if (requestId && userId) {
       const channel = supabase.channel(`herdeiros-combat-actions-${campaign.id}`);
       channel.subscribe(async (status) => {
@@ -416,7 +431,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
 
   function rollAttack() {
     if (!masterMode || !attacker || !target || !option) return;
-    if (resolveAttack(attacker, target, option, dice, reactionValid, undefined, triple && tripleAvailable, special)) { setExtraMode(''); setVenge(false); setMimicOpen(false); setMimicPick(''); }
+    if (resolveAttack(attacker, target, option, dice, reactionValid, undefined, triple && tripleAvailable, special)) { setExtraMode(''); setVenge(false); setMimicOpen(false); setMimicPick(''); setEco(false); }
   }
 
   function resolveIncomingIntent(intent: AttackIntent, reaction: Reaction) {
@@ -491,14 +506,14 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   }
   function toggleCombat() {
     combatants.forEach(c => { if (c.pc) resetStandard?.(c.pc); });
-    setReactions({}); setLostAction({}); setCompletaLast({}); setDance({}); setPending(null); setNotice('');
+    setReactions({}); setReactions2({}); setActs({}); setLostAction({}); setCompletaLast({}); setDance({}); setPending(null); setNotice('');
     saveCampaign({ ...campaign, combat_active: !campaign.combat_active, round: 1, turn_index: 0, log: [`${campaign.combat_active ? 'Combate encerrado' : 'Combate iniciado'} — ${new Date().toLocaleTimeString('pt-BR')}`, ...campaign.log] });
   }
   function nextTurn() {
     const next = campaign.turn_index + 1; const nextFighter = combatants[next % Math.max(1, combatants.length)];
     // A Reação volta quando chega a vez do personagem; a ação sacrificada vale no turno dele e some quando esse turno termina.
     setLostAction(prev => { const copy = { ...prev }; if (current) delete copy[current.id]; return copy; });
-    if (nextFighter) { setReactions(prev => ({ ...prev, [nextFighter.id]: 0 })); if (nextFighter.pc) resetStandard?.(nextFighter.pc); }
+    if (nextFighter) { setReactions(prev => ({ ...prev, [nextFighter.id]: 0 })); setReactions2(prev => ({ ...prev, [nextFighter.id]: 0 })); setActs(prev => ({ ...prev, [nextFighter.id]: { free: false, std: false, move: false } })); if (nextFighter.pc) resetStandard?.(nextFighter.pc); }
     setAttackerId(''); setPending(null); setNotice('');
     const sacrificed = nextFighter ? lostAction[nextFighter.id] : undefined;
     saveCampaign({ ...campaign, turn_index: next % Math.max(1, combatants.length), round: next >= combatants.length ? campaign.round + 1 : campaign.round, log: [`Turno de ${nextFighter?.name ?? '—'}${sacrificed ? (sacrificed === 'all' ? ' (ação inteira sacrificada: padrão, deslocamento e fala)' : ' (ação padrão sacrificada)') : ''}`, ...campaign.log] });
@@ -514,6 +529,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
           <span className="combatant-icon">{c.kind === 'npc' ? <Skull /> : <Users />}</span>
           <span className="flex-1"><strong>{c.name}</strong><small>{c.pv} / {c.pvMax} PV · <span className="text-flux">{c.pf} / {c.pfMax} PF</span> · Esq {c.esquiva} · Bloq {c.bloqueio}{c.pc ? agonyLabel(c.pc) : (c.pv === 0 ? ' · AGONIA' : '')}{campaign.combat_active ? (reactionAvailable(c) ? ' · Reação ✓' : ' · Reação usada') : ''}{lostAction[c.id] ? (lostAction[c.id] === 'all' ? ' · sem ação' : ' · sem ação padrão') : ''}</small>
             {c.pc && campaign.combat_active && (taken[c.id] ?? 0) > 0 && (() => { const lvl = pathLevels(c.pc!).vinganca; if (lvl < 1) return null; const sh = vengeanceShares(taken[c.id] ?? 0); const mark = (n: number) => lvl === n ? 'text-karma font-semibold' : ''; return <span className="mt-1 block"><span className="field-kicker text-karma">VINGANÇA KARMÁTICA</span><small className="block">Dano recebido: <strong>{taken[c.id]}</strong></small><small className="block"><span className={mark(1)}>⅓ = {sh.third}</span> · <span className={mark(2)}>½ = {sh.half}</span> · <span className={mark(3)}>completo = {sh.full}</span></small></span>; })()}
+            {campaign.combat_active && current?.id === c.id && <span className="mt-1 flex flex-wrap gap-1" aria-label="Ações do turno">{([['free', 'Livre'], ['std', 'Padrão'], ['move', 'Deslocamento']] as const).map(([k, label]) => { const used = (acts[c.id] ?? { free: false, std: false, move: false })[k]; return <button type="button" key={k} aria-pressed={used} title={used ? `Ação ${label.toLowerCase()} já usada neste turno (clique para desfazer)` : `Marcar a ação ${label.toLowerCase()} como usada`} onClick={() => toggleAct(c.id, k)} className={`rounded-full border px-2 py-0.5 text-[11px] ${used ? 'border-border text-muted-foreground line-through' : 'border-primary text-foreground'}`}>{label}</button>; })}</span>}
           </span>
           <Button variant="outline" size="sm" title="Rolar iniciativa" aria-label={`Rolar iniciativa de ${c.name}`} onClick={() => c.npc ? rollNpcInitiative(c.npc) : rollPcInitiative(c)}><Dices /> Iniciativa</Button>
           {(() => { const ns = c.npc ? npcSheet(c.npc) : null; if (!c.npc || !ns) return null; const npc = c.npc; return <>
@@ -564,6 +580,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
                   {pl.corpo >= 3 && <Button size="sm" variant="outline" aria-pressed={chamadoOpen} className={chamadoOpen ? 'border-primary bg-accent' : ''} disabled={attacker.pf < CHAMADO_COST} title={`O Chamado · ${CHAMADO_COST} PF · alvos a curto alcance fazem teste de ESPÍRITO contra a DT do Mestre`} onClick={() => setChamadoOpen(o => !o)}><Sparkles /> O Chamado</Button>}
                   {pl.mimetismo >= 2 && weaponLike && <Button size="sm" variant="outline" aria-pressed={mimicOpen} className={mimicOpen ? 'border-primary bg-accent' : ''} disabled={!mimicList.length || (!masterMode && !isMyTurn)} title={`Mimetismo · ${mimicUseCost(pl.mimetismo)} PF${pl.mimetismo >= 3 ? ' · sem teste, escala máxima' : ' · teste de MENTE + ESPÍRITO, escala reduzida'}`} onClick={() => { setMimicOpen(o => !o); setMimicPick(''); }}><Sparkles /> Mimetismo{mimicPick ? ` · ${mimicPick}` : ''}</Button>}
                   {pl.avancada >= 3 && <Button size="sm" variant="outline" aria-pressed={fusionOn} className={fusionOn ? 'border-primary bg-accent' : ''} disabled={(attacker.pc?.nomenclatures.length ?? 0) < 2 || (!masterMode && !isMyTurn)} title={`Fusão de Nomenclaturas · ${FUSION_COST} PF · funde duas Nomenclaturas; o ataque precisa acertar`} onClick={() => { setFusionOn(o => !o); setPending(null); setArea(null); }}><Sparkles /> Fusão de Nomenclaturas</Button>}
+                  {pl.avancada >= 2 && weaponLike && <Button size="sm" variant="outline" aria-pressed={eco} className={eco ? 'border-primary bg-accent' : ''} disabled={!ecoReady || attacker.pf < ECO_COST || (!masterMode && !isMyTurn)} title={`A Voz e o Eco da Arma · ${ECO_COST} PF · 1x por cena, ação livre · até uma versão parcial da técnica; se errar o ataque, o poder se desfaz`} onClick={() => setEco(v => !v)}><Sparkles /> Voz e Eco da Arma{attSt?.ecoUsed ? ' · usada' : ''}</Button>}
                   {pl.vinganca >= 1 && <Button size="sm" variant="outline" aria-pressed={venge} className={venge ? 'border-primary bg-accent' : ''} disabled={attacker.pf < vengeanceCost(pl.vinganca) || (!masterMode && !isMyTurn)} title={`Vingança Karmática · ${vengeanceCost(pl.vinganca)} PF · devolve ${pl.vinganca >= 3 ? 'todo' : pl.vinganca === 2 ? '1/2 d' : '1/3 d'}o dano recebido se o ataque acertar`} onClick={() => setVenge(v => !v)}><Skull /> Vingança Karmática</Button>}
                 </div>
                 {extraMode && <small className="muted-copy block pt-1">Ataque Extra: −{extraMode === 'refined' ? EXTRA_REFINED_COST : EXTRA_COST} PF, {extraMode === 'refined' ? '1d20 normal' : '2d20 (fica o menor)'} + dado do atributo. Use "Rolar ataque".</small>}

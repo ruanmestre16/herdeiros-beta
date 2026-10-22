@@ -6,7 +6,7 @@ import {
   ELO_ACTIONS, LINEAGE_STAGES, NOMENCLATURE_COST, NOMENCLATURE_DICE, NOMENCLATURE_CRIT_DICE, REST_TYPES, TRIPLE_CRIT_COST, WEAPONS,
   attackRoll, absorbPf, canTripleCrit, combinedRoll, stylizedCritThreshold, nomenclatureDamage, nomenclatureLabel, nomenclatureLevelLabel, applyMilestone, milestoneKey, milestoneNeedsTechnique, milestoneOptions, milestoneOptionsFor, milestonePath, nomenclatureFamilies, techniqueKey, restRoll, stageIndexFor,
   damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, weaponRules, techniqueRules, upgradedDamage, isTechAgent, absorbActionLabel, attrLabelFor, sheetState, withSheetState,
-  SHARE_MIN_SYNC, PROTECTION_MIN_ELO, syncLevelWith, pfShareBlock, pathLevels, mimicCapacity, FLUX_LINK_COST, MIMIC_RECORD_COST, mimicUseCost, vengeanceCost, EXTRA_COST, EXTRA_REFINED_COST, CHAMADO_COST,
+  SHARE_MIN_SYNC, PROTECTION_MIN_ELO, syncLevelWith, pfShareBlock, pathLevels, mimicCapacity, FLUX_LINK_COST, MIMIC_RECORD_COST, mimicUseCost, vengeanceCost, ECO_COST, EXTRA_COST, EXTRA_REFINED_COST, CHAMADO_COST,
   agonyStatus, agonyEnter, agonyFailure, agonyUndo, agonyLeave, agonySacrifice, AGONY_MAX_FAILURES,
   type Attr, type Character, type NomenclatureKind, type RestType,
 } from '@/lib/game';
@@ -353,18 +353,19 @@ export function PathPanel({ character, update, addRoll }: { character: Character
   const set = (patch: Partial<typeof st>, extra: Partial<Character> = {}) => update({ ...extra, abilities: withSheetState(character, patch) });
   const full = st.mimic.length >= cap;
   const closed = st.mimicClosed.some(n => n.toLowerCase() === name.trim().toLowerCase());
-  if (!lv.arma && !lv.corpo && !lv.mimetismo && !lv.vinganca && !lv.avancada) return <p className="empty-copy">Os caminhos de GS aparecem aqui conforme você resolve os marcos.</p>;
+  if (!lv.arma && !lv.corpo && !lv.mimetismo && !lv.vinganca && !lv.avancada && !st.ecoUsed) return <p className="empty-copy">Os caminhos de GS aparecem aqui conforme você resolve os marcos.</p>;
   return <div className="field-stack">
     {lv.arma >= 1 && <div className={`passive ${st.fluxLink ? 'passive-ready' : ''}`}>
       <span className="field-kicker">VÍNCULO DE FLUXO · {st.fluxLink ? 'LIGADO' : 'DESLIGADO'}</span>
       <p>A Arma de Vínculo causa dano de Fluxo, que conta como dano normal contra Gakis. Ligar custa {FLUX_LINK_COST} PF e a arma fica ligada até o fim da cena. Desligada, Gakis resistem ao golpe (dano menor, definido pelo Mestre). Contra Humanos e Arcadianos o dano é o mesmo.</p>
       <div className="flex flex-wrap gap-2">
         {!st.fluxLink && <Button variant="outline" disabled={character.pf_current < FLUX_LINK_COST} onClick={() => set({ fluxLink: true }, { pf_current: character.pf_current - FLUX_LINK_COST })}><Sparkles /> Ligar Vínculo de Fluxo (−{FLUX_LINK_COST} PF)</Button>}
-        {st.fluxLink && <Button variant="ghost" onClick={() => set({ fluxLink: false })}>Encerrar cena (desligar)</Button>}
+        {st.fluxLink && <Button variant="ghost" onClick={() => set({ fluxLink: false, ecoUsed: false })}>Encerrar cena (desligar)</Button>}
       </div>
     </div>}
     {lv.corpo >= 2 && <div className="passive"><span className="field-kicker">CORPO MOLDADO</span><p>Ataque Extra ({EXTRA_COST} PF){lv.corpo >= 3 ? `, Ataque Extra Refinado (${EXTRA_REFINED_COST} PF) e O Chamado (${CHAMADO_COST} PF)` : ''}: botões no painel de combate, perto do ataque.</p></div>}
     {lv.vinganca >= 1 && <div className="passive"><span className="field-kicker text-karma">VINGANÇA KARMÁTICA · NÍVEL {lv.vinganca}</span><p>Gasta {vengeanceCost(lv.vinganca)} PF antes do ataque e devolve {lv.vinganca >= 3 ? '100%' : lv.vinganca === 2 ? '1/2' : '1/3'} do dano recebido no combate. O contador aparece no combate assim que você toma dano.</p></div>}
+    {lv.avancada >= 2 && <div className="passive"><span className="field-kicker">A VOZ E O ECO DA ARMA · {st.ecoUsed ? 'USADA NESTA CENA' : 'DISPONÍVEL'}</span><p>1x por cena, como ação livre e por {ECO_COST} PF, usa a habilidade inerente da Arma de Ego (ou possessão, ou poder especial), só até uma versão parcial da técnica. Se errar o ataque, o poder se desfaz e os PF são gastos. Botão no painel de combate.</p>{st.ecoUsed && <Button variant="ghost" onClick={() => set({ ecoUsed: false })}>Nova cena (liberar de novo)</Button>}</div>}
     {lv.avancada >= 3 && <div className="passive"><span className="field-kicker">FUSÃO DE NOMENCLATURAS</span><p>Botão no painel de combate, perto do ataque.</p></div>}
     {lv.mimetismo >= 1 && <div className="passive"><span className="field-kicker">MIMETISMO DO FLUXO · REGISTRO ({st.mimic.length} / {cap})</span>
       <p>Ao presenciar uma técnica, gaste {MIMIC_RECORD_COST} PF e faça um teste de MENTE + {attrLabelFor('espirito', character.lineage)} contra a DT do Mestre para gravá-la. Receber o ataque diretamente facilita (DT menor); técnicas de aliados exigem Elo alto ou dano proposital. Se falhar, a oportunidade se fecha para sempre para aquela técnica.</p>
@@ -386,6 +387,40 @@ export function PathPanel({ character, update, addRoll }: { character: Character
       {msg && <p role="status" className="auth-message">{msg}</p>}
       {lv.mimetismo >= 2 && <p className="muted-copy text-xs">Em combate, junto com o ataque: {lv.mimetismo >= 3 ? `${mimicUseCost(3)} PF, sem testes, escala máxima.` : `${mimicUseCost(2)} PF e teste de MENTE + ESPÍRITO, escala reduzida.`}</p>}
     </div>}
+  </div>;
+}
+
+/** Arma de Ego (Arcadiano): Arma Verdadeira (2 Reações por rodada), duelo mental contra a Possessão e a Relíquia que o Ego deixa ao morrer. */
+export function EgoWeaponPanel({ character, update, addRoll }: { character: Character; update: Update; addRoll: AddRoll }) {
+  const st = sheetState(character);
+  const [weaponBonus, setWeaponBonus] = useState(0);
+  const [duel, setDuel] = useState('');
+  const set = (patch: Partial<typeof st>) => update({ abilities: withSheetState(character, patch) });
+  const myDie = dieFor(character.mente) ?? 4; const egoDie = dieFor(character.espirito) ?? 4;
+  return <div className="field-stack">
+    <div className={`passive ${st.trueWeapon ? 'passive-ready' : ''}`}>
+      <span className="field-kicker">ARMA VERDADEIRA · {st.trueWeapon ? 'ATIVA' : 'ADORMECIDA'}</span>
+      <p>No estágio Narande o Ego assume forma física independente e luta ao seu lado como um segundo cérebro de combate, permitindo reações em dobro e suporte tático imediato. Ativa, você ganha uma segunda Reação por rodada no combate.</p>
+      <label className="anchor-toggle"><input type="checkbox" checked={st.trueWeapon} onChange={e => set({ trueWeapon: e.target.checked })} /> Arma Verdadeira ativa (2 Reações por rodada)</label>
+    </div>
+    <div className="passive">
+      <span className="field-kicker">POSSESSÃO · DUELO MENTAL</span>
+      <p>Em conflito ético ou fraqueza, o Ego pode tentar a Possessão: você precisa vencer um duelo mental para não perder o controle do corpo. Aqui o duelo compara 1d20 + 1d{myDie} (MENTE) contra 1d20 + 1d{egoDie} (ESPÍRITO da arma) + o bônus que o Mestre der à arma. Empate favorece a arma.</p>
+      <Stepper label="BÔNUS DA ARMA (MESTRE)" value={weaponBonus} min={-10} max={20} onChange={setWeaponBonus} />
+      <Button variant="outline" onClick={() => {
+        const mine = rollDice(1, 20)[0]! + (rollDice(1, myDie)[0] ?? 1); const ego = rollDice(1, 20)[0]! + (rollDice(1, egoDie)[0] ?? 1) + weaponBonus;
+        const won = mine > ego;
+        addRoll({ expression: `1d20 + 1d${myDie} contra 1d20 + 1d${egoDie}${weaponBonus ? ` + ${weaponBonus}` : ''}`, dice: [mine, ego], modifier: 0, total: mine, source: `Duelo mental · você ${mine} × Ego ${ego} — ${won ? 'venceu' : 'a Possessão tomou o controle'}` });
+        setDuel(won ? `Você venceu o duelo (${mine} contra ${ego}) e mantém o controle do corpo.` : `A arma venceu (${ego} contra ${mine}): a Possessão tomou o controle. O Mestre narra o que acontece.`);
+      }}><Dices /> Duelo mental contra a Possessão</Button>
+      {duel && <p role="status" className="auth-message">{duel}</p>}
+    </div>
+    <div className="passive">
+      <span className="field-kicker">RELÍQUIA · O QUE O EGO DEIXA</span>
+      <p>Quando o Herdeiro morre, o Ego da arma pode virar uma Relíquia (Fênix, por exemplo, mantém a voz de sua antiga portadora). Registre aqui o legado da arma.</p>
+      <Field label="NOME DA RELÍQUIA"><input value={st.relic.name} onChange={e => set({ relic: { ...st.relic, name: e.target.value } })} placeholder="Ex.: Fênix" /></Field>
+      <Field label="LEGADO E VOZ DO EGO"><input value={st.relic.text} onChange={e => set({ relic: { ...st.relic, text: e.target.value } })} placeholder="O que ela guarda de quem a portou" /></Field>
+    </div>
   </div>;
 }
 
