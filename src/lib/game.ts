@@ -9,7 +9,13 @@ export type Character = {
 export type NomenclatureKind = 'Direta' | 'Parcial' | 'Completa';
 /** Uma nomenclatura tem até três versões (Direta, Parcial, Completa). `family` liga as versões à mesma nomenclatura; sem ela, a versão é uma nomenclatura própria (chave = nome). */
 export type Nomenclature = { name: string; cost: number; effect?: string; kind?: NomenclatureKind; dice?: number; family?: string };
-export type Npc = { id: string; name: string; kind: string; hidden: boolean; pv_current: number; pv_max: number; pf_current: number; pf_max: number; corpo: number; mente: number; espirito: number; esquiva: number; bloqueio: number; notes: string; initiative: number | null };
+export type Npc = { id: string; name: string; kind: string; hidden: boolean; pv_current: number; pv_max: number; pf_current: number; pf_max: number; corpo: number; mente: number; espirito: number; esquiva: number; bloqueio: number; notes: string; initiative: number | null; /** O Mestre decide o que os jogadores veem do NPC (padrão: tudo; precisa da migração 20261021120000). */ show_name?: boolean; show_hp?: boolean; show_sheet?: boolean };
+export const UNKNOWN_NPC_NAME = 'Criatura desconhecida';
+export const npcShows = (n: Pick<Npc, 'show_name' | 'show_hp' | 'show_sheet'>, what: 'name' | 'hp' | 'sheet') => n[`show_${what}` as const] !== false;
+/** Troca o nome real de NPCs com nome oculto por um nome genérico (registro, crônica e rolagens que os jogadores veem). */
+export function hideNpcNames(text: string, npcs: Npc[]) {
+  return npcs.filter(n => !npcShows(n, 'name') && n.name.trim().length > 1).sort((a, b) => b.name.length - a.name.length).reduce((t, n) => t.split(n.name).join(UNKNOWN_NPC_NAME), text);
+}
 export type Campaign = { id: string; name: string; code: string; scene: string; round: number; turn_index: number; combat_active: boolean; log: string[] };
 export const dieFor = (n: number) => [0, 4, 6, 8, 10, 12][Math.max(1, Math.min(5, n))];
 export const derived = (corpo: number) => ({ pv: [0,25,32,42,52,60][corpo] ?? 25, esquiva: [0,10,12,14,15,16][corpo] ?? 10, bloqueio: [0,3,5,7,10,12][corpo] ?? 3, deslocamento: [0,7,9,11,12,13][corpo] ?? 7 });
