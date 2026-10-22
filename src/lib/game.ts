@@ -118,8 +118,9 @@ export function absorbActionLabel(lineage: string) {
 }
 export function initiativeRoll(corpo: number) { const dice = rollDice(Math.max(1, corpo), 20); return { dice, total: Math.max(...dice) + corpo }; }
 /** Forçar o Fluxo (ação livre): rola de novo os d20 de Espírito; ganha PF = metade da soma (para baixo) e recebe Karma = metade dos PF gerados. */
-export function forceFlux(espirito: number) {
-  const dice = rollDice(Math.max(1, espirito), 20);
+export function forceFlux(espirito: number) { return forceFluxFromDice(rollDice(Math.max(1, espirito), 20)); }
+/** Mesma regra de forceFlux, mas a partir de d20 já rolados. */
+export function forceFluxFromDice(dice: number[]) {
   const total = dice.reduce((a, b) => a + b, 0);
   const pf = Math.floor(total / 2);
   return { dice, total, pf, karma: Math.floor(pf / 2), expression: `${dice.length}d20` };
@@ -151,8 +152,8 @@ export function counterRoll(c: { corpo: number; mente: number; espirito: number 
 export function normalizeCharacter(c: Partial<Character> & { id: string }): Character { return { ...makeCharacter(), ...c, abilities: Array.isArray(c.abilities) ? c.abilities : [], sync: Array.isArray(c.sync) ? c.sync : [], nomenclatures: Array.isArray(c.nomenclatures) ? c.nomenclatures : [], inventory: Array.isArray(c.inventory) ? c.inventory : [], weapon_type: c.weapon_type ?? '', weapon_dice: c.weapon_dice ?? '', initiative: c.initiative ?? null } as Character; }
 
 // Persistent rule state shares the existing JSON abilities field; no table changes.
-export type SheetState = { excess: number; rounds: number; agony: boolean; failures: number; stable: boolean; dead: boolean; standard: boolean; agonyDt: number; coins: number; anchorBroken: boolean; weaponMode: 'linhagem' | 'comum'; path: 'arma' | 'nomenclatura' | ''; weaponRank: number; nomRank: number; milestones: string[]; milestoneChoices: Record<string, string>; techniqueUpgrades: Record<string, { improved?: 'dano' | 'alcance'; mastered?: boolean; favorite?: string }>; attributeFloor: Partial<Record<Attr, number>>; attributeBudget: number; highestStage: number; specialEffect: string; fluxLink: boolean; mimic: { name: string; effect: string }[]; mimicClosed: string[] };
-export const emptySheetState: SheetState = { excess: 0, rounds: 0, agony: false, failures: 0, stable: false, dead: false, standard: false, agonyDt: 6, coins: 0, anchorBroken: false, weaponMode: 'linhagem', path: '', weaponRank: 0, nomRank: 0, milestones: [], milestoneChoices: {}, techniqueUpgrades: {}, attributeFloor: {}, attributeBudget: 0, highestStage: 0, specialEffect: '', fluxLink: false, mimic: [], mimicClosed: [] };
+export type SheetState = { excess: number; rounds: number; agony: boolean; failures: number; stable: boolean; dead: boolean; standard: boolean; agonyDt: number; coins: number; anchorBroken: boolean; weaponMode: 'linhagem' | 'comum'; path: 'arma' | 'nomenclatura' | ''; weaponRank: number; nomRank: number; milestones: string[]; milestoneChoices: Record<string, string>; techniqueUpgrades: Record<string, { improved?: 'dano' | 'alcance'; mastered?: boolean; favorite?: string }>; attributeFloor: Partial<Record<Attr, number>>; attributeBudget: number; highestStage: number; specialEffect: string; fluxLink: boolean; mimic: { name: string; effect: string }[]; mimicClosed: string[]; ecoUsed: boolean; trueWeapon: boolean; relic: { name: string; text: string } };
+export const emptySheetState: SheetState = { excess: 0, rounds: 0, agony: false, failures: 0, stable: false, dead: false, standard: false, agonyDt: 6, coins: 0, anchorBroken: false, weaponMode: 'linhagem', path: '', weaponRank: 0, nomRank: 0, milestones: [], milestoneChoices: {}, techniqueUpgrades: {}, attributeFloor: {}, attributeBudget: 0, highestStage: 0, specialEffect: '', fluxLink: false, mimic: [], mimicClosed: [], ecoUsed: false, trueWeapon: false, relic: { name: '', text: '' } };
 export function sheetState(c: Character): SheetState {
   try { return { ...emptySheetState, ...JSON.parse(c.abilities.find(a => a.kind === 'state')?.description ?? '{}') } as SheetState; }
   catch { return { ...emptySheetState }; }
@@ -264,9 +265,10 @@ export function absorbBand(highest: number) {
   return { band: '1–7 · 1/3', apply: (v: number) => Math.floor(v / 3), crit: false };
 }
 /** d20 = Espírito. Soma todos os dados; o maior dado define a faixa aplicada à soma inteira; depois + Espírito. */
-export function absorbPf(espirito: number) {
-  const count = Math.max(1, espirito);
-  const dice = rollDice(count, 20);
+export function absorbPf(espirito: number) { return absorbFromDice(rollDice(Math.max(1, espirito), 20), espirito); }
+/** Mesma regra de absorbPf, mas a partir de d20 já rolados (ex.: a janela de dados da mesa). */
+export function absorbFromDice(dice: number[], espirito: number) {
+  const count = dice.length;
   const sum = dice.reduce((a, b) => a + b, 0);
   const highest = Math.max(...dice);
   const band = absorbBand(highest);
@@ -386,7 +388,7 @@ export function pathLevels(c: Character) {
   return { arma: lvl(0, 'arma'), corpo: lvl(0, 'corpo'), nomenclatura: lvl(0, 'nomenclatura'), mimetismo: lvl(1, 'mimetismo'), vinganca: lvl(1, 'vinganca'), avancada: lvl(1, 'nomenclatura_avancada') };
 }
 /** Custos fixos das habilidades de caminho (PF). */
-export const FLUX_LINK_COST = 2; export const EXTRA_COST = 3; export const EXTRA_REFINED_COST = 10; export const CHAMADO_COST = 5; export const FUSION_COST = 12; export const MIMIC_RECORD_COST = 5;
+export const ECO_COST = 5; export const FLUX_LINK_COST = 2; export const EXTRA_COST = 3; export const EXTRA_REFINED_COST = 10; export const CHAMADO_COST = 5; export const FUSION_COST = 12; export const MIMIC_RECORD_COST = 5;
 export const mimicUseCost = (level: number) => level >= 3 ? 12 : 3;
 /** Vingança Karmática: 5 GS devolve 1/3 do dano recebido (3 PF) · 7 GS devolve 1/2 (5 PF) · 10 GS devolve 100% (12 PF, sem teste) e aplica Karma = metade do dano devolvido. */
 export const vengeanceCost = (level: number) => level >= 3 ? 12 : level === 2 ? 5 : 3;
