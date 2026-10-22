@@ -40,6 +40,14 @@ export type DiceRollMsg = { id: string; userId: string; name: string; label: str
 /** Efeito de uma rolagem na ficha de quem rolou (PF, Karma, iniciativa…). Só é aplicado quando os dados terminam de cair. */
 type Fx = { note?: string; result?: number; block?: string; apply?: (c: Character) => Partial<Character>; log?: RollEntry };
 
+/** Rolagem de qualquer parte do app (ataque, dano, teste, absorção…) mostrada a toda a mesa. */
+export type TableRoll = { id: string; userId: string; name: string; source: string; expression: string; dice: number[]; total: number; ts: number };
+function sanitizeRoll(raw: unknown): TableRoll | null {
+  const m = raw as Partial<TableRoll> | null;
+  if (!m || typeof m.id !== 'string' || !Array.isArray(m.dice)) return null;
+  const total = Number(m.total); if (!Number.isFinite(total)) return null;
+  return { id: m.id.slice(0, 64), userId: String(m.userId ?? '').slice(0, 64), name: String(m.name ?? 'Jogador').slice(0, 40), source: String(m.source ?? 'Rolagem').slice(0, 140), expression: String(m.expression ?? '').slice(0, 160), dice: m.dice.map(Number).filter(Number.isFinite).slice(0, 40), total: clamp(Math.trunc(total), -9999, 9999), ts: Number(m.ts) || Date.now() };
+}
 const rollSide = (sides: number) => 1 + Math.floor(Math.random() * sides);
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
@@ -167,7 +175,7 @@ function DiceStage({ roll, tint, onSettled }: { roll: DiceRollMsg | null; tint: 
   return <canvas ref={ref} className="tdice-canvas" style={{ width: STAGE_W, height: STAGE_H }} aria-label="Mesa de dados" />;
 }
 
-export function TabletopDice({ campaignId, userId, name, character, onApply, addRoll }: { campaignId: string | null; userId: string | null; name: string; character?: Character; /** Aplica uma mudança na ficha de quem rolou (PF, Karma, iniciativa). */ onApply?: (patch: Partial<Character>) => void; addRoll?: (e: RollEntry) => void }) {
+export function TabletopDice({ campaignId, userId, name, character, onApply, addRoll, isMaster = false }: { campaignId: string | null; userId: string | null; name: string; character?: Character; /** Aplica uma mudança na ficha de quem rolou (PF, Karma, iniciativa). */ onApply?: (patch: Partial<Character>) => void; addRoll?: (e: RollEntry) => void; isMaster?: boolean }) {
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
@@ -184,6 +192,15 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
   /** Refletir o resultado na ficha (PF da absorção, Karma, iniciativa, custo de PF da Nomenclatura). */
   const [reflect, setReflect] = useState(true);
   const [warn, setWarn] = useState('');
+  /** Tudo que a mesa rolou (qualquer parte do app), visível a todos. */
+  const [feed, setFeed] = useState<TableRoll[]>([]);
+  const [unread, setUnread] = useState(0);
+  /** O Mestre liga e desliga se as próprias rolagens aparecem para os jogadores (jogadores sempre compartilham). */
+  const [shareMine, setShareMine] = useState(true);
+  const shareRef = useRef(true); shareRef.current = !isMaster || shareMine;
+  const nameRef = useRef(name); nameRef.current = name;
+  const onlineRef = useRef(false); onlineRef.current = online;
+  const userRef = useRef(userId); userRef.current = userId;
   const charRef = useRef<Character | undefined>(character); charRef.current = character;
   const applyRef = useRef(onApply); applyRef.current = onApply;
   const addRollRef = useRef(addRoll); addRollRef.current = addRoll;
@@ -196,7 +213,7 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
 
   useEffect(() => {
     setMounted(true);
-    try { const c = localStorage.getItem(COLOR_KEY); if (c && HEX.test(c)) setColor(c); } catch { /* ignore */ }
+    try { const c = localStorage.getItem(COLOR_KEY); if (c && HEX.test(c)) setColor(c); if (localStorage.getItem('herdeiros-share-rolls') === 'off') setShareMine(false); } catch { /* ignore */ }
     try { const raw = localStorage.getItem(POS_KEY); if (raw) { const p = JSON.parse(raw) as { x: number; y: number }; if (Number.isFinite(p.x) && Number.isFinite(p.y)) setPos({ x: clamp(p.x, 0, Math.max(0, window.innerWidth - 120)), y: clamp(p.y, 0, Math.max(0, window.innerHeight - 80)) }); } } catch { /* ignore */ }
   }, []);
 
@@ -213,10 +230,27 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
     channel.on('broadcast', { event: 'dice_roll' }, ({ payload }) => {
       const m = sanitize(payload); if (!m) return;
       show(m); if (autoOpenRef.current) setOpen(true);
+    }).on('broadcast', { event: 'table_roll' }, ({ payload }) => {
+      const r = sanitizeRoll(payload); if (!r) return;
+      setFeed(f => [r, ...f.filter(x => x.id !== r.id)].slice(0, 40)); setUnread(u => u + 1);
     }).subscribe(status => setOnline(status === 'SUBSCRIBED'));
     return () => { channelRef.current = null; setOnline(false); void supabase.removeChannel(channel); };
   }, [campaignId, userId, show]);
 
+  // Toda rolagem do app (addRoll) chega aqui: entra no registro da mesa e é enviada aos outros.
+  useEffect(() => {
+    const onAppRoll = (e: Event) => {
+      const d = (e as CustomEvent<{ expression: string; dice: number[]; total: number; source: string; publicExpression?: string; publicSource?: string }>).detail; if (!d) return;
+      const base = { id: crypto.randomUUID(), userId: userRef.current ?? 'local', name: nameRef.current, dice: d.dice, total: d.total, ts: Date.now() };
+      const r = sanitizeRoll({ ...base, source: d.source, expression: d.expression }); if (!r) return;
+      setFeed(f => [r, ...f].slice(0, 40));
+      const pub = sanitizeRoll({ ...base, source: d.publicSource ?? d.source, expression: d.publicExpression ?? d.expression });
+      const ch = channelRef.current; if (pub && ch && onlineRef.current && shareRef.current) void ch.send({ type: 'broadcast', event: 'table_roll', payload: pub });
+    };
+    window.addEventListener('herdeiros:roll', onAppRoll);
+    return () => window.removeEventListener('herdeiros:roll', onAppRoll);
+  }, []);
+  useEffect(() => { if (open) setUnread(0); }, [open, feed]);
   const runEffect = useCallback((id: string) => {
     const eff = pendingFx.current.get(id); if (!eff) return; pendingFx.current.delete(id);
     const c = charRef.current; const apply = applyRef.current; if (!c || !apply || !eff.apply) return;
@@ -237,7 +271,7 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
     if (live && eff?.apply) { pendingFx.current.set(msg.id, eff); window.setTimeout(() => runEffect(msg.id), 3600); }
     show(msg); setOpen(true);
     const ch = channelRef.current;
-    if (ch && online) void ch.send({ type: 'broadcast', event: 'dice_roll', payload: msg });
+    if (ch && online && shareRef.current) void ch.send({ type: 'broadcast', event: 'dice_roll', payload: msg });
   }
   const manualDice = SIDES.flatMap(s => Array.from({ length: counts[s] ?? 0 }, () => s as number));
   const manualLabel = SIDES.filter(s => (counts[s] ?? 0) > 0).map(s => `${counts[s]}d${s}`).join(' + ') + (bonus ? ` ${bonus > 0 ? '+' : '−'} ${Math.abs(bonus)}` : '');
@@ -294,7 +328,7 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
   function onUp() { drag.current = null; try { if (pos) localStorage.setItem(POS_KEY, JSON.stringify(pos)); } catch { /* ignore */ } }
 
   if (!mounted) return null;
-  if (!open) return <button type="button" className="tdice-launcher" onClick={() => setOpen(true)} aria-label="Abrir a janela de dados"><Dices size={18} /> Dados</button>;
+  if (!open) return <button type="button" className="tdice-launcher" onClick={() => setOpen(true)} aria-label="Abrir a janela de dados"><Dices size={18} /> Dados{unread > 0 ? ` (${unread})` : ''}</button>;
   const settled = !!current && settledId === current.id;
   return <div ref={winRef} className="tdice-win" style={pos ? { left: pos.x, top: pos.y, right: 'auto', bottom: 'auto' } : undefined} role="dialog" aria-label="Janela de dados da mesa">
     <div className="tdice-head" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
@@ -359,6 +393,11 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
           <small className="muted-copy">Com isso ligado, a Absorção e o Forçar o Fluxo somam PF (e Karma) na ficha quando os dados param, a Iniciativa é registrada e o Acerto de uma Nomenclatura desconta o custo em PF. O dano das armas e Nomenclaturas só é mostrado: quem sofre o dano é controlado no combate.</small>
         </> : <small className="muted-copy">Abra uma ficha para rolar com os dados dela.</small>}
       </div>}
+      <div className="tdice-history"><span className="field-kicker">ROLAGENS DA MESA (TUDO QUE FOI ROLADO)</span>
+        {!feed.length && <small className="muted-copy">Ataques, danos, testes e absorções de todos aparecem aqui.</small>}
+        {feed.slice(0, 20).map(r => <div className="tdice-row" key={r.id} title={r.expression}><span><strong>{r.name}</strong> · {r.source}<small className="block muted-copy">{r.expression}{r.dice.length ? ` · dados ${r.dice.join(', ')}` : ''}</small></span><strong>{r.total}</strong></div>)}
+        {isMaster && <label className="tdice-auto"><input type="checkbox" checked={shareMine} onChange={e => { setShareMine(e.target.checked); try { localStorage.setItem('herdeiros-share-rolls', e.target.checked ? 'on' : 'off'); } catch { /* ignore */ } }} /> Mostrar as minhas rolagens à mesa (desligado: só eu vejo)</label>}
+      </div>
       {history.length > 0 && <div className="tdice-history"><span className="field-kicker">ÚLTIMAS ROLAGENS DA MESA</span>
         {history.map(h => <button type="button" key={h.id} className="tdice-row" onClick={() => show(h)}><span><i className="tdice-dot" style={{ background: h.color ?? '#c9a227' }} />{h.name} · {h.label}</span><strong>{total(h)}</strong></button>)}
       </div>}

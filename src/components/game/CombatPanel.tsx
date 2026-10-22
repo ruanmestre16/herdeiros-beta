@@ -3,7 +3,7 @@ import { ArrowRight, Crosshair, Dices, RotateCcw, Shield, Skull, Sparkles, Sword
 import { Button } from '@/components/ui/button';
 import {
   NOMENCLATURE_CRIT_DICE, PROTECTION_MIN_ELO, stylizedCritThreshold, TRIPLE_CRIT_COST, WEAPONS,
-  ECO_COST, EXTRA_COST, EXTRA_REFINED_COST, CHAMADO_COST, FUSION_COST, FLUX_LINK_COST, mimicUseCost, vengeanceCost, vengeanceBonus, vengeanceShares, pathLevels, extraAttackRoll, combinedRoll, rollDice, sheetState, withSheetState,
+  npcShows, hideNpcNames, UNKNOWN_NPC_NAME, ECO_COST, EXTRA_COST, EXTRA_REFINED_COST, CHAMADO_COST, FUSION_COST, FLUX_LINK_COST, mimicUseCost, vengeanceCost, vengeanceBonus, vengeanceShares, pathLevels, extraAttackRoll, combinedRoll, rollDice, sheetState, withSheetState,
   attackRoll, canTripleCrit, weaponAttrFor, counterRoll, damageRoll, danceStep, derived, dieFor, forceFlux, initiativeRoll, nomenclatureLabel, nomenclatureLevelLabel, attrLabelFor,
   karmaDamageBonus, karmaMaximum, weaponByKey, weaponRules, techniqueRules, upgradedDamage, protectRoll, syncLevelWith, stageIndexFor, isHuman, agonyStatus, agonyLabel, forceActionLabel, isTechAgent,
   type Attr, type Campaign, type Character, type NomenclatureKind, type Npc,
@@ -185,6 +185,10 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   }, [combatants, campaign.combat_active]);
 
   const masterMode = isMaster || !userId;
+  /** O Mestre vê tudo; jogadores só veem do NPC o que o Mestre deixou ligado (nome, vida, ficha). */
+  const npcHides = (c: Combatant, what: 'name' | 'hp' | 'sheet') => !masterMode && !!c.npc && !npcShows(c.npc, what);
+  const shownName = (c: Combatant) => npcHides(c, 'name') ? UNKNOWN_NPC_NAME : c.name;
+  const [openNpcSheet, setOpenNpcSheet] = useState('');
   const attacker = masterMode
     ? (combatants.find(c => c.id === (attackerId || current?.id)) ?? combatants[0])
     : combatants.find(c => c.id === myCharacterId) ?? undefined;
@@ -292,7 +296,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
       </>}
     </div>;
   }
-  const log = (lines: string[]) => saveCampaign({ ...campaign, log: [...lines.reverse(), ...campaign.log] });
+  const log = (lines: string[]) => saveCampaign({ ...campaign, log: [...lines.map(l => hideNpcNames(l, npcs)).reverse(), ...campaign.log] });
   function setResources(c: Combatant, pv: number | null, pf: number | null) {
     if (c.npc) saveNpc({ ...c.npc, pv_current: pv === null ? c.npc.pv_current : Math.max(0, Math.min(c.pvMax, pv)), pf_current: pf === null ? c.npc.pf_current : Math.max(0, Math.min(c.pfMax, pf)) });
     else updateSheet(c.id, pv, pf);
@@ -527,8 +531,9 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
         <div className="combat-list">{combatants.map((c, i) => <div key={c.id} className={`combatant ${current?.id === c.id ? 'current' : ''}`}>
           <span className="combatant-number">{c.initiative ?? '—'}</span>
           <span className="combatant-icon">{c.kind === 'npc' ? <Skull /> : <Users />}</span>
-          <span className="flex-1"><strong>{c.name}</strong><small>{c.pv} / {c.pvMax} PV · <span className="text-flux">{c.pf} / {c.pfMax} PF</span> · Esq {c.esquiva} · Bloq {c.bloqueio}{c.pc ? agonyLabel(c.pc) : (c.pv === 0 ? ' · AGONIA' : '')}{campaign.combat_active ? (reactionAvailable(c) ? ' · Reação ✓' : ' · Reação usada') : ''}{lostAction[c.id] ? (lostAction[c.id] === 'all' ? ' · sem ação' : ' · sem ação padrão') : ''}</small>
+          <span className="flex-1"><strong>{shownName(c)}</strong><small>{npcHides(c, 'hp') ? 'vida oculta' : `${c.pv} / ${c.pvMax} PV`}{npcHides(c, 'sheet') ? '' : <> · <span className="text-flux">{c.pf} / {c.pfMax} PF</span> · Esq {c.esquiva} · Bloq {c.bloqueio}</>}{c.pc ? agonyLabel(c.pc) : (c.pv === 0 ? ' · AGONIA' : '')}{campaign.combat_active ? (reactionAvailable(c) ? ' · Reação ✓' : ' · Reação usada') : ''}{lostAction[c.id] ? (lostAction[c.id] === 'all' ? ' · sem ação' : ' · sem ação padrão') : ''}</small>
             {c.pc && campaign.combat_active && (taken[c.id] ?? 0) > 0 && (() => { const lvl = pathLevels(c.pc!).vinganca; if (lvl < 1) return null; const sh = vengeanceShares(taken[c.id] ?? 0); const mark = (n: number) => lvl === n ? 'text-karma font-semibold' : ''; return <span className="mt-1 block"><span className="field-kicker text-karma">VINGANÇA KARMÁTICA</span><small className="block">Dano recebido: <strong>{taken[c.id]}</strong></small><small className="block"><span className={mark(1)}>⅓ = {sh.third}</span> · <span className={mark(2)}>½ = {sh.half}</span> · <span className={mark(3)}>completo = {sh.full}</span></small></span>; })()}
+            {!masterMode && c.npc && npcShows(c.npc, 'sheet') && <span className="mt-1 block"><button type="button" className="text-[11px] underline" onClick={() => setOpenNpcSheet(openNpcSheet === c.id ? '' : c.id)}>{openNpcSheet === c.id ? 'Fechar ficha' : 'Ver ficha'}</button>{openNpcSheet === c.id && <small className="block muted-copy">Corpo {c.corpo} · Mente {c.mente} · Espírito {c.espirito} · Esquiva {c.esquiva} · Bloqueio {c.bloqueio} · PV {npcShows(c.npc, 'hp') ? `${c.pv}/${c.pvMax}` : 'ocultos'} · PF {c.pf}/{c.pfMax}{c.npc.notes ? ` · ${c.npc.notes}` : ''}</small>}</span>}
             {campaign.combat_active && current?.id === c.id && <span className="mt-1 flex flex-wrap gap-1" aria-label="Ações do turno">{([['free', 'Livre'], ['std', 'Padrão'], ['move', 'Deslocamento']] as const).map(([k, label]) => { const used = (acts[c.id] ?? { free: false, std: false, move: false })[k]; return <button type="button" key={k} aria-pressed={used} title={used ? `Ação ${label.toLowerCase()} já usada neste turno (clique para desfazer)` : `Marcar a ação ${label.toLowerCase()} como usada`} onClick={() => toggleAct(c.id, k)} className={`rounded-full border px-2 py-0.5 text-[11px] ${used ? 'border-border text-muted-foreground line-through' : 'border-primary text-foreground'}`}>{label}</button>; })}</span>}
           </span>
           <Button variant="outline" size="sm" title="Rolar iniciativa" aria-label={`Rolar iniciativa de ${c.name}`} onClick={() => c.npc ? rollNpcInitiative(c.npc) : rollPcInitiative(c)}><Dices /> Iniciativa</Button>
@@ -555,8 +560,8 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
         {!masterMode && isMyTurn && attackerLost && <p className="empty-copy">Você sacrificou {lostAction[attacker!.id] === 'all' ? 'a ação inteira' : 'a ação padrão'} neste turno por causa do Bloqueio.</p>}
         {attacker && target ? <div className="field-stack">
           <div className="input-grid">
-            {masterMode ? <label className="field"><span className="field-label">ATACANTE</span><select value={attacker.id} onChange={e => { setAttackerId(e.target.value); selectOption('desarmado_leve'); }}>{combatants.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label> : <div className="field"><span className="field-label">ATACANTE</span><strong>{attacker.name} · {isMyTurn ? 'SEU TURNO' : 'AGUARDE'}</strong></div>}
-            <label className="field"><span className="field-label">ALVO</span><select value={target.id} onChange={e => { setTargetId(e.target.value); setPending(null); setArea(null); }} disabled={!masterMode && !isMyTurn}>{targets.map(c => <option key={c.id} value={c.id}>{c.name} (Esq {c.esquiva})</option>)}</select></label>
+            {masterMode ? <label className="field"><span className="field-label">ATACANTE</span><select value={attacker.id} onChange={e => { setAttackerId(e.target.value); selectOption('desarmado_leve'); }}>{combatants.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label> : <div className="field"><span className="field-label">ATACANTE</span><strong>{shownName(attacker)} · {isMyTurn ? 'SEU TURNO' : 'AGUARDE'}</strong></div>}
+            <label className="field"><span className="field-label">ALVO</span><select value={target.id} onChange={e => { setTargetId(e.target.value); setPending(null); setArea(null); }} disabled={!masterMode && !isMyTurn}>{targets.map(c => <option key={c.id} value={c.id}>{shownName(c)}{npcHides(c, 'sheet') ? '' : ` (Esq ${c.esquiva})`}</option>)}</select></label>
           </div>
           {masterMode && <label className="field"><span className="field-label">MODO DE ATAQUE</span><select value={mode} onChange={e => { setMode(e.target.value as 'single' | 'full' | 'half'); setPending(null); setArea(null); }}><option value="single">Um alvo</option><option value="full">Todos os inimigos · dano total</option><option value="half">Todos os inimigos · metade do dano</option></select></label>}
           {masterMode && mode === 'single' && <label className="field"><span className="field-label">REAÇÃO DE {target.name.toUpperCase()} {reactionAvailable(target) ? '' : '· JÁ USADA NESTA RODADA (ataque acerta sem defesa)'}</span><select value={reactionValid} onChange={e => { setChosenReaction(e.target.value as Reaction); setPending(null); }} disabled={!reactionAvailable(target)}>{reactionOptions.map(r => <option key={r.value} value={r.value} disabled={r.disabled}>{r.label}</option>)}</select></label>}
