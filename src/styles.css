@@ -491,3 +491,5 @@ html{scroll-behavior:smooth}body{font-family:'DM Sans',sans-serif;background:#10
 .tdice-pair{display:flex;gap:6px;flex-wrap:wrap}
 .tdice-pair>*{flex:1;min-width:70px}
 .tdice-presets .field-kicker{margin-top:4px}
+.tdice-note{color:#3db89a;font-size:11px}
+.tdice-warn{color:#e0505d;font-size:11px}
