@@ -336,19 +336,52 @@ export function nomenclatureFamilies(c: Pick<Character, 'nomenclatures'>) {
   return [...map.values()].map(g => ({ ...g, items: [...g.items].sort((a, b) => KIND_ORDER[a.item.kind ?? 'Direta'] - KIND_ORDER[b.item.kind ?? 'Direta']) }));
 }
 /** Dados, custo e bônus de uma Nomenclatura conforme o caminho Nomenclatura (Aprimorada 5 GS · Dominada 7 GS · Favorita 10 GS). */
+/** Efeito escrito pelo jogador no 10 GS (Arma/Corpo Estilizada e Nomenclatura Favorita), lido como regra de jogo.
+ * Reconhece: dados extras de dano ("mais 1d6 de dano", "+1d8"), dano fixo ("+2 de dano") e bloqueio ignorado
+ * ("ignora 3 de bloqueio"; sem número, "ignora o bloqueio" ignora tudo). Cláusulas com veneno, sangramento ou "por rodada"
+ * não viram dado de dano: aparecem como nota no resultado. O texto fica salvo exatamente como foi escrito. */
+export function parseEffect(text: string) {
+  const raw = (text ?? '').trim();
+  const dice: string[] = []; const notes: string[] = []; let flat = 0; let ignoreBlock = 0;
+  const lower = raw.toLowerCase();
+  const ign = /(?:ignor\w*|perfur\w*|atravess\w*)\s+(?:mais\s+)?(\d+)\s*(?:pontos?\s+)?(?:de|do|da)?\s*bloqueio/.exec(lower);
+  if (ign) ignoreBlock = Number(ign[1]);
+  else if (/(?:ignor\w*|perfur\w*|atravess\w*)\s+(?:todo\s+|todos\s+)?(?:o\s+|os\s+)?bloqueio/.test(lower)) ignoreBlock = 999;
+  for (const clause of lower.split(/[;,.\n]|\se\s/)) {
+    const c = clause.trim(); if (!c) continue;
+    if (/bloqueio/.test(c)) continue;
+    if (/veneno|sangr|queim|por rodada|por turno|a cada rodada|cont[ií]nu|paralis|atordo|lent|congel|corro/.test(c)) { notes.push(c); continue; }
+    const withoutDice = c.replace(/(\d+)\s*d\s*(\d+)/g, (m, n, s) => { const sides = Number(s), count = Number(n); if ([4, 6, 8, 10, 12, 20].includes(sides) && count >= 1 && count <= 6) dice.push(`${count}d${sides}`); return ' '; });
+    const f = /(?:\+|mais|causa|d[aá]|adiciona|soma)\s*(\d+)\s*(?:pontos?\s+)?(?:de\s+)?dano/.exec(withoutDice);
+    if (f) flat += Number(f[1]);
+  }
+  return { raw, dice, flat, ignoreBlock, notes };
+}
+/** Resumo legível do que o jogo entendeu do texto (mostrado ao salvar e junto do dano). */
+export function describeEffect(text: string) {
+  const p = parseEffect(text); const parts: string[] = [];
+  if (p.dice.length) parts.push(`+${p.dice.join(' + ')} de dano`);
+  if (p.flat) parts.push(`+${p.flat} de dano fixo`);
+  if (p.ignoreBlock) parts.push(p.ignoreBlock >= 999 ? 'ignora todo o bloqueio' : `ignora ${p.ignoreBlock} de bloqueio`);
+  if (p.notes.length) parts.push(`nota: ${p.notes.join('; ')}`);
+  return parts;
+}
 export function techniqueRules(c: Character, n: Nomenclature) {
   const kind = n.kind ?? 'Direta';
   const st = sheetState(c);
   const rank = st.nomRank;
   const upgrade = st.techniqueUpgrades[techniqueKey(n)] ?? st.techniqueUpgrades[n.name] ?? {};
   const die = dieFor(c.espirito) ?? 4;
+  const fav = parseEffect(upgrade.favorite && upgrade.favorite !== 'Versão Favorita' ? upgrade.favorite : '');
   return {
     kind, rank, upgrade,
+    /** Efeito da versão Favorita escrito pelo jogador: bloqueio ignorado e nota que acompanham o dano. */
+    ignoreBlock: fav.ignoreBlock, effectNote: fav.raw,
     dice: NOMENCLATURE_DICE[kind], critDice: NOMENCLATURE_CRIT_DICE[kind],
     cost: Math.max(0, NOMENCLATURE_COST[kind] - (rank >= 2 && kind !== 'Direta' ? 2 : 0)),
     /** Aprimorada: dado de ESPÍRITO no dano. Dominada: dado + valor fixo. */
-    extraDice: rank >= 1 ? [`1d${die}`] : [] as string[],
-    bonus: rank >= 2 ? c.espirito : 0,
+    extraDice: [...(rank >= 1 ? [`1d${die}`] : []), ...fav.dice] as string[],
+    bonus: (rank >= 2 ? c.espirito : 0) + fav.flat,
   };
 }
 /** Dano de uma Nomenclatura. Direta/Parcial: crítico dobra todos os dados (inclusive o de ESPÍRITO). Completa: crítico é sempre 12d8 puro. */
@@ -363,7 +396,8 @@ export function weaponRules(c: Character, type = c.weapon_type, common = sheetSt
   const attr: Attr = unarmed || common ? 'corpo' : weaponAttrFor(c.lineage);
   const rank = common || unarmed ? 0 : sheetState(c).weaponRank;
   /** Sem evolução: valor fixo. Evoluído (rank 1): dado do atributo no lugar do fixo. Dominado (rank 2): dado + valor fixo. */
-  return { attr, bonus: rank === 1 ? 0 : c[attr], extraDice: rank > 0 ? [`1d${dieFor(c[attr]) ?? 4}`] : [] as string[], rank };
+  const eff = unarmed || common ? parseEffect('') : parseEffect(sheetState(c).specialEffect);
+  return { attr, bonus: (rank === 1 ? 0 : c[attr]) + eff.flat, extraDice: [...(rank > 0 ? [`1d${dieFor(c[attr]) ?? 4}`] : []), ...eff.dice] as string[], rank, ignoreBlock: eff.ignoreBlock, effectNote: eff.raw };
 }
 /** Quem escolheu Arma / Corpo Estilizada no marco de 10 GS pode gastar 10 PF para o efeito único de crítico: dados ×3 no crítico E margem de crítico reduzida. */
 export function canTripleCrit(c: Character) {
