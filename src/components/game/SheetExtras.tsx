@@ -5,7 +5,7 @@ import { Stepper } from './Controls';
 import {
   ELO_ACTIONS, LINEAGE_STAGES, NOMENCLATURE_COST, NOMENCLATURE_DICE, NOMENCLATURE_CRIT_DICE, REST_TYPES, TRIPLE_CRIT_COST, WEAPONS,
   attackRoll, absorbPf, canTripleCrit, combinedRoll, stylizedCritThreshold, nomenclatureDamage, nomenclatureLabel, nomenclatureLevelLabel, applyMilestone, milestoneKey, milestoneNeedsTechnique, milestoneOptions, milestoneOptionsFor, milestonePath, nomenclatureFamilies, techniqueKey, restRoll, stageIndexFor,
-  damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, weaponRules, techniqueRules, upgradedDamage, isTechAgent, absorbActionLabel, attrLabelFor, sheetState, withSheetState,
+  describeEffect, damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, weaponRules, techniqueRules, upgradedDamage, isTechAgent, absorbActionLabel, attrLabelFor, sheetState, withSheetState,
   SHARE_MIN_SYNC, PROTECTION_MIN_ELO, syncLevelWith, pfShareBlock, pathLevels, mimicCapacity, FLUX_LINK_COST, MIMIC_RECORD_COST, mimicUseCost, vengeanceCost, ECO_COST, EXTRA_COST, EXTRA_REFINED_COST, CHAMADO_COST,
   agonyStatus, agonyEnter, agonyFailure, agonyUndo, agonyLeave, agonySacrifice, AGONY_MAX_FAILURES,
   type Attr, type Character, type NomenclatureKind, type RestType,
@@ -198,7 +198,7 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
       <Button variant="outline" disabled={!type || !last || last.fumble} onClick={() => {
         const crit = !!last?.crit;
         const d = upgradedDamage(dice, bonus, crit, wr.extraDice, last?.tripled ? 3 : 2); setDmg({ total: d.total, dice: d.dice, bonus, crit });
-        addRoll({ expression: d.expression, dice: d.dice, modifier: bonus, total: d.total, source: `Dano da arma${crit ? ` — CRÍTICO (dados ${last?.tripled ? '×3' : 'dobrados'})` : ''}`, crit });
+        addRoll({ expression: d.expression, dice: d.dice, modifier: bonus, total: d.total, source: `Dano da arma${crit ? ` — CRÍTICO (dados ${last?.tripled ? '×3' : 'dobrados'})` : ''}${wr.ignoreBlock ? ` · ignora ${wr.ignoreBlock >= 999 ? 'todo o' : `${wr.ignoreBlock} de`} bloqueio` : ''}${wr.effectNote ? ` · Efeito: ${wr.effectNote}` : ''}`, crit });
       }} className={last?.crit ? 'action-critical' : ''}><Dices /> Rolar dano{last?.crit ? ' crítico' : ''}</Button>
     </div>
     {last && <div className={`combat-banner ${last.fumble ? 'banner-miss' : last.crit ? 'banner-crit' : 'banner-neutral'}`}><strong>{last.fumble ? 'FALHA CRÍTICA! 1 NATURAL' : last.crit ? `CRÍTICO! ${last.d20} NO D20` : `ATAQUE: ${last.total}`}</strong><span>1d20 [{last.d20}] + 1d{last.attrDie} [{last.attrRoll}] = {last.total}{last.fumble ? ' · erra sempre, qualquer que seja a soma' : last.crit ? ' · só é crítico se o total superar ou igualar a Esquiva do alvo; dados de dano dobrados' : ' · compare com a Esquiva do alvo (empate favorece quem ataca)'}</span></div>}
@@ -283,7 +283,7 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
             if (!result) return;
             const d = nomenclatureDamage(character, item, result.crit, karmaDamageBonus(character));
             setResult({ ...result, damage: d.total, dice: d.dice });
-            addRoll({ expression: d.expression, dice: d.dice, modifier: d.bonus, total: d.total, source: `${nomenclatureLabel(character.lineage)} · ${item.name} — ${nomenclatureLevelLabel(character.lineage, t.kind)} · dano${result.crit ? ' CRÍTICO' : ''}`, crit: result.crit });
+            addRoll({ expression: d.expression, dice: d.dice, modifier: d.bonus, total: d.total, source: `${nomenclatureLabel(character.lineage)} · ${item.name} — ${nomenclatureLevelLabel(character.lineage, t.kind)} · dano${result.crit ? ' CRÍTICO' : ''}${t.ignoreBlock ? ` · ignora ${t.ignoreBlock >= 999 ? 'todo o' : `${t.ignoreBlock} de`} bloqueio` : ''}${t.effectNote ? ` · Efeito: ${t.effectNote}` : ''}`, crit: result.crit });
           }}><Dices /> Rolar dano</Button>
           <select aria-label="Nomenclatura a que esta versão pertence" value={techniqueKey(item)} onChange={e => update({ nomenclatures: character.nomenclatures.map((n, j) => j === i ? { ...n, family: e.target.value === '__own' ? n.name : e.target.value } : n) })}>{families.map(f => <option key={f.key} value={f.key}>Faz parte de: {f.name}</option>)}<option value="__own">Separar como nomenclatura própria</option></select>
           <Button size="icon" variant="ghost" title="Excluir técnica" aria-label="Excluir técnica" onClick={() => update({ nomenclatures: character.nomenclatures.filter((_, j) => j !== i) })}><Trash2 /></Button>
@@ -325,7 +325,8 @@ export function GsPanel({ character, update }: { character: Character; update: U
         <p>{info.text}</p></>}
         {ready && <div className="field-stack mt-3">
           {needsTech && <Field label="NOMENCLATURA ESCOLHIDA"><select value={technique} onChange={e => setTechnique(e.target.value)}><option value="">Escolher</option>{nomenclatureFamilies(character).filter(f => !st.techniqueUpgrades[f.key]?.favorite).map(f => <option key={f.key} value={f.key}>{f.name} ({f.items.length} {f.items.length > 1 ? 'versões' : 'versão'})</option>)}</select></Field>}
-          {askEffect && <Field label={needsTech ? 'O QUE A VERSÃO FAVORITA PASSA A FAZER (COM O MESTRE)' : 'EFEITO ESPECIAL (COM O MESTRE)'}><input value={effect} onChange={e => setEffect(e.target.value)} /></Field>}
+          {askEffect && <Field label={needsTech ? 'O QUE A VERSÃO FAVORITA PASSA A FAZER (COM O MESTRE)' : 'EFEITO ESPECIAL (COM O MESTRE)'}><input value={effect} onChange={e => setEffect(e.target.value)} placeholder="Ex.: mais 1d6 de dano, mais 1d8 de dano e ignora 3 de bloqueio" /></Field>}
+          {askEffect && effect.trim() && <small className="muted-copy">O jogo entendeu: {describeEffect(effect).join(' · ') || 'nenhum número (fica só como nota no resultado)'}</small>}
           <Button variant="outline" disabled={needsTech && !technique} onClick={() => {
             const next = applyMilestone(character, gs, choice, technique, effect.trim());
             if (!next) { setMsg('Não foi possível aplicar este marco.'); return; }
@@ -335,8 +336,38 @@ export function GsPanel({ character, update }: { character: Character; update: U
         </div>}
       </div>;
     })}
+    <EffectEditor character={character} update={update} />
     {msg && <p role="status" className="auth-message">{msg}</p>}
     {canAdvance && <Button variant="outline" className="action-flux" onClick={() => { update({ stage: stages[stage + 1]!.name }); setMsg(character.lineage === 'Arcadiano' ? 'Avanço de estágio: ganhe +1 ponto de atributo (respeitando o teto do estágio) e aprenda duas novas Nomenclaturas.' : 'Avanço de estágio: ganhe +1 ponto de atributo (respeitando o teto do estágio) e aprenda uma nova Nomenclatura.'); }}><Sparkles /> Avançar para {stages[stage + 1]!.name}</Button>}
+  </div>;
+}
+
+/** Efeito especial do 10 GS (Arma/Corpo Estilizada e versão Favorita da Nomenclatura): edite e salve. O jogo lê dados extras, dano fixo e bloqueio ignorado e soma isso a todo dano da arma ou da técnica. */
+export function EffectEditor({ character, update }: { character: Character; update: Update }) {
+  const st = sheetState(character);
+  const weaponStylized = Object.entries(st.milestoneChoices).some(([k, v]) => k.endsWith(':10') && (v === 'arma' || v === 'corpo'));
+  const favs = nomenclatureFamilies(character).filter(f => st.techniqueUpgrades[f.key]?.favorite);
+  const [wText, setWText] = useState(st.specialEffect);
+  const [fText, setFText] = useState<Record<string, string>>({});
+  const [msg, setMsg] = useState('');
+  useEffect(() => { setWText(st.specialEffect); }, [st.specialEffect]);
+  if (!weaponStylized && !favs.length) return null;
+  const note = (text: string) => { const d = describeEffect(text); return d.length ? `Salvo. O jogo entendeu: ${d.join(' · ')}.` : 'Salvo. Nenhum número reconhecido: o texto aparece como nota no resultado.'; };
+  return <div className="passive">
+    <span className="field-kicker">EFEITO ESPECIAL DO 10 GS · FICA SALVO NA FICHA</span>
+    <p>Escreva o que a arma ou a versão Favorita faz. O jogo entende dados extras ("mais 1d6 de dano, mais 1d8 de dano"), dano fixo ("+2 de dano") e bloqueio ignorado ("ignora 3 de bloqueio"), e soma isso em todo dano que ela causar, no crítico também (os dados dobram). Veneno e outros efeitos aparecem como nota no resultado.</p>
+    {weaponStylized && <div className="field-stack">
+      <Field label="ARMA / CORPO ESTILIZADO"><input value={wText} onChange={e => setWText(e.target.value)} placeholder="Ex.: mais 1d6 de dano, mais 1d8 de dano e ignora 3 de bloqueio" /></Field>
+      <small className="muted-copy">Reconhecido agora: {describeEffect(wText).join(' · ') || 'nenhum número (fica como nota)'}</small>
+      <Button variant="outline" disabled={wText.trim() === st.specialEffect.trim()} onClick={() => { update({ abilities: withSheetState(character, { specialEffect: wText.trim() }) }); setMsg(`Arma: ${note(wText)}`); }}>Salvar efeito da arma</Button>
+    </div>}
+    {favs.map(f => { const cur = st.techniqueUpgrades[f.key]?.favorite ?? ''; const val = fText[f.key] ?? cur;
+      return <div className="field-stack" key={f.key}>
+        <Field label={`VERSÃO FAVORITA · ${f.name.toUpperCase()}`}><input value={val} onChange={e => setFText({ ...fText, [f.key]: e.target.value })} placeholder="Ex.: mais 1d8 de dano e ignora 2 de bloqueio" /></Field>
+        <small className="muted-copy">Reconhecido agora: {describeEffect(val).join(' · ') || 'nenhum número (fica como nota)'}</small>
+        <Button variant="outline" disabled={val.trim() === cur.trim()} onClick={() => { update({ abilities: withSheetState(character, { techniqueUpgrades: { ...st.techniqueUpgrades, [f.key]: { ...st.techniqueUpgrades[f.key], favorite: val.trim() } } }) }); setMsg(`${f.name}: ${note(val)}`); }}>Salvar efeito de {f.name}</Button>
+      </div>; })}
+    {msg && <p role="status" className="auth-message">{msg}</p>}
   </div>;
 }
 

@@ -20,7 +20,7 @@ type Combatant = {
 /** Opção de ataque: dado base + valor fixo + dados extras (evoluções) + bônus de Karma. Tudo vem das tabelas do Códice (game.ts). */
 type AttackOption = {
   id: string; label: string; hitAttr: Attr; dice: string[]; fixed: number; extra: string[]; pfCost: number; karma: number;
-  nomenclature: boolean; nomKind?: NomenclatureKind; melee: boolean; critFlat?: string; fusion?: boolean;
+  nomenclature: boolean; nomKind?: NomenclatureKind; melee: boolean; critFlat?: string; fusion?: boolean; /** Efeito do 10 GS escrito pelo jogador: bloqueio que o golpe ignora e nota mostrada no resultado. */ ignoreBlock?: number; effectNote?: string;
 };
 /** Habilidades de GS escolhidas antes do ataque: Ataque Extra, Vingança Karmática e Mimetismo. */
 type Special = { extra?: 'basic' | 'refined'; venge?: boolean; mimic?: string; eco?: boolean };
@@ -63,9 +63,9 @@ function toCombatants(party: Character[], npcs: Npc[]): Combatant[] {
 function weaponOption(c: Combatant, id: string, prefix: string, key: string): AttackOption | null {
   const w = weaponByKey(key); if (!w) return null;
   const karma = c.pc ? karmaDamageBonus(c.pc) : 0;
-  const rules = c.pc ? weaponRules(c.pc, key) : { attr: 'corpo' as Attr, bonus: c.corpo, extraDice: [] as string[], rank: 0 };
+  const rules = c.pc ? weaponRules(c.pc, key) : { attr: 'corpo' as Attr, bonus: c.corpo, extraDice: [] as string[], rank: 0, ignoreBlock: 0, effectNote: '' };
   const parts = [w.dice[0]!, ...rules.extraDice, ...(rules.bonus ? [attrLabelFor(rules.attr, c.pc?.lineage)] : [])];
-  return { id, label: `${prefix} (${parts.join(' + ')})`, hitAttr: rules.attr, dice: [w.dice[0]!], fixed: rules.bonus, extra: rules.extraDice, pfCost: 0, karma, nomenclature: false, melee: key !== 'fogo' };
+  return { id, label: `${prefix} (${parts.join(' + ')})`, hitAttr: rules.attr, dice: [w.dice[0]!], fixed: rules.bonus, extra: rules.extraDice, pfCost: 0, karma, nomenclature: false, melee: key !== 'fogo', ...(rules.ignoreBlock ? { ignoreBlock: rules.ignoreBlock } : {}), ...(rules.effectNote ? { effectNote: rules.effectNote } : {}) };
 }
 function optionsFor(c: Combatant): AttackOption[] {
   const opts: AttackOption[] = [];
@@ -79,7 +79,7 @@ function optionsFor(c: Combatant): AttackOption[] {
     pc.nomenclatures.forEach((n, i) => {
       const t = techniqueRules(pc, n);
       const parts = [t.dice, ...t.extraDice, ...(t.bonus ? [attrLabelFor('espirito', pc.lineage)] : [])];
-      opts.push({ id: `nom-${i}`, label: `${nomenclatureLabel(pc.lineage)} · ${n.name} · ${nomenclatureLevelLabel(pc.lineage, n.kind)} (dano ${parts.join(' + ')} · ${t.cost} PF)`, hitAttr: 'espirito', dice: [t.dice], fixed: t.bonus, extra: t.extraDice, pfCost: t.cost, karma, nomenclature: true, nomKind: t.kind, melee: false, ...(t.kind === 'Completa' ? { critFlat: NOMENCLATURE_CRIT_DICE.Completa } : {}) });
+      opts.push({ id: `nom-${i}`, label: `${nomenclatureLabel(pc.lineage)} · ${n.name} · ${nomenclatureLevelLabel(pc.lineage, n.kind)} (dano ${parts.join(' + ')} · ${t.cost} PF)`, hitAttr: 'espirito', dice: [t.dice], fixed: t.bonus, extra: t.extraDice, pfCost: t.cost, karma, nomenclature: true, nomKind: t.kind, melee: false, ...(t.ignoreBlock ? { ignoreBlock: t.ignoreBlock } : {}), ...(t.effectNote ? { effectNote: t.effectNote } : {}), ...(t.kind === 'Completa' ? { critFlat: NOMENCLATURE_CRIT_DICE.Completa } : {}) });
     });
   } else {
     WEAPONS.filter(w => w.attr !== 'corpo').forEach(w => add(weaponOption(c, `npc-${w.key}`, `Arma · ${w.label}`, w.key)));
@@ -92,7 +92,7 @@ function fusionOption(c: Combatant, i: number, j: number): AttackOption | null {
   const A = pc.nomenclatures[i], B = pc.nomenclatures[j]; if (!A || !B) return null;
   const ta = techniqueRules(pc, A), tb = techniqueRules(pc, B); const bonus = ta.bonus + tb.bonus;
   const parts = [ta.dice, ...ta.extraDice, tb.dice, ...tb.extraDice];
-  return { id: `fusion-${i}-${j}`, label: `Fusão · ${A.name} + ${B.name} (dano ${parts.join(' + ')}${bonus ? ` + ${bonus}` : ''} · ${FUSION_COST} PF)`, hitAttr: 'espirito', dice: [ta.dice], fixed: bonus, extra: [tb.dice, ...ta.extraDice, ...tb.extraDice], pfCost: FUSION_COST, karma: karmaDamageBonus(pc), nomenclature: false, melee: false, fusion: true };
+  return { id: `fusion-${i}-${j}`, label: `Fusão · ${A.name} + ${B.name} (dano ${parts.join(' + ')}${bonus ? ` + ${bonus}` : ''} · ${FUSION_COST} PF)`, hitAttr: 'espirito', dice: [ta.dice], fixed: bonus, extra: [tb.dice, ...ta.extraDice, ...tb.extraDice], pfCost: FUSION_COST, karma: karmaDamageBonus(pc), nomenclature: false, melee: false, fusion: true, ...(Math.max(ta.ignoreBlock, tb.ignoreBlock) ? { ignoreBlock: Math.max(ta.ignoreBlock, tb.ignoreBlock) } : {}) };
 }
 /** Acha uma opção de ataque pelo id (inclui as fusões, que são montadas na hora). */
 function findOption(c: Combatant, id: string): AttackOption | undefined {
@@ -466,14 +466,15 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     }
     const extra = humanReadBonus(a, t) + (pending.vengeBonus ?? 0);
     const d = optionDamage(pending.option, pending.dice, pending.crit, extra, pending.triple && pending.crit ? 3 : 2);
-    const final = Math.max(0, d.total - pending.block); const pv = Math.max(0, t.pv - final);
-    setPending({ ...pending, damage: { raw: d.total, dice: d.dice, bonus: d.bonus, block: pending.block, final } });
+    const ignored = Math.min(pending.block, pending.option.ignoreBlock ?? 0); const effBlock = pending.block - ignored;
+    const final = Math.max(0, d.total - effBlock); const pv = Math.max(0, t.pv - final);
+    setPending({ ...pending, damage: { raw: d.total, dice: d.dice, bonus: d.bonus, block: effBlock, final } });
     const vk = pending.vengeKarma ?? 0; let vkNote = '';
     if (vk && t.pc && patchSheet) { patchSheet(t.pc, { pv_current: pv, karma: Math.min(karmaMaximum(t.pc.mente, t.pc.espirito), t.pc.karma + vk) }); vkNote = ` · +${vk} Karma em ${t.name} (Vingança Karmática Absoluta)`; }
     else if (vk && t.npc && npcSheet(t.npc) && !isMonster(npcSheet(t.npc)!)) { const ns = npcSheet(t.npc)!; saveNpc(applyNpcSheetPatch({ ...t.npc, pv_current: pv }, { karma: Math.min(karmaMaximum(ns.mente, ns.espirito), ns.karma + vk) })); vkNote = ` · +${vk} Karma em ${t.name} (Vingança Karmática Absoluta)`; }
     else { setResources(t, pv, null); if (vk) vkNote = ` · aplique ${vk} Karma em ${t.name} (Vingança Karmática Absoluta)`; }
     addRoll({ expression: d.expression, dice: d.dice, modifier: d.bonus, total: d.total, source: `Dano em ${t.name}${pending.crit ? ' — CRÍTICO' : ''}`, crit: pending.crit });
-    log([`Dano${pending.crit ? ` CRÍTICO! (dados ${pending.triple ? 'triplicados' : 'dobrados'})` : ''}: ${d.expression} = ${d.total}${pending.block ? ` − bloqueio ${pending.block}` : ''} = ${final}. ${t.name}: ${t.pv} → ${pv} PV${pv === 0 ? ' — entra em AGONIA' : ''}${pending.vengeBonus ? ` · Vingança Karmática: +${pending.vengeBonus} de dano` : ''}${vkNote}`]);
+    log([`Dano${pending.crit ? ` CRÍTICO! (dados ${pending.triple ? 'triplicados' : 'dobrados'})` : ''}: ${d.expression} = ${d.total}${pending.block ? ` − bloqueio ${effBlock}${ignored ? ` (o efeito ignorou ${ignored} de ${pending.block})` : ''}` : ''} = ${final}${pending.option.effectNote ? ` · Efeito: ${pending.option.effectNote}` : ''}. ${t.name}: ${t.pv} → ${pv} PV${pv === 0 ? ' — entra em AGONIA' : ''}${pending.vengeBonus ? ` · Vingança Karmática: +${pending.vengeBonus} de dano` : ''}${vkNote}`]);
   }
 
   /** O Chamado (Corpo Moldado, 10 GS): 5 PF; cada alvo a curto alcance faz um teste de ESPÍRITO contra a DT do Mestre ou é atraído. */

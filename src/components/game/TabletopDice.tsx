@@ -283,13 +283,15 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
     const t = techniqueRules(character!, n);
     const normal = { dice: expand([t.dice, ...t.extraDice]), bonus: t.bonus };
     const crit = t.kind === 'Completa' ? { dice: expand([NOMENCLATURE_CRIT_DICE.Completa]), bonus: 0 } : { dice: expand([t.dice, ...t.extraDice], 2), bonus: t.bonus };
-    return { t, normal, crit };
+    const eff = `${t.ignoreBlock ? ` · ignora ${t.ignoreBlock >= 999 ? 'todo o' : `${t.ignoreBlock} de`} bloqueio` : ''}${t.effectNote ? ` · Efeito: ${t.effectNote}` : ''}`;
+    return { t, normal, crit, eff };
   };
   const weaponRoll = (() => {
     if (!character) return null;
     const type = weaponByKey(character.weapon_type); if (!type) return null;
     const wr = weaponRules(character);
-    return { name: type.label, normal: { dice: expand([...type.dice, ...wr.extraDice]), bonus: wr.bonus }, crit: { dice: expand([...type.dice, ...wr.extraDice], 2), bonus: wr.bonus } };
+    const eff = `${wr.ignoreBlock ? ` · ignora ${wr.ignoreBlock >= 999 ? 'todo o' : `${wr.ignoreBlock} de`} bloqueio` : ''}${wr.effectNote ? ` · Efeito: ${wr.effectNote}` : ''}`;
+    return { name: type.label, eff, normal: { dice: expand([...type.dice, ...wr.extraDice]), bonus: wr.bonus }, crit: { dice: expand([...type.dice, ...wr.extraDice], 2), bonus: wr.bonus } };
   })();
   const presets = character ? (() => {
     const atk = weaponAttrFor(character.lineage) as Attr; const lin = character.lineage;
@@ -369,8 +371,8 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
           {weaponRoll && weaponRoll.normal.dice.length > 0 && <>
             <span className="field-kicker">ARMA · {weaponRoll.name.toUpperCase()}</span>
             <div className="tdice-pair">
-              <Button variant="outline" size="sm" onClick={() => launch(weaponRoll.normal.dice, `Dano · ${weaponRoll.name}${karmaBonus ? ` (+${karmaBonus} Karma)` : ''}`, 'sum', weaponRoll.normal.bonus + karmaBonus)}><Dices /> Dano</Button>
-              <Button variant="outline" size="sm" onClick={() => launch(weaponRoll.crit.dice, `Dano crítico · ${weaponRoll.name}${karmaBonus ? ` (+${karmaBonus} Karma)` : ''}`, 'sum', weaponRoll.crit.bonus + karmaBonus)}><Dices /> Crítico</Button>
+              <Button variant="outline" size="sm" onClick={() => launch(weaponRoll.normal.dice, `Dano · ${weaponRoll.name}${karmaBonus ? ` (+${karmaBonus} Karma)` : ''}${weaponRoll.eff}`, 'sum', weaponRoll.normal.bonus + karmaBonus)}><Dices /> Dano</Button>
+              <Button variant="outline" size="sm" onClick={() => launch(weaponRoll.crit.dice, `Dano crítico · ${weaponRoll.name}${karmaBonus ? ` (+${karmaBonus} Karma)` : ''}${weaponRoll.eff}`, 'sum', weaponRoll.crit.bonus + karmaBonus)}><Dices /> Crítico</Button>
             </div>
           </>}
           {character && character.nomenclatures.length > 0 && <>
@@ -383,8 +385,8 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
                   const d20 = v[0] ?? 0;
                   return { note: `−${r.t.cost} PF${d20 === 20 ? ' · CRÍTICO se acertar' : d20 === 1 ? ' · FALHA CRÍTICA' : ''}`, apply: c => ({ pf_current: Math.max(0, c.pf_current - r.t.cost) }), log: { expression: `1d20 + 1d${spDie}`, dice: v, modifier: 0, total: (v[0] ?? 0) + (v[1] ?? 0), source: `Nomenclatura · ${n.name} · acerto (−${r.t.cost} PF)`, crit: d20 === 20 } };
                 })}>Acerto</Button>
-                <Button variant="outline" size="sm" title="Dano da Nomenclatura (quando acerta)" onClick={() => launch(r.normal.dice, `Dano · ${n.name}${karmaBonus ? ` (+${karmaBonus} Karma)` : ''}`, 'sum', r.normal.bonus + karmaBonus)}>Dano</Button>
-                <Button variant="outline" size="sm" title="Dano em crítico" onClick={() => launch(r.crit.dice, `Crítico · ${n.name}${karmaBonus ? ` (+${karmaBonus} Karma)` : ''}`, 'sum', r.crit.bonus + karmaBonus)}>Crítico</Button>
+                <Button variant="outline" size="sm" title="Dano da Nomenclatura (quando acerta)" onClick={() => launch(r.normal.dice, `Dano · ${n.name}${karmaBonus ? ` (+${karmaBonus} Karma)` : ''}${r.eff}`, 'sum', r.normal.bonus + karmaBonus)}>Dano</Button>
+                <Button variant="outline" size="sm" title="Dano em crítico" onClick={() => launch(r.crit.dice, `Crítico · ${n.name}${karmaBonus ? ` (+${karmaBonus} Karma)` : ''}${r.eff}`, 'sum', r.crit.bonus + karmaBonus)}>Crítico</Button>
               </div>
             </div>; })}
           </>}
