@@ -11,6 +11,7 @@ import {
   type Attr, type Character, type NomenclatureKind, type RestType,
 } from '@/lib/game';
 import { milestoneText } from '@/lib/milestones';
+import { parseNomenclatureText } from '@/lib/nomenclature-parser';
 
 export type RollEntry = { expression: string; dice: number[]; modifier: number; total: number; source?: string; crit?: boolean };
 type Update = (partial: Partial<Character>) => void;
@@ -206,32 +207,6 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
   </div>;
 }
 
-type ParsedTechnique = { name: string; kind: NomenclatureKind; effect: string };
-
-/** Lê o texto no formato: "DIRETA — 2 PF" / nome / texto. Dano e custo vêm sempre da tabela do Códice (o texto só define tipo, nome e efeito). */
-function parseNomenclatureText(text: string): ParsedTechnique[] {
-  const kinds: Record<string, NomenclatureKind> = { direta: 'Direta', parcial: 'Parcial', completa: 'Completa' };
-  const out: ParsedTechnique[] = [];
-  let cur: ParsedTechnique | null = null;
-  let needName = false;
-  for (const raw of text.split(/\r?\n/)) {
-    const line = raw.trim();
-    if (!line) continue;
-    const head = line.match(/^\W*(direta|parcial|completa)\b/i);
-    if (head && /PF/i.test(line)) {
-      cur = { name: '', kind: kinds[head[1]!.toLowerCase()]!, effect: '' };
-      out.push(cur);
-      needName = true;
-      continue;
-    }
-    if (!cur) continue;
-    if (/^dano\s*:/i.test(line)) continue;
-    if (needName) { cur.name = line; needName = false; continue; }
-    cur.effect = cur.effect ? `${cur.effect}\n${line}` : line;
-  }
-  return out.filter(p => p.name);
-}
-
 /** Nomenclaturas: nome e tipo. Dano, crítico e custo de PF seguem a escala de Recitação (Direta 1d6/2 PF · Parcial 2d8/5 PF · Completa 6d8/12 PF). */
 export function NomenclaturesTab({ character, update, addRoll }: { character: Character; update: Update; addRoll: AddRoll }) {
   const [draft, setDraft] = useState<{ name: string; kind: NomenclatureKind; family: string } | null>(null);
@@ -239,6 +214,13 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
   const [pasteText, setPasteText] = useState('');
   const [result, setResult] = useState<{ name: string; attack: number; d20: number; attrDie: number; attrRoll: number; crit: boolean; fumble: boolean; damage?: number; dice?: number[] } | null>(null);
   const parsed = draft ? parseNomenclatureText(pasteText) : [];
+  const importedFamilies = [...new Set(parsed.map(p => draft?.family || p.family))];
+  const incomplete = importedFamilies.flatMap(group => {
+    const present = new Set(parsed.filter(p => (draft?.family || p.family) === group).map(p => p.kind));
+    const missing = (['Direta', 'Parcial', 'Completa'] as NomenclatureKind[]).filter(kind => !present.has(kind));
+    return missing.length ? [`${group}: falta ${missing.join(', ')}`] : [];
+  });
+  const differentCosts = parsed.filter(p => p.declaredCost !== undefined && p.declaredCost !== NOMENCLATURE_COST[p.kind]);
   const closeDraft = () => { setDraft(null); setPasteText(''); };
   const kinds: NomenclatureKind[] = ['Direta', 'Parcial', 'Completa'];
   return <div className="single-section">
@@ -247,16 +229,20 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
       <div className="panel-head"><h3>Nova {nomenclatureLabel(character.lineage)}</h3></div>
       <div className="field-stack">
         <Field label="COLE O TEXTO COMPLETO (DIRETA, PARCIAL E COMPLETA)">
-          <textarea rows={10} value={pasteText} onChange={e => setPasteText(e.target.value)} placeholder={'⚡ DIRETA — 2 PF\nNOME DA TÉCNICA\ntexto...\n🌘 PARCIAL — 5 PF\n...'} />
+          <textarea rows={10} value={pasteText} onChange={e => setPasteText(e.target.value)} placeholder={'## NOMENCLATURA: NOME DA TÉCNICA\n### DIRETA — 2 PF\nNome: Nome do grau direto\nEfeito: ...\n### PARCIAL — 5 PF\nNome: Nome do grau parcial\nEfeito: ...\n### COMPLETA — 12 PF\nNome: Nome do grau completo\nEfeito: ...'} />
         </Field>
-        {pasteText.trim() && <p className="empty-copy">{parsed.length
-          ? `Reconhecido: ${parsed.map(p => `${p.kind} · ${p.name} · ${NOMENCLATURE_DICE[p.kind]} (crítico ${NOMENCLATURE_CRIT_DICE[p.kind]}) · ${NOMENCLATURE_COST[p.kind]} PF`).join('  |  ')}`
-          : 'Nada reconhecido ainda. Confira se cada versão começa com uma linha como "DIRETA — 2 PF".'}</p>}
+        {pasteText.trim() && <div className="field-stack" role="status" aria-live="polite">
+          <p className="empty-copy">{parsed.length
+            ? `Reconhecido: ${parsed.length} versão(ões) em ${importedFamilies.length} nomenclatura(s). ${parsed.map(p => `${p.family}: ${p.kind} · ${p.name} · ${NOMENCLATURE_DICE[p.kind]} (crítico ${NOMENCLATURE_CRIT_DICE[p.kind]}) · ${NOMENCLATURE_COST[p.kind]} PF`).join('  |  ')}`
+            : 'Nenhum grau reconhecido. Use DIRETA, PARCIAL e COMPLETA como títulos de linhas (com ou sem custo em PF).'}
+          </p>
+          {!!incomplete.length && <p className="empty-copy">Atenção: nem todas as nomenclaturas têm os três graus. {incomplete.join(' | ')}.</p>}
+          {!!differentCosts.length && <p className="empty-copy">Atenção: o custo de PF do texto difere do Códice em {differentCosts.map(p => `${p.family} (${p.kind}: texto ${p.declaredCost}, sistema ${NOMENCLATURE_COST[p.kind]})`).join('; ')}. Ao salvar, prevalece o custo do Códice.</p>}
+        </div>}
         {parsed.length > 0 && <div className="flex gap-2"><Button onClick={() => {
-          const family = draft!.family || (parsed.find(p => p.kind === 'Direta') ?? parsed[0]!).name;
-          update({ nomenclatures: [...character.nomenclatures, ...parsed.map(p => ({ name: p.name, cost: NOMENCLATURE_COST[p.kind], kind: p.kind, family, ...(p.effect ? { effect: p.effect } : {}) }))] });
+          update({ nomenclatures: [...character.nomenclatures, ...parsed.map(p => ({ name: p.name, cost: NOMENCLATURE_COST[p.kind], kind: p.kind, family: draft!.family || p.family, ...(p.effect ? { effect: p.effect } : {}) }))] });
           closeDraft();
-        }}><Plus /> Salvar {parsed.length} {parsed.length > 1 ? 'versões' : 'versão'} do texto</Button></div>}
+        }}><Plus /> Salvar {parsed.length} {parsed.length > 1 ? 'versões' : 'versão'} ({importedFamilies.length} {importedFamilies.length > 1 ? 'nomenclaturas' : 'nomenclatura'})</Button></div>}
         <Field label="NOME DA TÉCNICA"><input value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} placeholder="Nome da técnica" /></Field>
         <Field label="FAZ PARTE DE"><select value={draft.family} onChange={e => setDraft({ ...draft, family: e.target.value })}><option value="">Nova nomenclatura</option>{families.map(f => <option key={f.key} value={f.key}>{f.name} (outra versão dela)</option>)}</select></Field>
         <Field label={`TIPO DE ${nomenclatureLabel(character.lineage).toUpperCase()}`}><select value={draft.kind} onChange={e => setDraft({ ...draft, kind: e.target.value as NomenclatureKind })}>
