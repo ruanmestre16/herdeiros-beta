@@ -23,3 +23,12 @@
 .tc-compact .tc-quick-adjust{gap:7px}
 .tc-percent small{white-space:nowrap}
 @media(max-width:480px){.tc-heading{flex-wrap:wrap}.tc-quick-adjust{width:100%;justify-content:space-between;margin-left:0}.tc-compact .tc-heading strong{font-size:13px}}
+
+/* Forçar Núcleo exclusivamente como ação compacta dentro de Combate → Fluxo e carga. */
+.tc-force-only{gap:12px;padding:15px;margin-top:12px}
+.tc-force-only .tc-force-stats{display:flex;flex-wrap:wrap;gap:9px}
+.tc-force-only .tc-force-stats>span{display:flex;align-items:baseline;justify-content:space-between;gap:16px;flex:1 1 135px;padding:9px 12px;border-radius:9px;background:#ffffff0a;border:1px solid #ffffff1a;font-size:11px;color:#c5d4db}
+.tc-force-only .tc-force-stats strong{font-size:15px;color:#f1f7fa;font-variant-numeric:tabular-nums}
+.tc-force-only .tc-actions{align-items:center}
+.tc-force-only .tc-actions button{min-width:175px}
+@media(max-width:480px){.tc-force-only .tc-actions button{width:100%}}

@@ -9,11 +9,15 @@ import type { RollEntry } from './SheetExtras';
 import './tech-core-stability.css';
 
 type Update = (patch: Partial<Character>) => void;
-export function TechCoreStability({ character, update, addRoll, compact = false }: {
+export function TechCoreStability({ character, update, addRoll, compact = false, forceOnly = false, showForce = true }: {
   character: Character;
   update?: Update;
   addRoll?: (entry: RollEntry) => void;
   compact?: boolean;
+  /** Mostra apenas a ação de Forçar Núcleo em Combate → Fluxo e carga. */
+  forceOnly?: boolean;
+  /** Mantém o estado e os ajustes +/− visíveis, sem repetir a ação de combate. */
+  showForce?: boolean;
 }) {
   const [last, setLast] = useState('');
   if (!isTechAgent(character.lineage)) return null;
@@ -33,6 +37,21 @@ export function TechCoreStability({ character, update, addRoll, compact = false 
       source: `Forçar Núcleo · ${character.name} · +${f.pf} PN (${nextPn - character.pf_current} armazenados), +${f.karma} Destruição do Núcleo` });
     setLast(`Forçou o Núcleo: +${f.pf} PN gerados, +${f.karma} Destruição. Nova integridade: ${Math.max(0, Math.round((1 - nextRisk / max) * 100))}%.${nextRisk >= max ? ' NÚCLEO CONSUMIDO — resolva com o Mestre.' : ''}`);
   }
+
+  if (forceOnly) return <section className={`tc-stability tc-force-only tc-${risk.stage}`} aria-label="Forçar Núcleo em Fluxo e carga">
+    <header className="tc-heading">
+      <span className="tc-icon"><Zap size={21}/></span>
+      <div><span className="tc-overline">AGENTE TECNOLÓGICO · AÇÃO LIVRE</span><strong>Forçar Núcleo</strong></div>
+    </header>
+    <p className="tc-description">Role os d20 de TECNOLOGIA para gerar PN. Metade dos PN gerados aumenta a Destruição do Núcleo, mesmo se os PN já estiverem cheios.</p>
+    <div className="tc-force-stats"><span>PN atuais <strong>{character.pf_current}/{character.pf_max}</strong></span><span>Destruição <strong>{current}/{max} · {percent}%</strong></span></div>
+    {consumed && <p className="tc-critical" role="alert"><AlertTriangle size={18}/> Núcleo consumido. Novas ativações indisponíveis até a resolução do Mestre.</p>}
+    <div className="tc-actions">
+      <Button type="button" variant="outline" className="tc-force" disabled={!update || !addRoll || consumed} onClick={force}><Zap size={17}/> Forçar Núcleo</Button>
+      <span className="tc-force-hint"><Cpu size={15}/> {Math.max(1,character.espirito)}d20 de TECNOLOGIA → metade em PN → metade dos PN gerados em Destruição.</span>
+    </div>
+    {last && <p className="tc-last" role="status"><Sparkles size={14}/>{last}</p>}
+  </section>;
 
   return <section className={`tc-stability tc-${risk.stage}${compact ? ' tc-compact' : ''}`} aria-label="Integridade do Núcleo">
     <header className="tc-heading">
@@ -58,10 +77,10 @@ export function TechCoreStability({ character, update, addRoll, compact = false 
       <div className={percent>=70?'tc-reached':''}><strong>70%</strong><span>Autodestruição Iminente</span><small>+5 de dano, pulsos elétricos</small></div>
       <div className={percent>=100?'tc-reached':''}><strong>100%</strong><span>Núcleo Consumido</span><small>Colapso e decisão narrativa</small></div>
     </div>}
-    {update&&<div className="tc-actions">
+    {update && showForce && <div className="tc-actions">
 
-      {addRoll&&<Button type="button" variant="outline" className="tc-force" disabled={consumed} onClick={force}><Zap size={17}/> Forçar Núcleo</Button>}
-      <span className="tc-force-hint"><Cpu size={15}/> Rola {Math.max(1,character.espirito)}d20 de TECNOLOGIA: metade vira PN; metade dos PN gerados aumenta a destruição.</span>
+      {showForce && addRoll && <Button type="button" variant="outline" className="tc-force" disabled={consumed} onClick={force}><Zap size={17}/> Forçar Núcleo</Button>}
+      {showForce && <span className="tc-force-hint"><Cpu size={15}/> Rola {Math.max(1,character.espirito)}d20 de TECNOLOGIA: metade vira PN; metade dos PN gerados aumenta a destruição.</span>}
     </div>}
     {last&&<p className="tc-last" role="status"><Sparkles size={14}/>{last}</p>}
     <p className="tc-small">O campo técnico é salvo na ficha existente. A destruição não é GS e não altera as trilhas de evolução. Reparos e consequências dependem do Mestre.</p>
