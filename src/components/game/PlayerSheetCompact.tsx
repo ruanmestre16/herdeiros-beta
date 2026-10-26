@@ -12,11 +12,12 @@ const buttons: {id:Section, icon:typeof UserRound}[] = [
 ];
 const lineages = [{value:'Humano',label:'Humano · padrão'},{value:'Agente Tecnológico',label:'Humano · Agente Tecnológico'},{value:'Arcadiano',label:'Arcadiano'},{value:'Gaki',label:'Gaki'}];
 
-export function PlayerSheetCompact({ character:c, onUpdate, onOpenDetail, onTab, notice }: {
+export function PlayerSheetCompact({ character:c, onUpdate, onOpenDetail, onTab, onRoll, notice }: {
  character:Character;
  onUpdate:(p:Partial<Character>)=>void;
  onOpenDetail:()=>void;
  onTab:(tab:SectionTab)=>void;
+ onRoll:(expression:string,source?:string)=>unknown;
  notice?:string;
 }) {
  const [section,setSection]=useState<Section>('Resumo');
@@ -65,7 +66,7 @@ export function PlayerSheetCompact({ character:c, onUpdate, onOpenDetail, onTab,
    {section==='Atributos'&&<div className="h-sheet-compact-flow">
      <div className="h-sheet-section-title"><h3>Atributos</h3><p>Os limites de estágio e de evolução continuam valendo. Pontos distribuídos não podem ser retirados após serem confirmados.</p></div>
      <div className="h-sheet-points"><span>Pontos livres no estágio {attr.stage}</span><strong>{attr.free} <small>/ {attr.budget}</small></strong></div>
-     {(['corpo','mente','espirito'] as const).map(key=><div className="h-sheet-attr-editor" key={key}><div><strong>{attrLabelFor(key,c.lineage)}</strong><small>Dado do atributo: 1d{dieFor(c[key])}</small></div><Stepper label="VALOR" value={c[key]} min={1} max={attr.cap} onChange={v=>changeAttr(key,v)}/></div>)}
+     {(['corpo','mente','espirito'] as const).map(key=><div className="h-sheet-attr-editor" key={key}><div><strong>{attrLabelFor(key,c.lineage)}</strong><small>Dado do atributo: 1d{dieFor(c[key])}</small></div><Stepper label="VALOR" value={c[key]} min={1} max={attr.cap} onChange={v=>changeAttr(key,v)}/><Button variant="outline" size="sm" onClick={()=>onRoll(`1d${dieFor(c[key])}`,`Teste de ${attrLabelFor(key,c.lineage)}`)}><Dices size={15}/> Rolar</Button></div>)}
      {notice&&<p className="h-sheet-error" role="alert">{notice}</p>}
      <div className="h-sheet-metrics"><div><small>PV BASE</small><strong>{derivedStats.pv}</strong></div><div><small>ESQUIVA</small><strong>{derivedStats.esquiva}</strong></div><div><small>BLOQUEIO</small><strong>{derivedStats.bloqueio}</strong></div><div><small>MOVIMENTO</small><strong>{derivedStats.deslocamento}m</strong></div></div>
    </div>}
