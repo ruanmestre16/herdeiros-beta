@@ -62,7 +62,7 @@ export const NOMENCLATURE_DICE: Record<NomenclatureKind, string> = { Direta: '1d
 export const NOMENCLATURE_CRIT_DICE: Record<NomenclatureKind, string> = { Direta: '2d6', Parcial: '4d8', Completa: '12d8' };
 export const NOMENCLATURE_COST: Record<NomenclatureKind, number> = { Direta: 2, Parcial: 5, Completa: 12 };
 export const NOMENCLATURE_LABEL: Record<NomenclatureKind, string> = { Direta: 'Nomeação Direta (Nome Curto) · 1d6 · 2 PF', Parcial: 'Recitação Parcial (O Chamado) · 2d8 · 5 PF', Completa: 'Recitação Completa (Verdadeira) · 6d8 · 12 PF' };
-const TECH_NOMENCLATURE_LABEL: Record<NomenclatureKind, string> = { Direta: 'Ativação Padrão · 1d6 · 2 PF', Parcial: 'Ativação Forçada · 2d8 · 5 PF', Completa: 'Liberação Total de Núcleo · 6d8 · 12 PF' };
+const TECH_NOMENCLATURE_LABEL: Record<NomenclatureKind, string> = { Direta: 'Ativação Rápida · 1d6 · 2 PN', Parcial: 'Ativação Calibrada · 2d8 · 5 PN', Completa: 'Ativação Plena · 6d8 · 12 PN' };
 export function nomenclatureLabel(lineage: string, plural = false) {
   return isTechAgent(lineage) ? (plural ? 'Habilidades de Núcleo' : 'Habilidade de Núcleo') : (plural ? 'Nomenclaturas' : 'Nomenclatura');
 }
@@ -79,7 +79,7 @@ export const attrLabelFor = (attr: Attr, lineage?: string) => {
   return ATTR_LABEL[attr];
 };
 /** Atributo PADRÃO do ataque com arma: humanos MENTE (vontade), demais linhagens CORPO. Humanos podem escolher outro. */
-export const weaponAttrFor = (lineage: string): Attr => lineage === 'Humano' || isTechAgent(lineage) ? 'mente' : lineage === 'Arcadiano' ? 'espirito' : 'corpo';
+export const weaponAttrFor = (lineage: string): Attr => isTechAgent(lineage) ? 'espirito' : lineage === 'Humano' ? 'mente' : lineage === 'Arcadiano' ? 'espirito' : 'corpo';
 
 export function rollDice(count: number, sides: number) { return Array.from({ length: count }, () => 1 + Math.floor(Math.random() * sides)); }
 export function parseDice(expr: string) { const m = expr.match(/^(\d+)d(\d+)$/); return m ? { count: Number(m[1]), sides: Number(m[2]) } : null; }
