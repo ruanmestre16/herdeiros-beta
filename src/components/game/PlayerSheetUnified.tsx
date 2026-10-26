@@ -3,7 +3,7 @@ import { Activity, ArrowRight, BookOpen, Brain, Eye, ChevronDown, Dices, Heart, 
 import { Button } from '@/components/ui/button';
 import {
   attackRoll, derived, dieFor, isTechAgent, joinStory, nomenclatureFamilies,
-  nomenclatureLabel, rollDice, splitStory, weaponAttackAttrFor, sheetState, type Character,
+  nomenclatureLabel, rollDice, splitStory, weaponAttackAttrFor, sheetState, techCoreConsumed, type Character,
 } from '@/lib/game';
 import {
   ANCHOR_NAME, AbsorbPfAction, AbilitiesTab, AgonyPanel, CoinsPanel, EffectEditor,
@@ -14,6 +14,7 @@ import {
 import { PlayerSheetCompact } from './PlayerSheetCompact';
 import { GsControl } from './GsControl';
 import { TechAgentGsPanel, TechEyePanel } from './TechAgentGsPanel';
+import { TechCoreStability } from './TechCoreStability';
 import './sheet-unified.css';
 
 type Section = 'Ficha' | 'Combate' | 'Nomenclaturas' | 'Habilidades' | 'Inventário' | 'História' | 'Evolução';
@@ -109,7 +110,7 @@ export function PlayerSheetUnified({ character, update, addRoll, onRoll, tablema
  const label = nomenclatureLabel(character.lineage,true);
  const select=(next:Section)=>{setSection(next);if(next==='Nomenclaturas'||next==='Habilidades'||next==='Inventário'||next==='História')onTabChange?.(next);else onTabChange?.('Geral')};
  const attributes=[{name:'CORPO',value:character.corpo},{name:'MENTE',value:character.mente},{name:tech?'TECNOLOGIA':'ESPÍRITO',value:character.espirito}];
- function hitRoll() {const attr=weaponAttackAttrFor(character);const r=attackRoll(character[attr]);addRoll({expression:r.expression,dice:r.dice,modifier:0,total:r.total,crit:r.crit,source:`Ataque · ${character.name}${r.fumble?' — FALHA CRÍTICA':r.crit?' — CRÍTICO':''}`});setLastRoll(`Ataque: ${r.total} (${r.expression})${r.fumble?' · falha crítica':r.crit?' · crítico':''}`);}
+ function hitRoll() {if(techCoreConsumed(character)&&sheetState(character).weaponMode!=='comum')return;const attr=weaponAttackAttrFor(character);const r=attackRoll(character[attr]);addRoll({expression:r.expression,dice:r.dice,modifier:0,total:r.total,crit:r.crit,source:`Ataque · ${character.name}${r.fumble?' — FALHA CRÍTICA':r.crit?' — CRÍTICO':''}`});setLastRoll(`Ataque: ${r.total} (${r.expression})${r.fumble?' · falha crítica':r.crit?' · crítico':''}`);}
  function initiativeRoll(){const dice=rollDice(Math.max(1,character.corpo),20);const total=Math.max(...dice)+character.corpo;addRoll({expression:`${character.corpo}d20 (maior) + ${character.corpo}`,dice,modifier:character.corpo,total,source:`Iniciativa · ${character.name}`});update({initiative:total});setLastRoll(`Iniciativa: ${total}`);}
  return <div className="hu-sheet" data-sheet="unificada">
    <div className="hu-hero">
@@ -118,12 +119,12 @@ export function PlayerSheetUnified({ character, update, addRoll, onRoll, tablema
    </div>
    <nav className="hu-nav" aria-label="Áreas da ficha completa">{NAV.map(({id,icon:Icon,tip})=><button type="button" key={id} className={section===id?'hu-nav-active':''} aria-current={section===id?'page':undefined} title={tip} onClick={()=>select(id)}><Icon size={18}/><span>{id==='Nomenclaturas'?label:id}</span></button>)}</nav>
    <fieldset disabled={readOnly} className="hu-edit-scope">
-   {section==='Ficha'&&<PlayerSheetCompact character={character} onUpdate={update} onRoll={onRoll} {...(notice!==undefined?{notice}:{})} onOpenDetail={()=>select('Combate')} onTab={tab=>select(tab)}/>}
+   {section==='Ficha'&&<PlayerSheetCompact character={character} onUpdate={update} onRoll={onRoll} addRoll={addRoll} {...(notice!==undefined?{notice}:{})} onOpenDetail={()=>select('Combate')} onTab={tab=>select(tab)}/>}
    {section==='Combate'&&<div className="hu-content">
      <section className="hu-section-card">
        <header className="hu-section-head"><div><span>CONTROLES DE COMBATE</span><h3>Pronto para agir</h3><p>Rolagens rápidas e acesso às regras completas da arma.</p></div><Swords size={25}/></header>
        <div className="hu-stat-pills">{attributes.map(s=><span key={s.name}>{s.name} <strong>{s.value}</strong> · d{dieFor(s.value)}</span>)}</div>
-       <div className="hu-action-grid"><button type="button" disabled={!!corePending} onClick={hitRoll}><Swords size={24}/><strong>Rolar acerto</strong><small>{corePending ? 'Conceito ativado: use a rolagem detalhada abaixo' : '1d20 + dado do atributo'}</small></button><button type="button" onClick={initiativeRoll}><Dices size={24}/><strong>Iniciativa</strong><small>Maior d20 de CORPO + CORPO</small></button>{onCombat&&<button type="button" onClick={onCombat}><Activity size={24}/><strong>Combate ao vivo</strong><small>Abrir painel de turno e reações</small></button>}</div>
+       <div className="hu-action-grid"><button type="button" disabled={!!corePending || (techCoreConsumed(character) && sheetState(character).weaponMode !== 'comum')} onClick={hitRoll}><Swords size={24}/><strong>Rolar acerto</strong><small>{techCoreConsumed(character) ? 'Núcleo consumido: Arma de Núcleo indisponível' : corePending ? 'Conceito ativado: use a rolagem detalhada abaixo' : '1d20 + dado do atributo'}</small></button><button type="button" onClick={initiativeRoll}><Dices size={24}/><strong>Iniciativa</strong><small>Maior d20 de CORPO + CORPO</small></button>{onCombat&&<button type="button" onClick={onCombat}><Activity size={24}/><strong>Combate ao vivo</strong><small>Abrir painel de turno e reações</small></button>}</div>
        {corePending&&<p className="hu-result" role="status">Núcleo preparado: {corePending.name}. {corePending.mount==='arma'?'Use “Arma e dano” abaixo para aplicar o conceito e rolar o dano.':'Abra Habilidades de Núcleo para aplicar o conceito e rolar o dano.'}</p>}
        {lastRoll&&<p className="hu-result" role="status">{lastRoll}</p>}
        <p className="hu-muted">Quando você for atacado, suas reações continuam no painel de combate. Esta ficha não gasta sua reação automaticamente.</p>
@@ -151,8 +152,8 @@ export function PlayerSheetUnified({ character, update, addRoll, onRoll, tablema
      {!tech && <Block title="Caminhos de evolução" icon={Brain} summary="Nomenclatura, corpo, arma e estágios"><PathPanel character={character} update={update} addRoll={addRoll}/><EffectEditor character={character} update={update}/>{character.lineage==='Arcadiano'&&<EgoWeaponPanel character={character} update={update} addRoll={addRoll}/>}{character.lineage==='Gaki'&&<GakiPassive character={character} update={update} addRoll={addRoll}/>}</Block>}
      <Block title="Laços e Elo" icon={Heart} summary={`${character.sync.length} relações registradas`}><SyncEditor character={character} update={update}/></Block>
      <Block title="Moedas do Destino e Âncora" icon={Sparkles} summary="Resgates, rerrolagens e proteções"><CoinsPanel character={character} update={update}/></Block>
-     <Block title="Karma e riscos" icon={Shield} summary="Testes contra o Karma e consequências"><KarmaTest character={character} update={update} addRoll={addRoll}/></Block>
-     <Block title="Descanso" icon={HeartPulse} summary="Recuperação de PV e redução de Karma"><RestPanel character={character} update={update} addRoll={addRoll}/></Block>
+     {tech?<Block title="Integridade e destruição do Núcleo" icon={Shield} summary="Forçar Núcleo, 50%, 70% e 100% · consequência narrativa" initiallyOpen><TechCoreStability character={character} update={update} addRoll={addRoll}/></Block>:<Block title="Karma e riscos" icon={Shield} summary="Testes contra o Karma e consequências"><KarmaTest character={character} update={update} addRoll={addRoll}/></Block>}
+     <Block title="Descanso" icon={HeartPulse} summary={tech?"Recuperação de PV · manutenção do Núcleo com o Mestre":"Recuperação de PV e redução de Karma"}><RestPanel character={character} update={update} addRoll={addRoll}/></Block>
    </div>}
    </fieldset>
    <footer className="hu-sheet-footer"><span>✦ HERDEIROS · O DESPERTAR</span><span>Ficha integrada ao salvamento e à mesa existentes.</span></footer>

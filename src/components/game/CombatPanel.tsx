@@ -5,7 +5,7 @@ import {
   NOMENCLATURE_CRIT_DICE, PROTECTION_MIN_ELO, stylizedCritThreshold, TRIPLE_CRIT_COST, WEAPONS,
   npcShows, hideNpcNames, UNKNOWN_NPC_NAME, ECO_COST, EXTRA_COST, EXTRA_REFINED_COST, CHAMADO_COST, FUSION_COST, FLUX_LINK_COST, mimicUseCost, vengeanceCost, vengeanceBonus, vengeanceShares, pathLevels, extraAttackRoll, combinedRoll, rollDice, sheetState, withSheetState,
   attackRoll, canTripleCrit, weaponAttrFor, counterRoll, damageRoll, danceStep, derived, dieFor, forceFlux, initiativeRoll, nomenclatureLabel, nomenclatureLevelLabel, attrLabelFor,
-  karmaDamageBonus, karmaMaximum, weaponByKey, weaponRules, techniqueRules, upgradedDamage, protectRoll, syncLevelWith, stageIndexFor, isHuman, agonyStatus, agonyLabel, forceActionLabel, isTechAgent,
+  karmaDamageBonus, karmaMaximum, weaponByKey, weaponRules, techniqueRules, upgradedDamage, protectRoll, syncLevelWith, stageIndexFor, isHuman, agonyStatus, agonyLabel, forceActionLabel, isTechAgent, techCoreConsumed, coreDestructionPercent,
   type Attr, type Campaign, type Character, type NomenclatureKind, type Npc,
 } from '@/lib/game';
 import { AbsorbPfAction, type RollEntry } from './SheetExtras';
@@ -79,7 +79,7 @@ function toCombatants(party: Character[], npcs: Npc[]): Combatant[] {
 function weaponOption(c: Combatant, id: string, prefix: string, key: string): AttackOption | null {
   const w = weaponByKey(key); if (!w) return null;
   const owner = c.pc ?? (c.npc ? npcSheet(c.npc) : null);
-  const karma = c.kind === 'pc' && c.pc ? karmaDamageBonus(c.pc) : 0;
+  const karma = c.kind === 'pc' && c.pc ? karmaDamageBonus(c.pc) : owner && isTechAgent(owner.lineage) ? karmaDamageBonus(owner) : 0;
   const rules = owner ? weaponRules(owner, key) : { attr: 'corpo' as Attr, bonus: c.corpo, extraDice: [] as string[], rank: 0, ignoreBlock: 0, effectNote: '' };
   const base = owner ? weaponDiceFor(owner, key) : w.dice[0]!;
   const damageKind = owner && key === owner.weapon_type ? sheetState(owner).weaponDamageType : '';
@@ -93,9 +93,9 @@ function optionsFor(c: Combatant): AttackOption[] {
   add(weaponOption(c, 'desarmado_pesado', 'Físico · Desarmado médio/pesado', 'desarmado_pesado'));
   if (c.pc) {
     const pc = c.pc; const w = weaponByKey(pc.weapon_type);
-    if (w && w.attr !== 'corpo') add(weaponOption(c, 'arma', `Arma · ${pc.weapon || w.label}`, w.key));
+    if (w && w.attr !== 'corpo' && !techCoreConsumed(pc)) add(weaponOption(c, 'arma', `Arma · ${pc.weapon || w.label}`, w.key));
     const karma = karmaDamageBonus(pc);
-    pc.nomenclatures.forEach((n, i) => {
+    if (!techCoreConsumed(pc)) pc.nomenclatures.forEach((n, i) => {
       const t = techniqueRules(pc, n);
       const parts = [t.dice, ...t.extraDice, ...(t.bonus ? [attrLabelFor('espirito', pc.lineage)] : [])];
       opts.push({ id: `nom-${i}`, label: `${nomenclatureLabel(pc.lineage)} · ${n.name} · ${nomenclatureLevelLabel(pc.lineage, n.kind)} (dano ${parts.join(' + ')} · ${t.cost} ${isTechAgent(pc.lineage) ? "PN" : "PF"})`, hitAttr: 'espirito', dice: [t.dice], fixed: t.bonus, extra: t.extraDice, pfCost: t.cost, karma, nomenclature: true, nomKind: t.kind, melee: false, ...(t.ignoreBlock ? { ignoreBlock: t.ignoreBlock } : {}), ...(t.effectNote ? { effectNote: t.effectNote } : {}), ...(t.kind === 'Completa' ? { critFlat: NOMENCLATURE_CRIT_DICE.Completa } : {}) });
@@ -113,18 +113,19 @@ function optionsFor(c: Combatant): AttackOption[] {
         // Agentes MK atacam com TECNOLOGIA ao usar o Núcleo, mas um bastão/arma comum usa CORPO.
         // Preserva o dado base do ataque do Bestiário (a.attribute) sem trocar os atributos oficiais do monstro.
         const regular = /(?:bast[aã]o|sem n[uú]cleo|arma comum|desarmad|peda[cç]o de pau)/i.test(a.name);
+        if (sheet && techCoreConsumed(sheet) && !regular) return;
         const hitAttr: Attr = isTechAgent(sheet?.lineage ?? '') && !regular ? 'espirito' : 'corpo';
-        opts.push({ id: `best-${i}`, label: `${a.name} (${damage}${overrides?.damageType ? ` · ${overrides.damageType}` : ''})`, hitAttr, hitValue: isTechAgent(sheet?.lineage ?? '') ? c[hitAttr] : a.attribute, dice: [damage], fixed: 0, extra: [], pfCost: 0, karma: 0, nomenclature: false, melee: !/dist[aâ]ncia|pistola|proj[eé]til|EMP/i.test(a.name), ...(critical ? { criticalDamage: critical } : {}), effectNote: `Acerto: ${a.hit} · atributo: ${attrLabelFor(hitAttr, sheet?.lineage)}` });
+        opts.push({ id: `best-${i}`, label: `${a.name} (${damage}${overrides?.damageType ? ` · ${overrides.damageType}` : ''})`, hitAttr, hitValue: isTechAgent(sheet?.lineage ?? '') ? c[hitAttr] : a.attribute, dice: [damage], fixed: 0, extra: [], pfCost: 0, karma: sheet && isTechAgent(sheet.lineage) ? karmaDamageBonus(sheet) : 0, nomenclature: false, melee: !/dist[aâ]ncia|pistola|proj[eé]til|EMP/i.test(a.name), ...(critical ? { criticalDamage: critical } : {}), effectNote: `Acerto: ${a.hit} · atributo: ${attrLabelFor(hitAttr, sheet?.lineage)}` });
       });
     }
-    if (sheet?.weapon_type && weaponByKey(sheet.weapon_type)) add(weaponOption(c, 'npc-arma', `Arma · ${sheet.weapon || weaponByKey(sheet.weapon_type)?.label}`, sheet.weapon_type));
+    if (sheet?.weapon_type && weaponByKey(sheet.weapon_type) && (!techCoreConsumed(sheet) || sheetState(sheet).weaponMode==='comum')) add(weaponOption(c, 'npc-arma', `Arma · ${sheet.weapon || weaponByKey(sheet.weapon_type)?.label}`, sheet.weapon_type));
     if (!beast) WEAPONS.filter(w => w.attr !== 'corpo').forEach(w => add(weaponOption(c, `npc-${w.key}`, `Arma · ${w.label}`, w.key)));
   }
   return opts;
 }
 /** Fusão de Nomenclaturas (Nomenclatura Avançada, 10 GS): junta os dados de duas Nomenclaturas conhecidas numa técnica só. 12 PF; o ataque precisa acertar. Dano e efeito finais são combinados com o Mestre. */
 function fusionOption(c: Combatant, i: number, j: number): AttackOption | null {
-  const pc = c.pc; if (!pc || i === j) return null;
+  const pc = c.pc; if (!pc || i === j || techCoreConsumed(pc)) return null;
   const A = pc.nomenclatures[i], B = pc.nomenclatures[j]; if (!A || !B) return null;
   const ta = techniqueRules(pc, A), tb = techniqueRules(pc, B); const bonus = ta.bonus + tb.bonus;
   const parts = [ta.dice, ...ta.extraDice, tb.dice, ...tb.extraDice];
@@ -635,12 +636,12 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
 
   /** Forçar o Fluxo de um NPC/inimigo com ficha completa (mesma regra da ficha de jogador). */
   function npcForceFlux(n: Npc) {
-    const sheet = npcSheet(n); if (!sheet) return;
+    const sheet = npcSheet(n); if (!sheet || techCoreConsumed(sheet)) return;
     const f = forceFlux(sheet.espirito);
     const patch: Partial<Character> = { pf_current: Math.min(sheet.pf_max, sheet.pf_current + f.pf) };
-    if (!isMonster(sheet)) patch.karma = Math.min(karmaMaximum(sheet.mente, sheet.espirito), sheet.karma + f.karma);
+    if (!isMonster(sheet) || isTechAgent(sheet.lineage)) patch.karma = Math.min(karmaMaximum(sheet.mente, sheet.espirito), sheet.karma + f.karma);
     saveNpc(applyNpcSheetPatch(n, patch));
-    addRoll({ expression: f.expression, dice: f.dice, modifier: 0, total: f.total, source: `${forceActionLabel(sheet.lineage)}: ${n.name} (+${f.pf} PF${isMonster(sheet) ? '' : `, +${f.karma} Karma`})` });
+    addRoll({ expression: f.expression, dice: f.dice, modifier: 0, total: f.total, source: `${forceActionLabel(sheet.lineage)}: ${n.name} (+${f.pf} ${isTechAgent(sheet.lineage)?'PN':'PF'}${isMonster(sheet) ? '' : `, +${f.karma} ${isTechAgent(sheet.lineage)?'Destruição do Núcleo':'Karma'}`})` });
   }
   function rollPcInitiative(c: Combatant) {
     const r = initiativeRoll(c.corpo);
@@ -817,14 +818,14 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
         <div className="combat-list">{combatants.map((c, i) => <div key={c.id} className={`combatant ${current?.id === c.id ? 'current' : ''}`}>
           <span className="combatant-number">{c.initiative ?? '—'}</span>
           <span className="combatant-icon">{c.kind === 'npc' ? <Skull /> : <Users />}</span>
-          <span className="flex-1"><strong>{shownName(c)}</strong><small>{npcHides(c, 'hp') ? 'vida oculta' : `${c.pv} / ${c.pvMax} PV`}{npcHides(c, 'sheet') ? '' : <> · <span className="text-flux">{c.pf} / {c.pfMax} PF</span> · Esq {c.esquiva} · Bloq {c.bloqueio}</>}{c.pc ? agonyLabel(c.pc) : (c.pv === 0 ? ' · AGONIA' : '')}{campaign.combat_active ? (reactionAvailable(c) ? ' · Reação ✓' : ' · Reação usada') : ''}{lostAction[c.id] ? (lostAction[c.id] === 'all' ? ' · sem ação' : ' · sem ação padrão') : ''}</small>
+          <span className="flex-1"><strong>{shownName(c)}</strong><small>{npcHides(c, 'hp') ? 'vida oculta' : `${c.pv} / ${c.pvMax} PV`}{npcHides(c, 'sheet') ? '' : <> · <span className="text-flux">{c.pf} / {c.pfMax} {isTechAgent(c.pc?.lineage ?? (c.npc ? npcSheet(c.npc)?.lineage : '') ?? '') ? 'PN' : 'PF'}</span> · Esq {c.esquiva} · Bloq {c.bloqueio}</>}{c.pc ? agonyLabel(c.pc) : (c.pv === 0 ? ' · AGONIA' : '')}{c.pc&&isTechAgent(c.pc.lineage)?` · Destruição do Núcleo ${coreDestructionPercent(c.pc)}%`:''}{campaign.combat_active ? (reactionAvailable(c) ? ' · Reação ✓' : ' · Reação usada') : ''}{lostAction[c.id] ? (lostAction[c.id] === 'all' ? ' · sem ação' : ' · sem ação padrão') : ''}</small>
             {c.pc && campaign.combat_active && (taken[c.id] ?? 0) > 0 && (() => { const lvl = pathLevels(c.pc!).vinganca; if (lvl < 1) return null; const sh = vengeanceShares(taken[c.id] ?? 0); const mark = (n: number) => lvl === n ? 'text-karma font-semibold' : ''; return <span className="mt-1 block"><span className="field-kicker text-karma">VINGANÇA KARMÁTICA</span><small className="block">Dano recebido: <strong>{taken[c.id]}</strong></small><small className="block"><span className={mark(1)}>⅓ = {sh.third}</span> · <span className={mark(2)}>½ = {sh.half}</span> · <span className={mark(3)}>completo = {sh.full}</span></small></span>; })()}
             {!masterMode && c.npc && npcShows(c.npc, 'sheet') && <span className="mt-1 block"><button type="button" className="text-[11px] underline" onClick={() => setOpenNpcSheet(openNpcSheet === c.id ? '' : c.id)}>{openNpcSheet === c.id ? 'Fechar ficha' : 'Ver ficha'}</button>{openNpcSheet === c.id && <small className="block muted-copy">Corpo {c.corpo} · Mente {c.mente} · Espírito {c.espirito} · Esquiva {c.esquiva} · Bloqueio {c.bloqueio} · PV {npcShows(c.npc, 'hp') ? `${c.pv}/${c.pvMax}` : 'ocultos'} · PF {c.pf}/{c.pfMax}{c.npc.notes ? ` · ${c.npc.notes}` : ''}</small>}</span>}
             {campaign.combat_active && current?.id === c.id && <span className="mt-1 flex flex-wrap gap-1" aria-label="Ações do turno">{([['free', 'Livre'], ['std', 'Padrão'], ['move', 'Deslocamento']] as const).map(([k, label]) => { const used = (acts[c.id] ?? { free: false, std: false, move: false })[k]; return <button type="button" key={k} aria-pressed={used} title={used ? `Ação ${label.toLowerCase()} já usada neste turno (clique para desfazer)` : `Marcar a ação ${label.toLowerCase()} como usada`} onClick={() => toggleAct(c.id, k)} className={`rounded-full border px-2 py-0.5 text-[11px] ${used ? 'border-border text-muted-foreground line-through' : 'border-primary text-foreground'}`}>{label}</button>; })}</span>}
           </span>
           <Button variant="outline" size="sm" title="Rolar iniciativa" aria-label={`Rolar iniciativa de ${c.name}`} onClick={() => c.npc ? rollNpcInitiative(c.npc) : rollPcInitiative(c)}><Dices /> Iniciativa</Button>
           {(() => { const ns = c.npc ? npcSheet(c.npc) : null; if (!c.npc || !ns) return null; const npc = c.npc; return <>
-            <Button variant="outline" size="sm" className={isTechAgent(ns.lineage) ? 'action-force-nucleo' : 'action-force-karma'} title="Forçar o Fluxo" aria-label={`Forçar o Fluxo de ${c.name}`} onClick={() => npcForceFlux(npc)}><Sparkles /> {forceActionLabel(ns.lineage)}</Button>
+            <Button variant="outline" size="sm" className={isTechAgent(ns.lineage) ? 'action-force-nucleo' : 'action-force-karma'} title={forceActionLabel(ns.lineage)} aria-label={`${forceActionLabel(ns.lineage)} de ${c.name}`} disabled={techCoreConsumed(ns)} onClick={() => npcForceFlux(npc)}><Sparkles /> {forceActionLabel(ns.lineage)}</Button>
             <AbsorbPfAction character={ns} update={p => saveNpc(applyNpcSheetPatch(npc, p))} addRoll={addRoll} />
           </>; })()}
           {openSheet && (!masterMode ? c.id === myCharacterId : true) && <Button variant="outline" size="sm" title={masterMode ? 'Editar ficha' : 'Abrir ficha'} aria-label={`${masterMode ? 'Editar' : 'Abrir'} ficha de ${c.name}`} onClick={() => openSheet(c)}>{masterMode ? 'Editar ficha' : 'Abrir ficha'}</Button>}

@@ -5,7 +5,7 @@ import { Stepper } from './Controls';
 import {
   ELO_ACTIONS, LINEAGE_STAGES, NOMENCLATURE_COST, NOMENCLATURE_DICE, NOMENCLATURE_CRIT_DICE, REST_TYPES, TRIPLE_CRIT_COST, WEAPONS,
   attackRoll, absorbPf, canTripleCrit, combinedRoll, stylizedCritThreshold, nomenclatureDamage, nomenclatureLabel, nomenclatureLevelLabel, applyMilestone, milestoneKey, milestoneNeedsTechnique, milestoneOptions, milestoneOptionsFor, milestonePath, nomenclatureFamilies, techniqueKey, restRoll, stageIndexFor,
-  describeEffect, damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, weaponDiceFor, weaponRules, techniqueRules, upgradedDamage, isTechAgent, absorbActionLabel, forceActionLabel, attrLabelFor, sheetState, withSheetState,
+  describeEffect, damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, weaponDiceFor, weaponRules, techniqueRules, upgradedDamage, isTechAgent, absorbActionLabel, forceActionLabel, attrLabelFor, sheetState, withSheetState, techCoreConsumed,
   techCoreCompatible, techCoreExtraDamage,
   SHARE_MIN_SYNC, PROTECTION_MIN_ELO, syncLevelWith, pfShareBlock, pathLevels, mimicCapacity, FLUX_LINK_COST, MIMIC_RECORD_COST, mimicUseCost, vengeanceCost, ECO_COST, EXTRA_COST, EXTRA_REFINED_COST, CHAMADO_COST,
   agonyStatus, agonyEnter, agonyFailure, agonyUndo, agonyLeave, agonySacrifice, AGONY_MAX_FAILURES,
@@ -93,17 +93,17 @@ export function RestPanel({ character, update, addRoll }: { character: Character
   const [last, setLast] = useState('');
   const st = sheetState(character);
   return <div className="field-stack">
-    <Field label="TIPO DE DESCANSO"><select value={type} onChange={e => setType(e.target.value as RestType)}>{(Object.keys(REST_TYPES) as RestType[]).map(k => <option key={k} value={k}>{REST_TYPES[k].label} · {REST_TYPES[k].pv} PV · −{REST_TYPES[k].karma} Karma</option>)}</select></Field>
+    <Field label="TIPO DE DESCANSO"><select value={type} onChange={e => setType(e.target.value as RestType)}>{(Object.keys(REST_TYPES) as RestType[]).map(k => <option key={k} value={k}>{REST_TYPES[k].label} · {REST_TYPES[k].pv} PV{isTechAgent(character.lineage) ? ' · integridade do Núcleo: reparo narrativo' : ` · −${REST_TYPES[k].karma} Karma`}</option>)}</select></Field>
     <Button variant="outline" onClick={() => {
       const r = restRoll(type);
-      update({ pv_current: Math.min(character.pv_max, character.pv_current + r.pv.total), karma: Math.max(0, character.karma - r.karma.total) });
+      update({ pv_current: Math.min(character.pv_max, character.pv_current + r.pv.total), ...(isTechAgent(character.lineage) ? {} : { karma: Math.max(0, character.karma - r.karma.total) }) });
       addRoll({ expression: r.pv.expression, dice: r.pv.dice, modifier: 0, total: r.pv.total, source: `Descanso: +${r.pv.total} PV` });
-      addRoll({ expression: r.karma.expression, dice: r.karma.dice, modifier: 0, total: r.karma.total, source: `Descanso: −${r.karma.total} Karma` });
-      setLast(`Descansou: +${r.pv.total} PV e −${r.karma.total} Karma.`);
+      if(!isTechAgent(character.lineage))addRoll({ expression: r.karma.expression, dice: r.karma.dice, modifier: 0, total: r.karma.total, source: `Descanso: −${r.karma.total} Karma` });
+      setLast(isTechAgent(character.lineage)?`Descansou: +${r.pv.total} PV. Reparos na integridade do Núcleo ficam a critério do Mestre.`:`Descansou: +${r.pv.total} PV e −${r.karma.total} Karma.`);
     }}><Sparkles /> Descansar</Button>
     {last && <p role="status" className="auth-message">{last}</p>}
-    {st.anchorBroken && <p className="empty-copy">Âncora quebrada: reduzir Karma fica mais difícil. O Mestre julga a qualidade do descanso e pode diminuir a recuperação.</p>}
-    <p className="muted-copy text-xs">Descanso considerável é dormir, se acalmar, conversar sobre traumas ou passar tempo de qualidade fazendo algo que ama. O Mestre julga a cena e pode aumentar ou diminuir a cura.</p>
+    {!isTechAgent(character.lineage) && st.anchorBroken && <p className="empty-copy">Âncora quebrada: reduzir Karma fica mais difícil. O Mestre julga a qualidade do descanso e pode diminuir a recuperação.</p>}
+    <p className="muted-copy text-xs">{isTechAgent(character.lineage)?"O descanso recupera PV, mas a destruição do Núcleo exige manutenção e decisão do Mestre. Nenhuma reparação é concedida automaticamente.":"Descanso considerável é dormir, se acalmar, conversar sobre traumas ou passar tempo de qualidade fazendo algo que ama. O Mestre julga a cena e pode aumentar ou diminuir a cura."}</p>
   </div>;
 }
 
@@ -174,6 +174,7 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
   const wr = weaponRules(character);
   const karma = karmaDamageBonus(character);
   const bonus = wr.bonus + karma;
+  const burned = techCoreConsumed(character) && !common && wr.attr === 'espirito';
   const tripleOk = !!type && type.attr !== 'corpo' && !common && canTripleCrit(character) && character.pf_current >= TRIPLE_CRIT_COST;
   const stylizedThreshold = stylizedCritThreshold(character[wr.attr]);
   const damageText = type ? [dice, ...wr.extraDice, ...(wr.bonus ? [`${attrLabelFor(wr.attr, character.lineage)} (${character[wr.attr]})`] : [])].join(' + ') : '';
@@ -198,11 +199,12 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
     {st.weaponHistory?.length ? <details className="mt-2"><summary className="field-kicker" style={{cursor:'pointer'}}>HISTÓRICO DE ALTERAÇÕES DE DANO ({st.weaponHistory.length})</summary>
       {st.weaponHistory.map((entry, i) => <p key={i} className="empty-copy">{new Date(entry.at).toLocaleString('pt-BR')} · {entry.from} → {entry.to}{entry.damageType ? ` · ${entry.damageType}` : ''}</p>)}
     </details> : null}
+    {burned&&<p role="alert" className="empty-copy">NÚCLEO CONSUMIDO: a Arma de Núcleo não pode disparar. Armas comuns continuam usando CORPO até o Mestre definir a consequência narrativa.</p>}
     {type && <p className="weapon-summary">Ataque <strong>1d20 + 1d{dieFor(character[wr.attr]) ?? 4} ({attrLabelFor(wr.attr, character.lineage)})</strong> · Dano <strong>{damageText}</strong>{st.weaponDamageType ? <span> · {st.weaponDamageType}</span> : null}{karma ? <strong className="text-karma"> + {karma} Karma</strong> : null}<br /><span>{type.note}{wr.rank === 1 ? ' Evoluída: o dado do atributo substitui o valor fixo.' : wr.rank >= 2 ? ' Dominada: dado + valor fixo do atributo.' : ''}{common && type.attr !== 'corpo' ? ' Arma comum não recebe evoluções.' : ''}</span></p>}
     {st.techCorePending && <div className="passive"><strong>NÚCLEO ATIVADO · {st.techCorePending.name}</strong><p>{st.techCorePending.damage ? `Dano adicional: ${st.techCorePending.damage} (não multiplica no crítico). ` : ''}{st.techCorePending.effect}</p><p>PN já descontados. O bônus será aplicado ao próximo ataque tecnológico compatível.</p></div>}
     {tripleOk && <label className="anchor-toggle mt-3"><input type="checkbox" checked={triple} onChange={e => setTriple(e.target.checked)} /> Crítico Triplo (−{TRIPLE_CRIT_COST} {isTechAgent(character.lineage) ? "PN" : "PF"}: dados ×3 no crítico e crítico no d20 a partir de {stylizedThreshold} — gasta antes de saber se acerta)</label>}
     <div className="quick-actions mt-3">
-      <Button variant="outline" disabled={!type} onClick={() => {
+      <Button variant="outline" disabled={!type || burned} onClick={() => {
         const tripled = triple && tripleOk;
         const r = attackRoll(character[wr.attr], undefined, tripled ? stylizedThreshold : 20);
         const cost = tripled ? TRIPLE_CRIT_COST : 0;
@@ -278,7 +280,7 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
         <div className="nomen-head"><strong>{item.name}</strong><span>{nomenclatureLevelLabel(character.lineage, t.kind)} · dano {parts} (crítico {t.kind === 'Completa' ? `${t.critDice} puro` : `${t.critDice}${t.extraDice.length ? ` + ${t.extraDice.map(e => `2${e.slice(1)}`).join(' + ')}` : ''}${t.bonus ? ` + ${t.bonus}` : ''}`}) · <span className="text-flux">{t.cost} {resource}</span></span></div>
         {item.effect && <p className="empty-copy" style={{ whiteSpace: 'pre-line' }}>{item.effect}</p>}
         <div className="row-actions">
-          <Button size="sm" variant="outline" disabled={character.pf_current < t.cost} onClick={() => {
+          <Button size="sm" variant="outline" disabled={character.pf_current < t.cost || techCoreConsumed(character)} onClick={() => {
             const r = attackRoll(character.espirito);
             const core = techCoreCompatible(character, 'habilidade') ? sheetState(character).techCorePending : null;
             update({ pf_current: character.pf_current - t.cost, ...(core ? { abilities: withSheetState(character, { techCorePending: null }) } : {}) });
@@ -296,7 +298,8 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
           <select aria-label="Nomenclatura a que esta versão pertence" value={techniqueKey(item)} onChange={e => update({ nomenclatures: character.nomenclatures.map((n, j) => j === i ? { ...n, family: e.target.value === '__own' ? n.name : e.target.value } : n) })}>{families.map(f => <option key={f.key} value={f.key}>Faz parte de: {f.name}</option>)}<option value="__own">Separar como nomenclatura própria</option></select>
           <Button size="icon" variant="ghost" title="Excluir técnica" aria-label="Excluir técnica" onClick={() => update({ nomenclatures: character.nomenclatures.filter((_, j) => j !== i) })}><Trash2 /></Button>
         </div>
-        {character.pf_current < t.cost && <p className="empty-copy">{resource} insuficientes: use {forceActionLabel(character.lineage)} (ação livre) para gerar {resource}, ao custo de Karma.</p>}
+        {techCoreConsumed(character)&&<p className="empty-copy" role="alert">Núcleo consumido: Habilidades de Núcleo indisponíveis até a resolução do Mestre.</p>}
+        {character.pf_current < t.cost && !techCoreConsumed(character) && <p className="empty-copy">{resource} insuficientes: use {forceActionLabel(character.lineage)} (ação livre) para gerar {resource}, ao custo de {isTechAgent(character.lineage)?'destruição do Núcleo':'Karma'}.</p>}
       </div>;
     })}</div>; })}{!character.nomenclatures.length && <p className="empty-copy">Ainda não há {nomenclatureLabel(character.lineage, true).toLowerCase()} nesta ficha.</p>}</div>
   </div>;

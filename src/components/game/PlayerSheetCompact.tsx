@@ -3,6 +3,8 @@ import { BookOpen, Brain, ChevronRight, Dices, HeartPulse, ScrollText, Shield, S
 import { Button } from '@/components/ui/button';
 import { Stepper, Meter } from './Controls';
 import { attrLabelFor, attributeInfo, derived, dieFor, isTechAgent, karmaMaximum, LINEAGE_STAGES, nomenclatureLabel, splitStory, joinStory, stageIndexFor, weaponDiceFor, weaponAttrFor, type Character } from '@/lib/game';
+import { TechCoreStability } from './TechCoreStability';
+import type { RollEntry } from './SheetExtras';
 import './sheet-redesign.css';
 
 type Section = 'Resumo' | 'Identidade' | 'Atributos' | 'Recursos';
@@ -12,12 +14,13 @@ const buttons: {id:Section, icon:typeof UserRound}[] = [
 ];
 const lineages = [{value:'Humano',label:'Humano · padrão'},{value:'Agente Tecnológico',label:'Humano · Agente Tecnológico'},{value:'Arcadiano',label:'Arcadiano'},{value:'Gaki',label:'Gaki'}];
 
-export function PlayerSheetCompact({ character:c, onUpdate, onOpenDetail, onTab, onRoll, notice }: {
+export function PlayerSheetCompact({ character:c, onUpdate, onOpenDetail, onTab, onRoll, notice, addRoll }: {
  character:Character;
  onUpdate:(p:Partial<Character>)=>void;
  onOpenDetail:()=>void;
  onTab:(tab:SectionTab)=>void;
  onRoll:(expression:string,source?:string)=>unknown;
+ addRoll?: (entry:RollEntry)=>void;
  notice?:string;
 }) {
  const [section,setSection]=useState<Section>('Resumo');
@@ -41,11 +44,12 @@ export function PlayerSheetCompact({ character:c, onUpdate, onOpenDetail, onTab,
      <div className="h-sheet-summary-hero"><div><span className="h-sheet-kicker">PERSONAGEM · {c.stage || 'ESTÁGIO 1'}</span><h3>{c.name || 'Sem nome'}</h3><p>{fullName} · GS {c.gs}</p></div><div className="h-sheet-hero-glyph">{tech?<Zap size={30}/>:<Sparkles size={30}/>}</div></div>
      {c.pv_current<=0&&<div className="h-sheet-hint"><HeartPulse size={21}/><p><strong>Estado de Agonia.</strong> Abra a ficha detalhada para os testes, a ajuda de aliados e as regras de recuperação.</p><Button variant="outline" onClick={onOpenDetail}>Ver Agonia</Button></div>}
      <div className="h-sheet-compact-resources"><div><Meter label="PONTOS DE VIDA" current={c.pv_current} max={c.pv_max} tone="health"/></div><div><Meter label={tech?'PODER DO NÚCLEO · PN':'PONTOS DE FLUXO · PF'} current={c.pf_current} max={c.pf_max} tone={tech?'nucleo':'flux'}/></div></div>
+     {tech&&<TechCoreStability character={c} update={onUpdate} {...(addRoll?{addRoll}:{})} compact />}
      <div className="h-sheet-metrics"><div><small>CORPO</small><strong>{c.corpo}</strong></div><div><small>MENTE</small><strong>{c.mente}</strong></div><div><small>{tech?'TECNOLOGIA':'ESPÍRITO'}</small><strong>{c.espirito}</strong></div><div><small>ESQUIVA / BLOQUEIO</small><strong>{derivedStats.esquiva} / {derivedStats.bloqueio}</strong></div></div>
      <div className="h-sheet-summary-grid">
        <button type="button" onClick={()=>setSection('Identidade')}><UserRound size={20}/><span><strong>Identidade</strong><small>{c.concept || 'Nome, origem, conceito e estágio'}</small></span><ChevronRight size={17}/></button>
        <button type="button" onClick={()=>setSection('Atributos')}><Dices size={20}/><span><strong>Atributos</strong><small>{attr.free} ponto(s) disponível(is) · Deslocamento {derivedStats.deslocamento}m</small></span><ChevronRight size={17}/></button>
-       <button type="button" onClick={()=>setSection('Recursos')}><HeartPulse size={20}/><span><strong>Vida e recursos</strong><small>PV · {resource} · Karma · Exaustão</small></span><ChevronRight size={17}/></button>
+       <button type="button" onClick={()=>setSection('Recursos')}><HeartPulse size={20}/><span><strong>Vida e recursos</strong><small>PV · {resource} · {tech?'Integridade do Núcleo':'Karma'} · Exaustão</small></span><ChevronRight size={17}/></button>
        <button type="button" onClick={onOpenDetail}><Swords size={20}/><span><strong>Arma e combate</strong><small>{c.weapon || 'Arma não definida'} · {asset}</small></span><ChevronRight size={17}/></button>
        <button type="button" onClick={()=>onTab('Nomenclaturas')}><Sparkles size={20}/><span><strong>{abilityLabel}</strong><small>{c.nomenclatures.length} versões cadastradas · abrir editor</small></span><ChevronRight size={17}/></button>
        <button type="button" onClick={()=>onTab('Habilidades')}><Shield size={20}/><span><strong>Habilidades e GS</strong><small>Passiva de linhagem, evoluções e efeitos</small></span><ChevronRight size={17}/></button>
@@ -72,7 +76,8 @@ export function PlayerSheetCompact({ character:c, onUpdate, onOpenDetail, onTab,
    </div>}
    {section==='Recursos'&&<div className="h-sheet-compact-flow">
      <div className="h-sheet-section-title"><h3>Vida, Fluxo e condições</h3><p>Alterações aparecem na mesa pelo Supabase, usando o salvamento existente.</p></div>
-     <div className="h-sheet-resource-edit"><Stepper label="PV ATUAL" value={c.pv_current} max={c.pv_max} tone="health" onChange={v=>onUpdate({pv_current:v})}/><Stepper label="PV MÁXIMO" value={c.pv_max} tone="health" onChange={v=>onUpdate({pv_max:v,pv_current:Math.min(c.pv_current,v)})}/><Stepper label={`${resource} ATUAL`} value={c.pf_current} max={c.pf_max} tone="flux" onChange={v=>onUpdate({pf_current:v})}/><Stepper label={`${resource} MÁXIMO`} value={c.pf_max} tone="flux" onChange={v=>onUpdate({pf_max:v,pf_current:Math.min(c.pf_current,v)})}/><Stepper label="KARMA" value={c.karma} max={karmaLimit} tone="karma" onChange={v=>onUpdate({karma:v})}/><Stepper label="EXAUSTÃO" value={c.exhaustion} max={6} onChange={v=>onUpdate({exhaustion:v})}/></div>
+     <div className="h-sheet-resource-edit"><Stepper label="PV ATUAL" value={c.pv_current} max={c.pv_max} tone="health" onChange={v=>onUpdate({pv_current:v})}/><Stepper label="PV MÁXIMO" value={c.pv_max} tone="health" onChange={v=>onUpdate({pv_max:v,pv_current:Math.min(c.pv_current,v)})}/><Stepper label={`${resource} ATUAL`} value={c.pf_current} max={c.pf_max} tone="flux" onChange={v=>onUpdate({pf_current:v})}/><Stepper label={`${resource} MÁXIMO`} value={c.pf_max} tone="flux" onChange={v=>onUpdate({pf_max:v,pf_current:Math.min(c.pf_current,v)})}/>{!tech&&<Stepper label="KARMA" value={c.karma} max={karmaLimit} tone="karma" onChange={v=>onUpdate({karma:v})}/>}<Stepper label="EXAUSTÃO" value={c.exhaustion} max={6} onChange={v=>onUpdate({exhaustion:v})}/></div>
+     {tech&&<TechCoreStability character={c} update={onUpdate} {...(addRoll?{addRoll}:{})}/>}
      <p className="h-sheet-help">O sistema mantém os cálculos especiais de Agonia, GS, absorção, Elo e evolução no modo detalhado.</p><Button variant="outline" onClick={onOpenDetail}>Abrir regras avançadas <ChevronRight/></Button>
    </div>}
  </div>;

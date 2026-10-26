@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import {
   LINEAGE_STAGES, TECH_CORE_DICE, TECH_GS_DESCRIPTIONS, TECH_GS_PATHS,
   activateTechCore, applyTechCoreMilestone, applyTechGsMilestone,
-  isTechAgent, nomenclatureFamilies, sheetState, stageIndexFor,
+  isTechAgent, nomenclatureFamilies, sheetState, stageIndexFor, techCoreConsumed,
   techCoreActivation, techCoreCanClaim, techCoreRank, techCoreStage,
   techEyeRules, techGsCanClaim, techGsLevel, techGsPath,
   withSheetState,
@@ -56,6 +56,7 @@ export function TechAgentGsPanel({character, update, readOnly = false}: Props) {
     update({abilities:withSheetState(character,{techCoreConcept:concept})});setFeedback('Conceito e efeitos atualizados na ficha.');
   };
   const activate=(tier:TechCoreTier)=>{
+    if(techCoreConsumed(character)){setFeedback('Núcleo consumido: não é possível ativar técnicas até a resolução do Mestre.');return;}
     const next=activateTechCore(character,tier);
     if(!next){setFeedback('Não foi possível ativar: confira os PN disponíveis e descarte uma ativação anterior, se houver.');return;}
     update({pf_current:next.pf_current,abilities:next.abilities});
@@ -106,7 +107,7 @@ export function TechAgentGsPanel({character, update, readOnly = false}: Props) {
           </div>;
         })}
       </div>
-      <div className="hu-tech-activation"><strong>Ativar Núcleo auxiliar</strong><p>Gasta PN na hora e prepara um único efeito para o próximo ataque compatível. O efeito não é somado duas vezes e dados extras não multiplicam no crítico.</p><div className="hu-tech-activation-actions">{([0,5,7,10] as TechCoreTier[]).filter(x=>x===0||coreRank>=x).map(tier=>{const a=techCoreActivation(character,tier);return a&&<button key={tier} type="button" disabled={readOnly||!!st.techCorePending||character.pf_current<a.cost} onClick={()=>activate(tier)}><Zap size={16}/><span><b>{tier===0?'Impulso':tier===5?'Amplificação':tier===7?'Conceito Experimental':'Obra-Prima'}</b><small>{a.cost} PN{a.damage?` · +${a.damage}`:' · efeito especial'}</small></span></button>})}</div>
+      <div className="hu-tech-activation"><strong>Ativar Núcleo auxiliar</strong><p>Gasta PN na hora e prepara um único efeito para o próximo ataque compatível. O efeito não é somado duas vezes e dados extras não multiplicam no crítico.</p><div className="hu-tech-activation-actions">{([0,5,7,10] as TechCoreTier[]).filter(x=>x===0||coreRank>=x).map(tier=>{const a=techCoreActivation(character,tier);return a&&<button key={tier} type="button" disabled={readOnly||techCoreConsumed(character)||!!st.techCorePending||character.pf_current<a.cost} onClick={()=>activate(tier)}><Zap size={16}/><span><b>{tier===0?'Impulso':tier===5?'Amplificação':tier===7?'Conceito Experimental':'Obra-Prima'}</b><small>{a.cost} PN{a.damage?` · +${a.damage}`:' · efeito especial'}</small></span></button>})}</div>
         {st.techCorePending&&<div className="hu-tech-pending"><strong>ATIVADO · {st.techCorePending.name}</strong><span>{st.techCorePending.damage?`+${st.techCorePending.damage} no ataque · `:''}{st.techCorePending.effect}</span><small>PN já descontados. Acesse Combate → Arma e dano ou Habilidades de Núcleo para usar. Se errar, o custo continua gasto.</small><Button variant="outline" type="button" disabled={readOnly} onClick={()=>update({abilities:withSheetState(character,{techCorePending:null})})}>Descartar efeito (sem reembolso de PN)</Button></div>}
       </div>
     </>}
@@ -114,7 +115,7 @@ export function TechAgentGsPanel({character, update, readOnly = false}: Props) {
       <div className="hu-tech-history"><strong>Terceiro estágio: Tecnologia Mestra</strong><p>Não há uma árvore fixa de terceiro estágio no Códice. O Mestre decide novas evoluções na narrativa. O Núcleo auxiliar e os marcos anteriores permanecem disponíveis.</p></div>
       <div className="hu-tech-activation"><strong>Núcleo auxiliar preservado · Estágio 2</strong><p>Os aprimoramentos anteriores continuam utilizáveis. Escolha a posição do Núcleo e ative um efeito por ataque.</p>
         <div className="hu-tech-mounts"><button type="button" className={auxMount==='arma'?'selected':''} disabled={readOnly||!!st.techCorePending} onClick={()=>update({abilities:withSheetState(character,{techCoreMount:'arma'})})}>Na arma</button><button type="button" className={auxMount==='corpo'?'selected':''} disabled={readOnly||!!st.techCorePending} onClick={()=>update({abilities:withSheetState(character,{techCoreMount:'corpo'})})}>No corpo</button></div>
-        <div className="hu-tech-activation-actions">{([0,5,7,10] as TechCoreTier[]).filter(x=>x===0||coreRank>=x).map(tier=>{const a=techCoreActivation(character,tier);return a&&<button type="button" key={tier} disabled={readOnly||!!st.techCorePending||character.pf_current<a.cost} onClick={()=>activate(tier)}><Zap size={16}/><span><b>{a.name}</b><small>{a.cost} PN{a.damage?` · +${a.damage}`:' · efeito narrativo'}</small></span></button>})}</div>
+        <div className="hu-tech-activation-actions">{([0,5,7,10] as TechCoreTier[]).filter(x=>x===0||coreRank>=x).map(tier=>{const a=techCoreActivation(character,tier);return a&&<button type="button" key={tier} disabled={readOnly||techCoreConsumed(character)||!!st.techCorePending||character.pf_current<a.cost} onClick={()=>activate(tier)}><Zap size={16}/><span><b>{a.name}</b><small>{a.cost} PN{a.damage?` · +${a.damage}`:' · efeito narrativo'}</small></span></button>})}</div>
         {st.techCorePending&&<div className="hu-tech-pending"><strong>{st.techCorePending.name} · ATIVADO</strong><span>{st.techCorePending.effect}</span><small>PN já descontados.</small><Button variant="outline" disabled={readOnly} onClick={()=>update({abilities:withSheetState(character,{techCorePending:null})})}>Descartar efeito sem reembolso</Button></div>}
       </div>
     </>}
