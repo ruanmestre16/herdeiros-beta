@@ -1,5 +1,5 @@
 import { Minus, Plus, Sparkles } from 'lucide-react';
-import { milestoneKey, milestonePath, sheetState, stageIndexFor, type Character } from '@/lib/game';
+import { isTechAgent, milestoneKey, milestonePath, sheetState, stageIndexFor, type Character } from '@/lib/game';
 import './gs-control.css';
 
 /**
@@ -15,13 +15,15 @@ export function GsControl({ character, onChange, compact = false, disabled = fal
   disabled?: boolean;
 }) {
   const value = Math.max(0, Math.min(10, Number(character.gs) || 0));
-  const milestones = sheetState(character).milestones;
+  const state = sheetState(character);
+  const milestones = state.milestones;
   const stage = stageIndexFor(character.lineage, character.stage);
-  const pathChosen = !!milestonePath(character);
+  const tech = isTechAgent(character.lineage);
+  const pathChosen = tech ? !!state.techGsMarks?.['0:5'] : !!milestonePath(character);
   const markers = ([5, 7, 10] as const).map(gs => {
-    const completed = milestones.includes(milestoneKey(character, gs));
+    const completed = tech && stage === 0 ? !!state.techGsMarks?.[`0:${gs}`] : tech && stage === 1 ? (state.techCoreMarks ?? []).includes(gs) : milestones.includes(milestoneKey(character, gs));
     const reached = value >= gs;
-    const needsPrevious = stage < 2 && gs > 5 && !pathChosen;
+    const needsPrevious = tech ? (stage===0 ? gs > 5 && !pathChosen : stage===1 ? (gs===7 && !(state.techCoreMarks??[]).includes(5) || gs===10 && !(state.techCoreMarks??[]).includes(7)) : false) : stage < 2 && gs > 5 && !pathChosen;
     const ready = reached && !completed && !needsPrevious;
     return { gs, completed, ready, reached, needsPrevious };
   });
@@ -55,7 +57,7 @@ export function GsControl({ character, onChange, compact = false, disabled = fal
       </div>
       <p className={`hu-gs-feedback ${available.length ? 'available' : ''}`} role="status" aria-live="polite">
         {available.length
-          ? `✦ ${available.length === 1 ? 'Marco liberado' : 'Marcos liberados'}: ${available.map(m => `${m.gs} GS`).join(', ')}. Abra “Grau de Sincronia” abaixo e escolha o aprimoramento.`
+          ? `✦ ${available.length === 1 ? 'Marco liberado' : 'Marcos liberados'}: ${available.map(m => `${m.gs} GS`).join(', ')}. Abra a trilha de evolução abaixo e escolha o aprimoramento.`
           : value === 10 && markers[2]?.completed
             ? 'Marco de 10 GS concluído. Confira se o avanço de estágio está disponível abaixo.'
             : 'Os marcos de 5, 7 e 10 GS serão liberados conforme sua jornada.'}

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { applyPfShare, makeCampaign, makeCharacter, makeNpc, normalizeCharacter, pfShareBlock, reconcileAgony, type Campaign, type Character, type Npc } from '@/lib/game';
+import { applyPfShare, makeCampaign, makeCharacter, makeNpc, normalizeCharacter, pfShareBlock, isTechAgent, reconcileAgony, type Campaign, type Character, type Npc } from '@/lib/game';
 
 // Changes to this hook's state layout require a fresh page, not preserved hook slots.
 if (import.meta.hot) import.meta.hot.accept(() => window.location.reload());
@@ -185,6 +185,8 @@ export function useGameData() {
       setCharacters(prev => prev.map(c => c.id === from.id ? r.from : c.id === to.id ? r.to : c));
       return { error: null, amount: r.amount };
     }
+    // A RPC legada não distingue PF de PN; valide antes de chamar o banco.
+    if (isTechAgent(from.lineage) !== isTechAgent(to.lineage)) return { error: 'Transferência inválida: PN só podem ser enviados a outro Agente Tecnológico. PF não carregam Núcleos.', amount: 0 };
     // Garante que edições pendentes das duas fichas já estão no banco antes da transferência.
     await Promise.all([fromId, toId].filter(id => sheetDrafts.current.has(id)).map(id => flushSheet(id)));
     const { data: moved, error: err } = await supabase.rpc('share_excess_pf', { p_from: fromId, p_to: toId });

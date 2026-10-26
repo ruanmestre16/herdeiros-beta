@@ -1,0 +1,57 @@
+/* Evolução exclusiva do Agente Tecnológico; compatível com PC, browser mobile e WebView/APK. */
+.hu-tech-gs{--hu-tech-accent:#d6ba80;--hu-tech-cyan:#7bd1d7;gap:13px}
+.hu-tech-header{display:flex;align-items:flex-start;gap:12px;min-width:0}
+.hu-tech-header>div{flex:1;min-width:0}.hu-tech-header h3{font-size:clamp(19px,2vw,24px);font-weight:800;color:#f9eedc;margin:3px 0 5px}
+.hu-tech-header p{color:#b9c6d1;font-size:12px;line-height:1.6}
+.hu-tech-emblem{display:flex;align-items:center;justify-content:center;min-width:46px;height:46px;border:1px solid #77cbd47b;border-radius:12px;color:#9ae4e9;background:#5d9ca52e}
+.hu-tech-eyebrow{font-size:10px;letter-spacing:.11em;font-weight:800;color:#9de0e3}
+.hu-tech-summary{display:grid;gap:4px;padding:13px 15px;border-radius:11px;border:1px solid #78b6b557;background:#142731}
+.hu-tech-summary>span{color:#99d4d8;font-size:10px;font-weight:800;letter-spacing:.12em}
+.hu-tech-summary strong{color:#eefafa;font-size:16px}.hu-tech-summary small{color:#acbdc7;font-size:11px}
+.hu-tech-guidance,.hu-tech-history p{font-size:12px;line-height:1.55;color:#aebfcd}
+.hu-tech-path-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px}
+.hu-tech-path{display:grid;gap:8px;align-content:start;min-height:135px;border:1px solid #78919f70;border-radius:12px;padding:13px;text-align:left;background:linear-gradient(140deg,#263642,#1b222f);color:#f5ece0;cursor:pointer;touch-action:manipulation}
+.hu-tech-path.selected{border:2px solid #89dbe0;background:linear-gradient(145deg,#255358,#202d39);padding:12px}
+.hu-tech-path:focus-visible,.hu-tech-eye-toggle:focus-visible,.hu-tech-eye-buttons button:focus-visible{outline:2px solid #b7f4f6;outline-offset:2px}
+.hu-tech-path:disabled{cursor:default;opacity:.66}.hu-tech-path.selected:disabled{opacity:1}
+.hu-tech-path-head{display:flex;justify-content:space-between;color:#9bdddf}.hu-tech-path strong{font-size:13px;line-height:1.3}.hu-tech-path small{font-size:11px;color:#bac6d2;line-height:1.45}
+.hu-tech-marks{display:grid;gap:9px}.hu-tech-mark{display:grid;gap:11px;padding:14px;border-radius:11px;border:1px solid #6d788355;background:#141d2a}
+.hu-tech-mark.ready{border-color:#bfa36a;background:#3b302b80}.hu-tech-mark.done{border-color:#619c8d;background:#21352f75}
+.hu-tech-mark-title{display:flex;align-items:center;gap:11px;color:#eee6d8}.hu-tech-mark-title>div{display:grid;gap:3px;min-width:0;flex:1}.hu-tech-mark-title>div strong{font-size:14px;line-height:1.3}.hu-tech-mark-title>div small{color:#b6bec9;font-size:11px}.hu-tech-mark-title>svg{color:#e0c88f;flex-shrink:0}
+.hu-tech-gs-number{padding:8px;border-radius:8px;background:#ffffff12;border:1px solid #ffffff30;font-weight:850;font-size:12px;color:#f2d39c;white-space:nowrap}
+.hu-tech-mark>p{line-height:1.55;color:#bec9d4;font-size:12px}.hu-tech-note{font-size:12px;line-height:1.5;background:#0003;border-radius:9px;padding:10px;color:#d5e1e1}
+.hu-tech-claim{display:grid;gap:10px}.hu-tech-claim>label{display:grid;gap:6px;color:#f2dfb6;font-size:12px;font-weight:650}
+.hu-tech-claim select,.hu-tech-claim textarea,.hu-tech-eye-entry input{width:100%;min-width:0;min-height:44px;border:1px solid #8395a370;border-radius:9px;background:#0e1824;color:#f7f3eb;padding:10px 12px;font-size:16px}
+.hu-tech-claim-btn{min-height:45px;width:100%}.hu-tech-hint{font-size:11px;line-height:1.55;color:#aebecb;display:flex;gap:5px;align-items:center}
+.hu-tech-switch{display:flex;gap:11px;align-items:flex-start;padding:12px;border-radius:10px;border:1px solid #ffffff30;background:#18212a}
+.hu-tech-switch input{width:18px;height:18px;flex-shrink:0;accent-color:#9ed8d5;margin-top:2px}.hu-tech-switch span{display:grid;gap:5px}.hu-tech-switch strong{font-size:12px}.hu-tech-switch small{color:#b2becc;font-size:11px;line-height:1.45}
+.hu-tech-history{display:grid;gap:5px;padding:13px;border:1px solid #779c9a77;border-radius:11px;background:#162b30}.hu-tech-history>strong{color:#e6d7ac}.hu-tech-history>span{color:#a9e0e0;font-size:12px}
+.hu-tech-feedback{padding:10px 12px;border:1px solid #78b69983;border-radius:9px;background:#2b5d483d;color:#ddf5e6;font-size:12px}
+.hu-tech-eye{overflow:hidden;border:1px solid #7aaebb7e;border-radius:12px;background:#172732;display:grid;gap:0}
+.hu-tech-eye-toggle{display:flex;align-items:center;gap:12px;min-height:66px;padding:12px 14px;color:#f4f5f1;text-align:left;width:100%;touch-action:manipulation}
+.hu-tech-eye-toggle>svg{color:#8cd5da;flex-shrink:0}.hu-tech-eye-toggle>span:nth-child(2){display:grid;gap:4px;flex:1;min-width:0}.hu-tech-eye-toggle strong{font-size:13px}.hu-tech-eye-toggle small{font-size:11px;color:#bac9d3}.hu-tech-eye-bonus{padding:7px 8px;border-radius:8px;background:#486a6c88;font-size:11px;font-weight:800;white-space:nowrap}
+.hu-tech-eye-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px;padding:0 12px 12px}
+.hu-tech-eye-metrics>div{display:grid;gap:4px;min-width:0;border:1px solid #ffffff18;background:#050e1840;padding:10px 6px;border-radius:9px;text-align:center}
+.hu-tech-eye-metrics small{color:#a8c8d2;font-size:9px}.hu-tech-eye-metrics strong{font-size:17px;color:#c9eee6}.hu-tech-eye-metrics span{font-size:10px;color:#b2c0ca}
+.hu-tech-eye-details{display:grid;gap:12px;border-top:1px solid #7aaebb55;padding:13px}.hu-tech-eye-details p{font-size:12px;line-height:1.65;color:#c9d5dc}
+.hu-tech-eye-entry{display:grid;grid-template-columns:1fr 1fr auto;gap:7px}.hu-tech-eye-entry button{min-height:45px}
+.hu-tech-eye-list{display:grid;gap:7px}.hu-tech-eye-record{display:flex;align-items:center;gap:12px;justify-content:space-between;border:1px solid #ffffff26;padding:10px;border-radius:9px}
+.hu-tech-eye-record>div:first-child{display:grid;gap:4px;min-width:0;flex:1}.hu-tech-eye-record strong{font-size:13px;overflow-wrap:anywhere}.hu-tech-eye-record small,.hu-tech-eye-record span{color:#b8c8d0;font-size:11px;line-height:1.35}
+.hu-tech-eye-buttons{display:flex;gap:6px}.hu-tech-eye-buttons button{border:1px solid #ffffff4a;border-radius:8px;color:#e5eaf1;width:36px;height:38px;display:grid;place-items:center;cursor:pointer}
+.hu-tech-eye-buttons button:disabled{opacity:.38;cursor:not-allowed}
+@media(max-width:710px){.hu-tech-path-grid{grid-template-columns:1fr}.hu-tech-path{min-height:90px}.hu-tech-eye-entry{grid-template-columns:1fr}}
+@media(max-width:390px){.hu-tech-eye-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.hu-tech-eye-toggle{flex-wrap:wrap}.hu-tech-eye-bonus{margin-left:auto}}
+/* Engenharia de Obra-Prima — opções amplas, campos legíveis e botões para toque. */
+.hu-tech-aux,.hu-tech-activation{display:grid;gap:12px;padding:15px;border-radius:12px;border:1px solid #729ea55b;background:#111f2a}
+.hu-tech-aux>strong,.hu-tech-activation>strong{font-size:15px;color:#e9ddd1}.hu-tech-aux>p,.hu-tech-activation>p{font-size:12px;color:#c4d1db;line-height:1.6}.hu-tech-aux>small{color:#abbcc7;font-size:11px;line-height:1.5}
+.hu-tech-mounts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.hu-tech-mounts button{display:flex;align-items:center;flex-wrap:wrap;gap:7px;border:1px solid #8f9dac7a;border-radius:10px;background:#1a2934;color:#e7eff1;min-height:76px;padding:12px;text-align:left;cursor:pointer}
+.hu-tech-mounts button.selected{border:2px solid #9edcdb;background:#245053}.hu-tech-mounts button small{width:100%;font-size:11px;color:#c3d0d9}
+.hu-tech-claim input{width:100%;min-width:0;min-height:44px;border:1px solid #8395a370;border-radius:9px;background:#0e1824;color:#f7f3eb;padding:10px 12px;font-size:16px}
+.hu-tech-activation-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.hu-tech-activation-actions button{display:flex;align-items:center;gap:9px;text-align:left;min-height:62px;padding:12px;border-radius:10px;border:1px solid #af9e74aa;background:#423625;color:#f7eee0;cursor:pointer}
+.hu-tech-activation-actions button>span{display:grid;gap:3px}.hu-tech-activation-actions button small{font-size:11px;color:#e9cfa4}
+.hu-tech-activation-actions button:disabled,.hu-tech-mounts button:disabled{opacity:.42;cursor:not-allowed}
+.hu-tech-pending{display:grid;gap:9px;border:1px solid #9fd1bc;border-radius:10px;padding:13px;background:#1d493d85}
+.hu-tech-pending strong{color:#d7f1e1;font-size:13px}.hu-tech-pending span,.hu-tech-pending small{font-size:12px;line-height:1.5;color:#d0dedb}
+@media(max-width:610px){.hu-tech-mounts,.hu-tech-activation-actions{grid-template-columns:1fr}}

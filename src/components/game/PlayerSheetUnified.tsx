@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Activity, ArrowRight, BookOpen, Brain, ChevronDown, Dices, Heart, HeartPulse, Minus, Package, Plus, ScrollText, Shield, Sparkles, Swords, UserRound, Zap } from 'lucide-react';
+import { Activity, ArrowRight, BookOpen, Brain, Eye, ChevronDown, Dices, Heart, HeartPulse, Minus, Package, Plus, ScrollText, Shield, Sparkles, Swords, UserRound, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   attackRoll, derived, dieFor, isTechAgent, joinStory, nomenclatureFamilies,
-  nomenclatureLabel, rollDice, splitStory, weaponAttackAttrFor, type Character,
+  nomenclatureLabel, rollDice, splitStory, weaponAttackAttrFor, sheetState, type Character,
 } from '@/lib/game';
 import {
   ANCHOR_NAME, AbsorbPfAction, AbilitiesTab, AgonyPanel, CoinsPanel, EffectEditor,
@@ -13,6 +13,7 @@ import {
 } from './SheetExtras';
 import { PlayerSheetCompact } from './PlayerSheetCompact';
 import { GsControl } from './GsControl';
+import { TechAgentGsPanel, TechEyePanel } from './TechAgentGsPanel';
 import './sheet-unified.css';
 
 type Section = 'Ficha' | 'Combate' | 'Nomenclaturas' | 'Habilidades' | 'Inventário' | 'História' | 'Evolução';
@@ -101,6 +102,7 @@ export function PlayerSheetUnified({ character, update, addRoll, onRoll, tablema
  useEffect(()=>{setSection('Ficha');setEditPowers(false);setEditAbilities(false)},[character.id]);
  const tech=isTechAgent(character.lineage);
  const resource=tech?'PN':'PF';
+ const corePending=tech?sheetState(character).techCorePending:null;
  const defenses=derived(character.corpo);
  const groups=useMemo(()=>nomenclatureFamilies(character),[character.nomenclatures]);
  const rawAbilities=character.abilities.filter(a=>!a.kind);
@@ -121,7 +123,8 @@ export function PlayerSheetUnified({ character, update, addRoll, onRoll, tablema
      <section className="hu-section-card">
        <header className="hu-section-head"><div><span>CONTROLES DE COMBATE</span><h3>Pronto para agir</h3><p>Rolagens rápidas e acesso às regras completas da arma.</p></div><Swords size={25}/></header>
        <div className="hu-stat-pills">{attributes.map(s=><span key={s.name}>{s.name} <strong>{s.value}</strong> · d{dieFor(s.value)}</span>)}</div>
-       <div className="hu-action-grid"><button type="button" onClick={hitRoll}><Swords size={24}/><strong>Rolar acerto</strong><small>1d20 + dado do atributo</small></button><button type="button" onClick={initiativeRoll}><Dices size={24}/><strong>Iniciativa</strong><small>Maior d20 de CORPO + CORPO</small></button>{onCombat&&<button type="button" onClick={onCombat}><Activity size={24}/><strong>Combate ao vivo</strong><small>Abrir painel de turno e reações</small></button>}</div>
+       <div className="hu-action-grid"><button type="button" disabled={!!corePending} onClick={hitRoll}><Swords size={24}/><strong>Rolar acerto</strong><small>{corePending ? 'Conceito ativado: use a rolagem detalhada abaixo' : '1d20 + dado do atributo'}</small></button><button type="button" onClick={initiativeRoll}><Dices size={24}/><strong>Iniciativa</strong><small>Maior d20 de CORPO + CORPO</small></button>{onCombat&&<button type="button" onClick={onCombat}><Activity size={24}/><strong>Combate ao vivo</strong><small>Abrir painel de turno e reações</small></button>}</div>
+       {corePending&&<p className="hu-result" role="status">Núcleo preparado: {corePending.name}. {corePending.mount==='arma'?'Use “Arma e dano” abaixo para aplicar o conceito e rolar o dano.':'Abra Habilidades de Núcleo para aplicar o conceito e rolar o dano.'}</p>}
        {lastRoll&&<p className="hu-result" role="status">{lastRoll}</p>}
        <p className="hu-muted">Quando você for atacado, suas reações continuam no painel de combate. Esta ficha não gasta sua reação automaticamente.</p>
      </section>
@@ -134,7 +137,7 @@ export function PlayerSheetUnified({ character, update, addRoll, onRoll, tablema
      <div className="hu-collection-grid">{groups.map((g,i)=><button key={i} type="button" onClick={()=>setEditPowers(true)} className="hu-collection-card"><Sparkles size={19}/><strong>{g.name}</strong><small>{g.items.map(v=>v.item.kind).filter(Boolean).join(' · ')||`${g.items.length} versões`}</small><ArrowRight size={16}/></button>)}{!groups.length&&<div className="hu-empty">Nenhuma técnica cadastrada ainda. Você pode importar um texto com os três graus.</div>}</div>
      <Button className="hu-primary-action" onClick={()=>setEditPowers(v=>!v)}><Plus size={17}/>{editPowers?'Fechar editor':'Criar, importar ou editar técnicas'}</Button>
    </section>{editPowers&&<div className="hu-legacy-wrapper"><NomenclaturesTab character={character} update={update} addRoll={addRoll}/></div>}</div>}
-   {section==='Habilidades'&&<div className="hu-content"><section className="hu-section-card">
+   {section==='Habilidades'&&<div className="hu-content">{tech && <section className="hu-section-card"><header className="hu-section-head"><div><span>PASSIVA DA LINHAGEM</span><h3>Olho Tecnológico</h3><p>Varredura, Predição e Anulação conforme o estágio.</p></div><Eye size={23}/></header><TechEyePanel character={character} update={update} readOnly={readOnly}/></section>}<section className="hu-section-card">
      <header className="hu-section-head"><div><span>DONS E CICATRIZES</span><h3>Habilidades</h3><p>Habilidades próprias, especiais e cicatrizes do Fluxo.</p></div><Shield size={23}/></header>
      <div className="hu-collection-grid">{rawAbilities.map((a,i)=><button key={i} type="button" onClick={()=>setEditAbilities(true)} className="hu-collection-card"><Zap size={19}/><strong>{a.name}</strong><small>{a.description?.slice(0,130)||'Toque para ler ou editar'}</small><ArrowRight size={16}/></button>)}{!rawAbilities.length&&<div className="hu-empty">Nenhuma habilidade própria registrada.</div>}</div>
      <Button className="hu-primary-action" onClick={()=>setEditAbilities(v=>!v)}><Plus size={17}/>{editAbilities?'Fechar editor':'Adicionar, usar ou editar habilidades'}</Button>
@@ -143,8 +146,9 @@ export function PlayerSheetUnified({ character, update, addRoll, onRoll, tablema
    {section==='História'&&<StoryPanel character={character} update={update}/>}
    {section==='Evolução'&&<div className="hu-content">
      <section className="hu-section-card"><header className="hu-section-head"><div><span>JORNADA E DESPERTAR</span><h3>Seu caminho</h3><p>Ajuste seu GS e acompanhe a liberação dos marcos de evolução.</p></div><BookOpen size={23}/></header><GsControl character={character} onChange={gs=>update({gs})} disabled={readOnly}/></section>
-     <Block title="Grau de Sincronia (GS)" icon={Sparkles} summary="Marcos de evolução, atributos e bônus" initiallyOpen><GsPanel character={character} update={update}/></Block>
-     <Block title="Caminhos de evolução" icon={Brain} summary="Nomenclatura, corpo, arma e estágios"><PathPanel character={character} update={update} addRoll={addRoll}/><EffectEditor character={character} update={update}/>{character.lineage==='Arcadiano'&&<EgoWeaponPanel character={character} update={update} addRoll={addRoll}/>}{character.lineage==='Gaki'&&<GakiPassive character={character} update={update} addRoll={addRoll}/>}</Block>
+     {tech && <TechAgentGsPanel character={character} update={update} readOnly={readOnly}/>}
+     {!tech && <Block title="Grau de Sincronia (GS)" icon={Sparkles} summary="Marcos de evolução, atributos e bônus" initiallyOpen><GsPanel character={character} update={update}/></Block>}
+     {!tech && <Block title="Caminhos de evolução" icon={Brain} summary="Nomenclatura, corpo, arma e estágios"><PathPanel character={character} update={update} addRoll={addRoll}/><EffectEditor character={character} update={update}/>{character.lineage==='Arcadiano'&&<EgoWeaponPanel character={character} update={update} addRoll={addRoll}/>}{character.lineage==='Gaki'&&<GakiPassive character={character} update={update} addRoll={addRoll}/>}</Block>}
      <Block title="Laços e Elo" icon={Heart} summary={`${character.sync.length} relações registradas`}><SyncEditor character={character} update={update}/></Block>
      <Block title="Moedas do Destino e Âncora" icon={Sparkles} summary="Resgates, rerrolagens e proteções"><CoinsPanel character={character} update={update}/></Block>
      <Block title="Karma e riscos" icon={Shield} summary="Testes contra o Karma e consequências"><KarmaTest character={character} update={update} addRoll={addRoll}/></Block>

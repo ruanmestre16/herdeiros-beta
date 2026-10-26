@@ -5,7 +5,8 @@ import { Stepper } from './Controls';
 import {
   ELO_ACTIONS, LINEAGE_STAGES, NOMENCLATURE_COST, NOMENCLATURE_DICE, NOMENCLATURE_CRIT_DICE, REST_TYPES, TRIPLE_CRIT_COST, WEAPONS,
   attackRoll, absorbPf, canTripleCrit, combinedRoll, stylizedCritThreshold, nomenclatureDamage, nomenclatureLabel, nomenclatureLevelLabel, applyMilestone, milestoneKey, milestoneNeedsTechnique, milestoneOptions, milestoneOptionsFor, milestonePath, nomenclatureFamilies, techniqueKey, restRoll, stageIndexFor,
-  describeEffect, damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, weaponDiceFor, weaponRules, techniqueRules, upgradedDamage, isTechAgent, absorbActionLabel, attrLabelFor, sheetState, withSheetState,
+  describeEffect, damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, weaponDiceFor, weaponRules, techniqueRules, upgradedDamage, isTechAgent, absorbActionLabel, forceActionLabel, attrLabelFor, sheetState, withSheetState,
+  techCoreCompatible, techCoreExtraDamage,
   SHARE_MIN_SYNC, PROTECTION_MIN_ELO, syncLevelWith, pfShareBlock, pathLevels, mimicCapacity, FLUX_LINK_COST, MIMIC_RECORD_COST, mimicUseCost, vengeanceCost, ECO_COST, EXTRA_COST, EXTRA_REFINED_COST, CHAMADO_COST,
   agonyStatus, agonyEnter, agonyFailure, agonyUndo, agonyLeave, agonySacrifice, AGONY_MAX_FAILURES,
   type Attr, type Character, type NomenclatureKind, type RestType,
@@ -163,7 +164,7 @@ const LINEAGE_WEAPON: Record<string, string> = { Humano: 'Arma de Vínculo (MENT
  * Dano = dado da tabela + atributo (fixo). Evoluído (5 GS): dado do atributo no lugar do fixo. Dominado (7 GS): dado + fixo.
  */
 export function WeaponPanel({ character, update, addRoll }: { character: Character; update: Update; addRoll: AddRoll }) {
-  const [last, setLast] = useState<{ d20: number; attrDie: number; attrRoll: number; total: number; crit: boolean; fumble: boolean; tripled: boolean } | null>(null);
+  const [last, setLast] = useState<{ d20: number; attrDie: number; attrRoll: number; total: number; crit: boolean; fumble: boolean; tripled: boolean; core?: import('@/lib/game').TechCorePending | null } | null>(null);
   const [dmg, setDmg] = useState<{ total: number; dice: number[]; bonus: number; crit: boolean } | null>(null);
   const [triple, setTriple] = useState(false);
   const st = sheetState(character);
@@ -198,20 +199,22 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
       {st.weaponHistory.map((entry, i) => <p key={i} className="empty-copy">{new Date(entry.at).toLocaleString('pt-BR')} · {entry.from} → {entry.to}{entry.damageType ? ` · ${entry.damageType}` : ''}</p>)}
     </details> : null}
     {type && <p className="weapon-summary">Ataque <strong>1d20 + 1d{dieFor(character[wr.attr]) ?? 4} ({attrLabelFor(wr.attr, character.lineage)})</strong> · Dano <strong>{damageText}</strong>{st.weaponDamageType ? <span> · {st.weaponDamageType}</span> : null}{karma ? <strong className="text-karma"> + {karma} Karma</strong> : null}<br /><span>{type.note}{wr.rank === 1 ? ' Evoluída: o dado do atributo substitui o valor fixo.' : wr.rank >= 2 ? ' Dominada: dado + valor fixo do atributo.' : ''}{common && type.attr !== 'corpo' ? ' Arma comum não recebe evoluções.' : ''}</span></p>}
+    {st.techCorePending && <div className="passive"><strong>NÚCLEO ATIVADO · {st.techCorePending.name}</strong><p>{st.techCorePending.damage ? `Dano adicional: ${st.techCorePending.damage} (não multiplica no crítico). ` : ''}{st.techCorePending.effect}</p><p>PN já descontados. O bônus será aplicado ao próximo ataque tecnológico compatível.</p></div>}
     {tripleOk && <label className="anchor-toggle mt-3"><input type="checkbox" checked={triple} onChange={e => setTriple(e.target.checked)} /> Crítico Triplo (−{TRIPLE_CRIT_COST} {isTechAgent(character.lineage) ? "PN" : "PF"}: dados ×3 no crítico e crítico no d20 a partir de {stylizedThreshold} — gasta antes de saber se acerta)</label>}
     <div className="quick-actions mt-3">
       <Button variant="outline" disabled={!type} onClick={() => {
         const tripled = triple && tripleOk;
         const r = attackRoll(character[wr.attr], undefined, tripled ? stylizedThreshold : 20);
         const cost = tripled ? TRIPLE_CRIT_COST : 0;
-        if (cost) update({ pf_current: character.pf_current - cost });
-        setLast({ ...r, tripled }); setDmg(null);
-        addRoll({ expression: r.expression, dice: r.dice, modifier: r.modifier, total: r.total, source: `Ataque com arma${tripled ? ` (Crítico Triplo: crítico ${stylizedThreshold}+ no d20)` : ''}${r.fumble ? ' — FALHA CRÍTICA' : r.crit ? ' — CRÍTICO' : ''}`, crit: r.crit });
+        const core = techCoreCompatible(character, 'arma') ? st.techCorePending : null;
+        if (cost || core) update({ ...(cost ? { pf_current: character.pf_current - cost } : {}), ...(core ? { abilities: withSheetState(character, { techCorePending: null }) } : {}) });
+        setLast({ ...r, tripled, core }); setDmg(null);
+        addRoll({ expression: r.expression, dice: r.dice, modifier: r.modifier, total: r.total, source: `Ataque com arma${tripled ? ` (Crítico Triplo: crítico ${stylizedThreshold}+ no d20)` : ''}${r.fumble ? ' — FALHA CRÍTICA' : r.crit ? ' — CRÍTICO' : ''}${core ? ` · Núcleo: ${core.name} — ${core.effect}` : ''}`, crit: r.crit });
       }}><Swords /> Atacar (1d20 + 1d{dieFor(character[wr.attr]) ?? 4})</Button>
-      <Button variant="outline" disabled={!type || !last || last.fumble} onClick={() => {
+      <Button variant="outline" disabled={!type || !last || last.fumble || !!dmg} onClick={() => {
         const crit = !!last?.crit;
-        const d = rollDamageFormula(dice, bonus, crit, wr.extraDice, last?.tripled ? 3 : 2); setDmg({ total: d.total, dice: d.dice, bonus, crit });
-        addRoll({ expression: d.expression, dice: d.dice, modifier: bonus, total: d.total, source: `Dano da arma${st.weaponDamageType ? ` (${st.weaponDamageType})` : ''}${crit ? ` — CRÍTICO (dados ${last?.tripled ? '×3' : 'dobrados'})` : ''}${wr.ignoreBlock ? ` · ignora ${wr.ignoreBlock >= 999 ? 'todo o' : `${wr.ignoreBlock} de`} bloqueio` : ''}${wr.effectNote ? ` · Efeito: ${wr.effectNote}` : ''}`, crit });
+        const d = rollDamageFormula(dice, bonus, crit, wr.extraDice, last?.tripled ? 3 : 2); const extra = techCoreExtraDamage(last?.core); const total = d.total + extra.total; setDmg({ total, dice: [...d.dice, ...extra.dice], bonus, crit });
+        addRoll({ expression: [d.expression, extra.expression].filter(Boolean).join(' + '), dice: [...d.dice, ...extra.dice], modifier: bonus, total, source: `Dano da arma${st.weaponDamageType ? ` (${st.weaponDamageType})` : ''}${crit ? ` — CRÍTICO (dados ${last?.tripled ? '×3' : 'dobrados'})` : ''}${wr.ignoreBlock ? ` · ignora ${wr.ignoreBlock >= 999 ? 'todo o' : `${wr.ignoreBlock} de`} bloqueio` : ''}${wr.effectNote ? ` · Efeito: ${wr.effectNote}` : ''}${last?.core ? ` · Núcleo (${last.core.name}): ${last.core.effect}` : ''}`, crit });
       }} className={last?.crit ? 'action-critical' : ''}><Dices /> Rolar dano{last?.crit ? ' crítico' : ''}</Button>
     </div>
     {last && <div className={`combat-banner ${last.fumble ? 'banner-miss' : last.crit ? 'banner-crit' : 'banner-neutral'}`}><strong>{last.fumble ? 'FALHA CRÍTICA! 1 NATURAL' : last.crit ? `CRÍTICO! ${last.d20} NO D20` : `ATAQUE: ${last.total}`}</strong><span>1d20 [{last.d20}] + 1d{last.attrDie} [{last.attrRoll}] = {last.total}{last.fumble ? ' · erra sempre, qualquer que seja a soma' : last.crit ? ' · só é crítico se o total superar ou igualar a Esquiva do alvo; dados de dano dobrados' : ' · compare com a Esquiva do alvo (empate favorece quem ataca)'}</span></div>}
@@ -225,7 +228,7 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
   const [draft, setDraft] = useState<{ name: string; kind: NomenclatureKind; family: string } | null>(null);
   const families = nomenclatureFamilies(character);
   const [pasteText, setPasteText] = useState('');
-  const [result, setResult] = useState<{ name: string; attack: number; d20: number; attrDie: number; attrRoll: number; crit: boolean; fumble: boolean; damage?: number; dice?: number[] } | null>(null);
+  const [result, setResult] = useState<{ name: string; attack: number; d20: number; attrDie: number; attrRoll: number; crit: boolean; fumble: boolean; damage?: number; dice?: number[]; core?: import('@/lib/game').TechCorePending | null } | null>(null);
   const parsed = draft ? parseNomenclatureText(pasteText) : [];
   const importedFamilies = [...new Set(parsed.map(p => draft?.family || p.family))];
   const incomplete = importedFamilies.flatMap(group => {
@@ -266,6 +269,7 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
         <div className="flex gap-2"><Button disabled={!draft.name.trim()} onClick={() => { update({ nomenclatures: [...character.nomenclatures, { name: draft.name.trim(), cost: NOMENCLATURE_COST[draft.kind], kind: draft.kind, family: draft.family || draft.name.trim() }] }); closeDraft(); }}><Plus /> Salvar técnica</Button><Button variant="ghost" onClick={closeDraft}>Cancelar</Button></div>
       </div>
     </div>}
+    {isTechAgent(character.lineage) && sheetState(character).techCorePending?.mount === 'corpo' && <div className="passive"><strong>NÚCLEO AUXILIAR ATIVO · {sheetState(character).techCorePending?.name}</strong><p>PN já descontados. A próxima Habilidade de Núcleo usará o conceito: {sheetState(character).techCorePending?.effect}. O dano opcional não é multiplicado no crítico.</p></div>}
     {result && <div className={`combat-banner mb-5 ${result.fumble ? 'banner-miss' : result.crit ? 'banner-crit' : 'banner-neutral'}`}><strong>{result.fumble ? `FALHA CRÍTICA! ${result.name}` : result.crit ? `CRÍTICO! ${result.name}` : `${result.name}: ataque ${result.attack}`}</strong><span>1d20 [{result.d20}] + 1d{result.attrDie} [{result.attrRoll}] ({attrLabelFor('espirito', character.lineage)}) = {result.attack}{result.damage !== undefined ? ` · dano ${result.damage} (${result.dice?.join(' + ')})${result.crit ? ' — crítico' : ''}` : ''}</span></div>}
     <div className="item-list">{families.map(g => { const gFav = techniqueRules(character, g.items[0]!.item).upgrade.favorite; return <div className="nomen-family" key={g.key}><div className="nomen-head"><strong>{g.name}{gFav ? ' ★' : ''}</strong><span>uma nomenclatura · {g.items.length} {g.items.length > 1 ? 'versões' : 'versão'}</span></div>{gFav && <p className="empty-copy">★ Nomenclatura Favorita: {gFav}</p>}{g.items.map(({ item, index: i }) => {
       const t = techniqueRules(character, item);
@@ -275,15 +279,19 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
         {item.effect && <p className="empty-copy" style={{ whiteSpace: 'pre-line' }}>{item.effect}</p>}
         <div className="row-actions">
           <Button size="sm" variant="outline" disabled={character.pf_current < t.cost} onClick={() => {
-            const r = attackRoll(character.espirito); update({ pf_current: character.pf_current - t.cost });
-            setResult({ name: item.name, attack: r.total, d20: r.d20, attrDie: r.attrDie, attrRoll: r.attrRoll, crit: r.crit, fumble: r.fumble });
-            addRoll({ expression: r.expression, dice: r.dice, modifier: r.modifier, total: r.total, source: `${nomenclatureLabel(character.lineage)} · ${item.name} — ${nomenclatureLevelLabel(character.lineage, t.kind)} · acerto${r.fumble ? ' FALHA CRÍTICA' : r.crit ? ' CRÍTICO' : ''}`, crit: r.crit });
+            const r = attackRoll(character.espirito);
+            const core = techCoreCompatible(character, 'habilidade') ? sheetState(character).techCorePending : null;
+            update({ pf_current: character.pf_current - t.cost, ...(core ? { abilities: withSheetState(character, { techCorePending: null }) } : {}) });
+            setResult({ name: item.name, attack: r.total, d20: r.d20, attrDie: r.attrDie, attrRoll: r.attrRoll, crit: r.crit, fumble: r.fumble, core });
+            addRoll({ expression: r.expression, dice: r.dice, modifier: r.modifier, total: r.total, source: `${nomenclatureLabel(character.lineage)} · ${item.name} — ${nomenclatureLevelLabel(character.lineage, t.kind)} · acerto${r.fumble ? ' FALHA CRÍTICA' : r.crit ? ' CRÍTICO' : ''}${core ? ` · Núcleo: ${core.name} — ${core.effect}` : ''}`, crit: r.crit });
           }} className="action-flux"><Sparkles /> Usar ({t.cost} {resource})</Button>
           <Button size="sm" variant="outline" disabled={!result || result.name !== item.name || result.damage !== undefined || result.fumble} onClick={() => {
             if (!result) return;
             const d = nomenclatureDamage(character, item, result.crit, karmaDamageBonus(character));
-            setResult({ ...result, damage: d.total, dice: d.dice });
-            addRoll({ expression: d.expression, dice: d.dice, modifier: d.bonus, total: d.total, source: `${nomenclatureLabel(character.lineage)} · ${item.name} — ${nomenclatureLevelLabel(character.lineage, t.kind)} · dano${result.crit ? ' CRÍTICO' : ''}${t.ignoreBlock ? ` · ignora ${t.ignoreBlock >= 999 ? 'todo o' : `${t.ignoreBlock} de`} bloqueio` : ''}${t.effectNote ? ` · Efeito: ${t.effectNote}` : ''}`, crit: result.crit });
+            const extra = techCoreExtraDamage(result.core);
+            const total = d.total + extra.total;
+            setResult({ ...result, damage: total, dice: [...d.dice, ...extra.dice] });
+            addRoll({ expression: [d.expression, extra.expression].filter(Boolean).join(' + '), dice: [...d.dice, ...extra.dice], modifier: d.bonus, total, source: `${nomenclatureLabel(character.lineage)} · ${item.name} — ${nomenclatureLevelLabel(character.lineage, t.kind)} · dano${result.crit ? ' CRÍTICO' : ''}${t.ignoreBlock ? ` · ignora ${t.ignoreBlock >= 999 ? 'todo o' : `${t.ignoreBlock} de`} bloqueio` : ''}${t.effectNote ? ` · Efeito: ${t.effectNote}` : ''}${result.core ? ` · Núcleo (${result.core.name}): ${result.core.effect}` : ''}`, crit: result.crit });
           }}><Dices /> Rolar dano</Button>
           <select aria-label="Nomenclatura a que esta versão pertence" value={techniqueKey(item)} onChange={e => update({ nomenclatures: character.nomenclatures.map((n, j) => j === i ? { ...n, family: e.target.value === '__own' ? n.name : e.target.value } : n) })}>{families.map(f => <option key={f.key} value={f.key}>Faz parte de: {f.name}</option>)}<option value="__own">Separar como nomenclatura própria</option></select>
           <Button size="icon" variant="ghost" title="Excluir técnica" aria-label="Excluir técnica" onClick={() => update({ nomenclatures: character.nomenclatures.filter((_, j) => j !== i) })}><Trash2 /></Button>
@@ -305,9 +313,12 @@ export function GsPanel({ character, update }: { character: Character; update: U
   const [effect, setEffect] = useState('');
   const [msg, setMsg] = useState('');
   const canAdvance = character.gs === 0 && st.milestones.includes(milestoneKey(character, 10)) && stage < stages.length - 1;
+  const tech = isTechAgent(character.lineage);
+  const techText = (s: string) => tech ? s.replace(/\bPF\b/g, 'PN').replace(/ESPÍRITO/g, 'TECNOLOGIA').replace(/Arma de Vínculo/g, 'Arma de Núcleo').replace(/Nomenclaturas/g, 'Habilidades de Núcleo').replace(/Nomenclatura/g, 'Habilidade de Núcleo') : s;
   return <div className="field-stack">
     <div><div className="mb-2 flex items-center justify-between text-xs"><span className="field-kicker">GRAU DE SINCRONIA</span><span className="font-medium">{character.gs} <span className="text-muted-foreground">/ 10</span></span></div><div className="meter-track"><div className="meter-fill meter-flux" style={{ width: `${Math.min(100, character.gs * 10)}%` }} /></div></div>
     <p className="muted-copy text-xs">O Mestre concede GS ao final de sessões, após grandes feitos ou superação de traumas. Os pontos não são gastos: o GS acumula (6, 7, 8...) e, ao chegar a 5, 7 e 10, libera um marco. No marco de 5 GS você define o caminho; os marcos de 7 e 10 seguem esse mesmo caminho e os outros ficam fechados. Ao resolver o marco de 10, o GS zera.</p>
+    {tech && <p className="muted-copy text-xs">Estes são os <strong>marcos gerais</strong>. A trilha adicional do Agente Tecnológico, com Arma de Núcleo, Corpo Modular e Habilidades de Núcleo, fica logo acima. As equivalências usam TECNOLOGIA e PN.</p>}
     {([5, 7, 10] as const).map(gs => {
       const key = milestoneKey(character, gs);
       const done = st.milestones.includes(key);
@@ -321,8 +332,8 @@ export function GsPanel({ character, update }: { character: Character; update: U
       return <div key={gs} className={`passive ${ready ? 'passive-ready' : ''}`}>
         <span className="field-kicker">{gs} GS · {done ? 'RESOLVIDO' : ready ? 'DISPONÍVEL' : 'BLOQUEADO'}</span>
         {ready && gsOptions.length > 1 && <Field label={gs === 5 ? 'CAMINHO (DEFINIDO AQUI, VALE PARA 7 E 10 GS)' : 'O QUE EVOLUIR NESTE MARCO'}><select value={choice} onChange={e => setPicks({ ...picks, [gs]: e.target.value })}>{gsOptions.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</select></Field>}
-        {pathLocked ? <p>Resolva primeiro o marco de 5 GS: ele define o caminho deste ciclo.</p> : <><strong>{info.title}</strong>
-        <p>{info.text}</p></>}
+        {pathLocked ? <p>Resolva primeiro o marco de 5 GS: ele define o caminho deste ciclo.</p> : <><strong>{techText(info.title)}</strong>
+        <p>{techText(info.text)}</p></>}
         {ready && <div className="field-stack mt-3">
           {needsTech && <Field label="NOMENCLATURA ESCOLHIDA"><select value={technique} onChange={e => setTechnique(e.target.value)}><option value="">Escolher</option>{nomenclatureFamilies(character).filter(f => !st.techniqueUpgrades[f.key]?.favorite).map(f => <option key={f.key} value={f.key}>{f.name} ({f.items.length} {f.items.length > 1 ? 'versões' : 'versão'})</option>)}</select></Field>}
           {askEffect && <Field label={needsTech ? 'O QUE A VERSÃO FAVORITA PASSA A FAZER (COM O MESTRE)' : 'EFEITO ESPECIAL (COM O MESTRE)'}><input value={effect} onChange={e => setEffect(e.target.value)} placeholder="Ex.: mais 1d6 de dano, mais 1d8 de dano e ignora 3 de bloqueio" /></Field>}
@@ -338,7 +349,7 @@ export function GsPanel({ character, update }: { character: Character; update: U
     })}
     <EffectEditor character={character} update={update} />
     {msg && <p role="status" className="auth-message">{msg}</p>}
-    {canAdvance && <Button variant="outline" className="action-flux" onClick={() => { update({ stage: stages[stage + 1]!.name }); setMsg(character.lineage === 'Arcadiano' ? 'Avanço de estágio: ganhe +1 ponto de atributo (respeitando o teto do estágio) e aprenda duas novas Nomenclaturas.' : 'Avanço de estágio: ganhe +1 ponto de atributo (respeitando o teto do estágio) e aprenda uma nova Nomenclatura.'); }}><Sparkles /> Avançar para {stages[stage + 1]!.name}</Button>}
+    {canAdvance && <Button variant="outline" className="action-flux" onClick={() => { update({ stage: stages[stage + 1]!.name }); setMsg(character.lineage === 'Arcadiano' ? 'Avanço de estágio: ganhe +1 ponto de atributo (respeitando o teto do estágio) e aprenda duas novas Nomenclaturas.' : tech ? 'Avanço de estágio: ganhe +1 ponto de atributo e aprenda uma nova Habilidade de Núcleo. A passiva Olho Tecnológico evolui com o estágio.' : 'Avanço de estágio: ganhe +1 ponto de atributo (respeitando o teto do estágio) e aprenda uma nova Nomenclatura.'); }}><Sparkles /> Avançar para {stages[stage + 1]!.name}</Button>}
   </div>;
 }
 
@@ -374,7 +385,7 @@ export function EffectEditor({ character, update }: { character: Character; upda
 /** Vínculo de Fluxo (Arma de Vínculo, 5 GS): caixa de marcar. Marcar liga e gasta 2 PF; fica ligado até o fim da cena ou do combate (o Mestre encerra) ou até você desmarcar. Desmarcar e marcar de novo conta como ligar em outra cena e gasta 2 PF de novo. O estado é o mesmo do painel de combate. */
 export function FluxLinkToggle({ character, update }: { character: Character; update: Update }) {
   const st = sheetState(character);
-  if (pathLevels(character).arma < 1) return null;
+  if (isTechAgent(character.lineage) || pathLevels(character).arma < 1) return null;
   const cannot = !st.fluxLink && character.pf_current < FLUX_LINK_COST;
   return <label className="anchor-toggle" title="A Arma de Vínculo causa dano de Fluxo, que conta como dano normal contra Gakis.">
     <input type="checkbox" checked={st.fluxLink} disabled={cannot} onChange={e => e.target.checked
@@ -400,11 +411,11 @@ export function PathPanel({ character, update, addRoll }: { character: Character
   if (!lv.arma && !lv.corpo && !lv.mimetismo && !lv.vinganca && !lv.avancada && !st.ecoUsed) return <p className="empty-copy">Os caminhos de GS aparecem aqui conforme você resolve os marcos.</p>;
   return <div className="field-stack">
     {lv.arma >= 1 && <div className={`passive ${st.fluxLink ? 'passive-ready' : ''}`}>
-      <span className="field-kicker">VÍNCULO DE FLUXO · {st.fluxLink ? 'LIGADO' : 'DESLIGADO'}</span>
-      <p>A Arma de Vínculo causa dano de Fluxo, que conta como dano normal contra Gakis. Ligar custa {FLUX_LINK_COST} PF e a arma fica ligada até o fim da cena. Desligada, Gakis resistem ao golpe (dano menor, definido pelo Mestre). Contra Humanos e Arcadianos o dano é o mesmo.</p>
-      <FluxLinkToggle character={character} update={update} />
+      <span className="field-kicker">{isTechAgent(character.lineage) ? 'ARMA DE NÚCLEO · NÚCLEO ENERGIZADO' : `VÍNCULO DE FLUXO · ${st.fluxLink ? 'LIGADO' : 'DESLIGADO'}`}</span>
+      <p>{isTechAgent(character.lineage) ? 'Arma de Núcleo: dano tecnológico com TECNOLOGIA. Contra Gakis, pode gastar 2 PN por ataque para que conte como dano normal; registre o custo manualmente enquanto esse gatilho não estiver ligado ao combate.' : `A Arma de Vínculo causa dano de Fluxo, que conta como dano normal contra Gakis. Ligar custa ${FLUX_LINK_COST} PF e a arma fica ligada até o fim da cena. Desligada, Gakis resistem ao golpe (dano menor, definido pelo Mestre). Contra Humanos e Arcadianos o dano é o mesmo.`}</p>
+      {!isTechAgent(character.lineage)&&<FluxLinkToggle character={character} update={update} />}
     </div>}
-    {lv.corpo >= 2 && <div className="passive"><span className="field-kicker">CORPO MOLDADO</span><p>Ataque Extra ({EXTRA_COST} PF){lv.corpo >= 3 ? `, Ataque Extra Refinado (${EXTRA_REFINED_COST} PF) e O Chamado (${CHAMADO_COST} PF)` : ''}: botões no painel de combate, perto do ataque.</p></div>}
+    {lv.corpo >= 2 && <div className="passive"><span className="field-kicker">{isTechAgent(character.lineage) ? 'CORPO MODULAR · IMPLANTES' : 'CORPO MOLDADO'}</span><p>Ataque Extra ({EXTRA_COST} {isTechAgent(character.lineage)?'PN':'PF'}){lv.corpo >= 3 ? `, Ataque Extra Refinado (${EXTRA_REFINED_COST} ${isTechAgent(character.lineage)?'PN':'PF'}) e O Chamado (${CHAMADO_COST} ${isTechAgent(character.lineage)?'PN':'PF'})` : ''}: botões no painel de combate, perto do ataque.</p></div>}
     {lv.vinganca >= 1 && <div className="passive"><span className="field-kicker text-karma">VINGANÇA KARMÁTICA · NÍVEL {lv.vinganca}</span><p>Gasta {vengeanceCost(lv.vinganca)} PF antes do ataque e devolve {lv.vinganca >= 3 ? '100%' : lv.vinganca === 2 ? '1/2' : '1/3'} do dano recebido no combate. O contador aparece no combate assim que você toma dano.</p></div>}
     {lv.avancada >= 2 && <div className="passive"><span className="field-kicker">A VOZ E O ECO DA ARMA · {st.ecoUsed ? 'USADA NESTA CENA' : 'DISPONÍVEL'}</span><p>1x por cena, como ação livre e por {ECO_COST} PF, usa a habilidade inerente da Arma de Ego (ou possessão, ou poder especial), só até uma versão parcial da técnica. Se errar o ataque, o poder se desfaz e os PF são gastos. Botão no painel de combate.</p>{st.ecoUsed && <Button variant="ghost" onClick={() => set({ ecoUsed: false })}>Nova cena (liberar de novo)</Button>}</div>}
     {lv.avancada >= 3 && <div className="passive"><span className="field-kicker">FUSÃO DE NOMENCLATURAS</span><p>Botão no painel de combate, perto do ataque.</p></div>}
@@ -509,7 +520,7 @@ export function AbsorbPfAction({ character, update, addRoll, tablemates = [], on
   const attribute = tech ? 'TECNOLOGIA' : 'ESPÍRITO';
   const [busy,setBusy]=useState(false);
   /** Alvos elegíveis: mesma mesa (tablemates) e 2 ou mais de Elo, identificados pelo começo do nome. */
-  const eligible=tablemates.filter(t=>t.id!==character.id&&syncLevelWith(character,t)>=SHARE_MIN_SYNC);
+  const eligible=tablemates.filter(t=>t.id!==character.id&&syncLevelWith(character,t)>=SHARE_MIN_SYNC&&isTechAgent(character.lineage)===isTechAgent(t.lineage));
   const chosen=eligible.find(t=>t.id===target)??eligible[0]??null;
   const shareBlock=(state.standard?pfShareBlock(character,null,true):null)
     ??(!tablemates.length?'Nenhum outro personagem na sua mesa.'
