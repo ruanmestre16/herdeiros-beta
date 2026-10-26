@@ -167,9 +167,149 @@ export function counterRoll(c: { corpo: number; mente: number; espirito: number 
 }
 export function normalizeCharacter(c: Partial<Character> & { id: string }): Character { return { ...makeCharacter(), ...c, abilities: Array.isArray(c.abilities) ? c.abilities : [], sync: Array.isArray(c.sync) ? c.sync : [], nomenclatures: Array.isArray(c.nomenclatures) ? c.nomenclatures : [], inventory: Array.isArray(c.inventory) ? c.inventory : [], weapon_type: c.weapon_type ?? '', weapon_dice: c.weapon_dice ?? '', initiative: c.initiative ?? null } as Character; }
 
+/** Estágio 1: os marcos tecnológicos oficiais substituem os genéricos do Agente.
+ * Estágio 2: Engenharia de Obra-Prima é uma trilha EXCLUSIVA da campanha. */
+export type TechGsPath = 'arma_nucleo' | 'corpo_modular' | 'habilidade_nucleo';
+export type TechSighting = { name: string; source: string; repeats: number };
+export const TECH_GS_PATHS: { id: TechGsPath; name: string; summary: string }[] = [
+  { id: 'arma_nucleo', name: 'Arma de Núcleo', summary: 'Energia tecnológica, dano evoluído e crítico triplo.' },
+  { id: 'corpo_modular', name: 'Corpo Modular', summary: 'Implantes, ataque extra e aprimoramentos de combate.' },
+  { id: 'habilidade_nucleo', name: 'Habilidade de Núcleo', summary: 'Ativações aprimoradas, dominadas e favorita.' },
+];
+export const TECH_GS_DESCRIPTIONS: Record<TechGsPath, Record<5 | 7 | 10, { title: string; text: string }>> = {
+  arma_nucleo: {
+    5: { title: 'Núcleo Energizado', text: 'O dano da Arma de Núcleo passa a ser de Núcleo. Gastando 2 PN, conta como dano normal contra Gakis. O dado de TECNOLOGIA substitui o bônus fixo no dano.' },
+    7: { title: 'Arma Dominada', text: 'Dano base da Arma de Núcleo + dado de TECNOLOGIA + valor fixo de TECNOLOGIA.' },
+    10: { title: 'Arma Estilizada e Crítico Triplo', text: 'Efeito da arma escolhido com o Mestre. Antes de atacar, 10 PN permitem crítico em 20 menos TECNOLOGIA no d20, com dados de dano triplicados se acertar criticamente.' },
+  },
+  corpo_modular: {
+    5: { title: 'Corpo Evoluído', text: 'Os implantes de combate acertam com TECNOLOGIA; o dado de TECNOLOGIA substitui o bônus fixo no dano de implantes.' },
+    7: { title: 'Ataque Extra', text: 'Dano dos implantes + dado e valor fixo de TECNOLOGIA. Após acertar, gaste 3 PN para ataque extra com 2d20 (menor) + dado de TECNOLOGIA, uma vez por rodada.' },
+    10: { title: 'O Chamado e Ataque Extra Refinado', text: 'O Chamado: 5 PN, alvos próximos testam ESPÍRITO (ou MENTE quando não possuem ESPÍRITO). Ataque Extra Refinado: 10 PN, dois ataques normais, uma vez por rodada.' },
+  },
+  habilidade_nucleo: {
+    5: { title: 'Habilidade Aprimorada', text: 'O dado de TECNOLOGIA passa a integrar o dano das Ativações Rápida, Calibrada e Plena.' },
+    7: { title: 'Habilidade Dominada', text: 'Soma dado + valor fixo de TECNOLOGIA ao dano. Calibrada custa 3 PN; Plena, 10 PN; Rápida, 2 PN.' },
+    10: { title: 'Habilidade Favorita', text: 'Escolha uma Habilidade de Núcleo para evoluir com novos efeitos, dano ou alcance. Custo adicional definido pelo Mestre.' },
+  },
+};
+export function techGsPath(c: Character): TechGsPath | null {
+  if (!isTechAgent(c.lineage)) return null;
+  return sheetState(c).techGsMarks?.['0:5'] ?? null;
+}
+export function techGsLevel(c: Character, path: TechGsPath): number {
+  if (!isTechAgent(c.lineage) || techGsPath(c) !== path) return 0;
+  const marks = sheetState(c).techGsMarks ?? {};
+  return ([5, 7, 10] as const).reduce((rank, gs, i) => marks[`0:${gs}`] === path ? i + 1 : rank, 0);
+}
+/** Pode aplicar depois que o GS foi alcançado. Se o marco geral de 10 já zerou
+ * o GS, ele ainda atesta o progresso de 5, 7 e 10 deste mesmo estágio. */
+export function techGsCanClaim(c: Character, gs: 5 | 7 | 10): boolean {
+  if (!isTechAgent(c.lineage) || stageIndexFor(c.lineage, c.stage) !== 0) return false;
+  const st = sheetState(c);
+  if (st.techGsMarks?.[`0:${gs}`]) return false;
+  if (!(c.gs >= gs || st.milestones.includes('0:10'))) return false;
+  if (gs === 7 && !st.techGsMarks?.['0:5']) return false;
+  if (gs === 10 && !st.techGsMarks?.['0:7']) return false;
+  return true;
+}
+export function applyTechGsMilestone(c: Character, gs: 5 | 7 | 10, path: TechGsPath, opts: { note?: string; favorite?: string } = {}): Character | null {
+  if (!techGsCanClaim(c, gs) || !TECH_GS_PATHS.some(p => p.id === path)) return null;
+  const st = sheetState(c);
+  if (gs !== 5 && techGsPath(c) !== path) return null;
+  const fav = (opts.favorite ?? '').trim();
+  if (gs === 10 && path === 'habilidade_nucleo' && !c.nomenclatures.some(n => techniqueKey(n) === fav)) return null;
+  const key = `0:${gs}`;
+  const upgrades = { ...st.techniqueUpgrades };
+  if (gs === 10 && path === 'habilidade_nucleo' && fav) {
+    if (upgrades[fav]?.favorite) return null;
+    upgrades[fav] = { ...upgrades[fav], favorite: opts.note?.trim() || 'Versão Favorita' };
+  }
+  return { ...c, gs: gs === 10 ? 0 : c.gs, abilities: withSheetState(c, {
+    milestones: gs === 10 ? [...new Set([...st.milestones, '0:10'])] : st.milestones,
+    techGsMarks: { ...(st.techGsMarks ?? {}), [key]: path },
+    techGsNotes: { ...(st.techGsNotes ?? {}), [key]: opts.note?.trim() ?? '' },
+    techGsFavorite: gs === 10 && fav ? fav : (st.techGsFavorite ?? ''),
+    specialEffect: gs === 10 && path === 'arma_nucleo' && opts.note?.trim() ? opts.note.trim() : st.specialEffect,
+    techniqueUpgrades: upgrades,
+  }) };
+}
+/** Trilha exclusiva do segundo estágio do Agente Tecnológico: regras de campanha.
+ * Um Núcleo auxiliar usa a reserva comum de PN, não duplica os PN máximos.
+ * 5 GS amplifica; 7 GS cria um conceito personalizado; 10 GS eleva esse conceito a Obra-Prima. */
+export type TechCoreMount = 'arma' | 'corpo';
+export type TechCoreTier = 0 | 5 | 7 | 10;
+export type TechCoreConcept = { name: string; effect: string; damage: string; masterpieceEffect: string; masterpieceDamage: string };
+export type TechCorePending = { tier: 0 | 5 | 7 | 10; cost: number; name: string; effect: string; damage: string; mount: TechCoreMount };
+export const TECH_CORE_DICE = ['', '1d4', '1d6', '1d8', '2d6', '2d8'] as const;
+export const techCoreStage = (c: Character) => isTechAgent(c.lineage) && stageIndexFor(c.lineage, c.stage) >= 1;
+export const techCoreRank = (c: Character): TechCoreTier => {
+  if (!isTechAgent(c.lineage)) return 0;
+  const marks = sheetState(c).techCoreMarks ?? [];
+  return marks.includes(10) ? 10 : marks.includes(7) ? 7 : marks.includes(5) ? 5 : 0;
+};
+export function techCoreCanClaim(c: Character, tier: 5 | 7 | 10) {
+  if (!techCoreStage(c) || stageIndexFor(c.lineage, c.stage) !== 1 || c.gs < tier) return false;
+  const marks = sheetState(c).techCoreMarks ?? [];
+  return !marks.includes(tier) && (tier === 5 || marks.includes(tier === 7 ? 5 : 7));
+}
+export function applyTechCoreMilestone(c: Character, tier: 5 | 7 | 10, next?: Partial<TechCoreConcept>): Character | null {
+  if (!techCoreCanClaim(c, tier)) return null;
+  const st = sheetState(c);
+  const old = st.techCoreConcept ?? { name: '', effect: '', damage: '', masterpieceEffect: '', masterpieceDamage: '' };
+  const concept = { ...old, ...next };
+  if (tier === 7 && (!concept.name.trim() || !concept.effect.trim())) return null;
+  if (tier === 10 && (!concept.name.trim() || !concept.masterpieceEffect.trim())) return null;
+  if (![concept.damage, concept.masterpieceDamage].every(x => (TECH_CORE_DICE as readonly string[]).includes(x))) return null;
+  return { ...c, gs: tier === 10 ? 0 : c.gs, abilities: withSheetState(c, {
+    techCoreMarks: [...(st.techCoreMarks ?? []), tier],
+    techCoreConcept: concept,
+    milestones: tier === 10 ? [...new Set([...st.milestones, '1:10'])] : st.milestones,
+  }) };
+}
+/** Oferece as alternativas sem acumular amplificações: os PN são consumidos ao ATIVAR.
+ * O efeito fica armado na ficha para o próximo ataque tecnológico compatível. */
+export function techCoreActivation(c: Character, tier: TechCoreTier): TechCorePending | null {
+  if (!techCoreStage(c) || (tier !== 0 && techCoreRank(c) < tier)) return null;
+  const st = sheetState(c);
+  const co = st.techCoreConcept ?? { name: '', effect: '', damage: '', masterpieceEffect: '', masterpieceDamage: '' };
+  const mount = st.techCoreMount ?? 'arma';
+  if (tier === 0) return { tier, cost: 3, name: 'Impulso do Núcleo Auxiliar', effect: 'Impulso tecnológico básico', damage: '1d6', mount };
+  if (tier === 5) return { tier, cost: 3, name: 'Amplificação de Núcleo', effect: 'Dano potencializado pelo Núcleo auxiliar', damage: '1d8', mount };
+  if (tier === 7) return { tier, cost: 5, name: co.name, effect: co.effect, damage: co.damage, mount };
+  return { tier, cost: 12, name: `${co.name} · Obra-Prima`, effect: co.masterpieceEffect, damage: co.masterpieceDamage, mount };
+}
+export function activateTechCore(c: Character, tier: TechCoreTier): Character | null {
+  const st = sheetState(c), pending = techCoreActivation(c, tier);
+  if (!pending || st.techCorePending || c.pf_current < pending.cost) return null;
+  return { ...c, pf_current: c.pf_current - pending.cost, abilities: withSheetState(c, { techCorePending: pending }) };
+}
+export function techCoreCompatible(c: Character, category: 'arma' | 'habilidade'): boolean {
+  const pending = sheetState(c).techCorePending;
+  if (!pending || !techCoreStage(c)) return false;
+  if (category === 'habilidade') return pending.mount === 'corpo';
+  return pending.mount === 'arma' && sheetState(c).weaponMode !== 'comum' && weaponByKey(c.weapon_type)?.attr !== 'corpo';
+}
+/** Efeito extra em dados: NUNCA multiplica em críticos, nem em Habilidade Plena. */
+export function techCoreExtraDamage(pending: TechCorePending | null | undefined) {
+  if (!pending?.damage) return { total: 0, dice: [] as number[], expression: '' };
+  return damageRoll(pending.damage, 0, false);
+}
+
+/** Olho Tecnológico evolui com o ESTÁGIO, independentemente do caminho de GS. */
+export function techEyeRules(c: Character) {
+  const stage = Math.max(0, Math.min(2, stageIndexFor(c.lineage, c.stage)));
+  const config = [
+    { name: 'Varredura', seen: 3, increment: 1, max: 6, damage: 2, canCancel: false },
+    { name: 'Predição', seen: 4, increment: 2, max: 10, damage: 3, canCancel: false },
+    { name: 'Anulação', seen: 6, increment: 0, max: 6, damage: 4, canCancel: true },
+  ] as const;
+  return config[stage]!;
+}
+
 // Persistent rule state shares the existing JSON abilities field; no table changes.
-export type SheetState = { excess: number; rounds: number; agony: boolean; failures: number; stable: boolean; dead: boolean; standard: boolean; agonyDt: number; coins: number; anchorBroken: boolean; weaponDamageType: string; weaponHistory?: { at: string; from: string; to: string; damageType: string }[]; weaponMode: 'linhagem' | 'comum'; path: 'arma' | 'nomenclatura' | ''; weaponRank: number; nomRank: number; milestones: string[]; milestoneChoices: Record<string, string>; techniqueUpgrades: Record<string, { improved?: 'dano' | 'alcance'; mastered?: boolean; favorite?: string }>; attributeFloor: Partial<Record<Attr, number>>; attributeBudget: number; highestStage: number; specialEffect: string; fluxLink: boolean; mimic: { name: string; effect: string }[]; mimicClosed: string[]; ecoUsed: boolean; trueWeapon: boolean; relic: { name: string; text: string } };
-export const emptySheetState: SheetState = { excess: 0, rounds: 0, agony: false, failures: 0, stable: false, dead: false, standard: false, agonyDt: 6, coins: 0, anchorBroken: false, weaponDamageType: '', weaponMode: 'linhagem', path: '', weaponRank: 0, nomRank: 0, milestones: [], milestoneChoices: {}, techniqueUpgrades: {}, attributeFloor: {}, attributeBudget: 0, highestStage: 0, specialEffect: '', fluxLink: false, mimic: [], mimicClosed: [], ecoUsed: false, trueWeapon: false, relic: { name: '', text: '' } };
+export type SheetState = { excess: number; rounds: number; agony: boolean; failures: number; stable: boolean; dead: boolean; standard: boolean; agonyDt: number; coins: number; anchorBroken: boolean; weaponDamageType: string; weaponHistory?: { at: string; from: string; to: string; damageType: string }[]; weaponMode: 'linhagem' | 'comum'; path: 'arma' | 'nomenclatura' | ''; weaponRank: number; nomRank: number; milestones: string[]; milestoneChoices: Record<string, string>; techGsMarks?: Record<string, TechGsPath>; techCoreMarks?: number[]; techCoreMount?: TechCoreMount; techCoreConcept?: TechCoreConcept; techCorePending?: TechCorePending | null; techGsNotes?: Record<string, string>; techGsFavorite?: string; techModularEquipped?: boolean; techSightings?: TechSighting[]; techniqueUpgrades: Record<string, { improved?: 'dano' | 'alcance'; mastered?: boolean; favorite?: string }>; attributeFloor: Partial<Record<Attr, number>>; attributeBudget: number; highestStage: number; specialEffect: string; fluxLink: boolean; mimic: { name: string; effect: string }[]; mimicClosed: string[]; ecoUsed: boolean; trueWeapon: boolean; relic: { name: string; text: string } };
+export const emptySheetState: SheetState = { excess: 0, rounds: 0, agony: false, failures: 0, stable: false, dead: false, standard: false, agonyDt: 6, coins: 0, anchorBroken: false, weaponDamageType: '', weaponMode: 'linhagem', path: '', weaponRank: 0, nomRank: 0, milestones: [], milestoneChoices: {}, techGsMarks: {}, techCoreMarks: [], techCoreMount: 'arma', techCoreConcept: {name:'',effect:'',damage:'',masterpieceEffect:'',masterpieceDamage:''}, techCorePending: null, techGsNotes: {}, techGsFavorite: '', techModularEquipped: false, techSightings: [], techniqueUpgrades: {}, attributeFloor: {}, attributeBudget: 0, highestStage: 0, specialEffect: '', fluxLink: false, mimic: [], mimicClosed: [], ecoUsed: false, trueWeapon: false, relic: { name: '', text: '' } };
 export function sheetState(c: Character): SheetState {
   try { return { ...emptySheetState, ...JSON.parse(c.abilities.find(a => a.kind === 'state')?.description ?? '{}') } as SheetState; }
   catch { return { ...emptySheetState }; }
@@ -191,12 +331,14 @@ export function syncLevelWith(from: Character, target: Pick<Character, 'name'>) 
 /** Motivo pelo qual Partilhar não pode ser usado agora (ou null se liberado). `sameTable` = alvo na mesma mesa. */
 export function pfShareBlock(from: Character, to: Character | null, sameTable: boolean): string | null {
   const st = sheetState(from);
-  if (st.excess <= 0) return 'Você não tem PF excedentes para partilhar.';
+  if (st.excess <= 0) return `Você não tem ${isTechAgent(from.lineage) ? 'PN' : 'PF'} excedentes para partilhar.`;
   if (st.standard) return 'Você já gastou a Ação Padrão.';
   if (!to || to.id === from.id) return 'Escolha um alvo.';
   if (!sameTable) return 'O alvo não está na mesma mesa.';
+  if (isTechAgent(from.lineage) && !isTechAgent(to.lineage)) return 'PN só podem ser transferidos para outro Agente Tecnológico ou dispositivo compatível.';
+  if (!isTechAgent(from.lineage) && isTechAgent(to.lineage)) return 'PF não podem carregar o Núcleo de um Agente Tecnológico.';
   if (syncLevelWith(from, to) < SHARE_MIN_SYNC) return 'Elo insuficiente: é preciso 2 ou mais de Elo com o alvo.';
-  if (to.pf_current >= to.pf_max) return 'O alvo está com os PF cheios e não pode receber o excedente.';
+  if (to.pf_current >= to.pf_max) return `O alvo está com os ${isTechAgent(to.lineage) ? 'PN' : 'PF'} cheios e não pode receber o excedente.`;
   return null;
 }
 /** Resultado da transferência: o alvo recebe até o que cabe nos PF máximos; o que sobrar continua como excedente. Gasta a Ação Padrão. */
@@ -379,7 +521,7 @@ export function describeEffect(text: string) {
 export function techniqueRules(c: Character, n: Nomenclature) {
   const kind = n.kind ?? 'Direta';
   const st = sheetState(c);
-  const rank = st.nomRank;
+  const rank = Math.max(st.nomRank, Math.min(2, techGsLevel(c, 'habilidade_nucleo')));
   const upgrade = st.techniqueUpgrades[techniqueKey(n)] ?? st.techniqueUpgrades[n.name] ?? {};
   const die = dieFor(c.espirito) ?? 4;
   const fav = parseEffect(upgrade.favorite && upgrade.favorite !== 'Versão Favorita' ? upgrade.favorite : '');
@@ -405,7 +547,8 @@ export function nomenclatureDamage(c: Character, n: Nomenclature, crit: boolean,
 export function weaponRules(c: Character, type = c.weapon_type, common = sheetState(c).weaponMode === 'comum') {
   const unarmed = weaponByKey(type)?.attr === 'corpo';
   const attr: Attr = unarmed || common ? 'corpo' : weaponAttrFor(c.lineage);
-  const rank = common || unarmed ? 0 : sheetState(c).weaponRank;
+  const techRank = isTechAgent(c.lineage) ? Math.max(techGsLevel(c, 'arma_nucleo'), sheetState(c).techModularEquipped ? techGsLevel(c, 'corpo_modular') : 0) : 0;
+  const rank = common || unarmed ? 0 : Math.max(sheetState(c).weaponRank, Math.min(2, techRank));
   /** Sem evolução: valor fixo. Evoluído (rank 1): dado do atributo no lugar do fixo. Dominado (rank 2): dado + valor fixo. */
   const eff = unarmed || common ? parseEffect('') : parseEffect(sheetState(c).specialEffect);
   return { attr, bonus: (rank === 1 ? 0 : c[attr]) + eff.flat, extraDice: [...(rank > 0 ? [`1d${dieFor(c[attr]) ?? 4}`] : []), ...eff.dice] as string[], rank, ignoreBlock: eff.ignoreBlock, effectNote: eff.raw };
@@ -417,7 +560,8 @@ export const energyUnitFor = (lineage: string) => isTechAgent(lineage) ? 'PN' : 
 /** Quem escolheu Arma / Corpo Estilizada no marco de 10 GS pode gastar 10 PF para o efeito único de crítico: dados ×3 no crítico E margem de crítico reduzida. */
 export function canTripleCrit(c: Character) {
   const st = sheetState(c);
-  return Object.entries(st.milestoneChoices).some(([k, v]) => k.endsWith(':10') && v === 'arma');
+  if (st.weaponMode === 'comum' || weaponByKey(c.weapon_type)?.attr === 'corpo') return false;
+  return Object.entries(st.milestoneChoices).some(([k, v]) => k.endsWith(':10') && v === 'arma') || techGsLevel(c, 'arma_nucleo') >= 3;
 }
 /** Custo ÚNICO (10 PF) do Crítico Triplo + margem de crítico, declarado ANTES de saber se acerta. */
 export const TRIPLE_CRIT_COST = 10;
@@ -440,7 +584,7 @@ export function extraAttackRoll(attrValue: number, esquiva?: number, refined = f
 export function pathLevels(c: Character) {
   const st = sheetState(c);
   const lvl = (stage: number, choice: string) => { let n = 0; ([5, 7, 10] as const).forEach((g, i) => { if (st.milestoneChoices[`${stage}:${g}`] === choice) n = i + 1; }); return n; };
-  return { arma: lvl(0, 'arma'), corpo: lvl(0, 'corpo'), nomenclatura: lvl(0, 'nomenclatura'), mimetismo: lvl(1, 'mimetismo'), vinganca: lvl(1, 'vinganca'), avancada: lvl(1, 'nomenclatura_avancada') };
+  return { arma: lvl(0, 'arma'), corpo: Math.max(lvl(0, 'corpo'), sheetState(c).techModularEquipped ? techGsLevel(c, 'corpo_modular') : 0), nomenclatura: Math.max(lvl(0, 'nomenclatura'), techGsLevel(c, 'habilidade_nucleo')), mimetismo: lvl(1, 'mimetismo'), vinganca: lvl(1, 'vinganca'), avancada: lvl(1, 'nomenclatura_avancada') };
 }
 /** Custos fixos das habilidades de caminho (PF). */
 export const ECO_COST = 5; export const FLUX_LINK_COST = 2; export const EXTRA_COST = 3; export const EXTRA_REFINED_COST = 10; export const CHAMADO_COST = 5; export const FUSION_COST = 12; export const MIMIC_RECORD_COST = 5;
@@ -500,7 +644,7 @@ export function milestonePath(c: Character): MilestoneChoice | null {
 }
 /** Opções válidas de cada marco: no 5 GS o jogador escolhe o caminho; nos de 7 e 10 só vale o caminho já definido (os outros ficam fechados). Depois do Estágio 3 é livre. */
 export function milestoneOptionsFor(c: Character, gs: 5 | 7 | 10) {
-  const stage = stageIndexFor(c.lineage, c.stage); const all = milestoneOptions(stage);
+  const stage = stageIndexFor(c.lineage, c.stage); if (isTechAgent(c.lineage)) return []; const all = milestoneOptions(stage);
   if (stage >= 2 || gs === 5) return all;
   const path = milestonePath(c);
   return path ? all.filter(o => o.id === path) : [];
@@ -514,7 +658,7 @@ export function applyMilestone(c: Character, gs: 5 | 7 | 10, choice: string, tec
   const state = sheetState(c);
   const key = milestoneKey(c, gs);
   const stage = stageIndexFor(c.lineage, c.stage);
-  if (c.gs < gs || state.milestones.includes(key) || !milestoneOptionsFor(c, gs).some(o => o.id === choice)) return null;
+  if (isTechAgent(c.lineage) || c.gs < gs || state.milestones.includes(key) || !milestoneOptionsFor(c, gs).some(o => o.id === choice)) return null;
   if (milestoneNeedsTechnique(c, gs, choice) && !c.nomenclatures.some(n => techniqueKey(n) === technique)) return null;
   const upgrades = { ...state.techniqueUpgrades };
   if (milestoneNeedsTechnique(c, gs, choice) && technique && upgrades[technique]?.favorite) return null; // uma nomenclatura só pode ser Favorita uma vez
