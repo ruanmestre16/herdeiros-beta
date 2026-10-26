@@ -3,7 +3,7 @@ import { Activity, Dices, Plus, Sparkles, Swords, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Meter, SectionHeading, Stepper } from './Controls';
 import {
-  derived, dieFor, rollDice, initiativeRoll, karmaMaximum, karmaStage, isTechAgent, attrLabelFor, nomenclatureLabel, resourceBarLabel, resourceStageLabel, forceActionLabel, forceFlux, attackRoll, weaponAttrFor,
+  derived, dieFor, rollDice, initiativeRoll, karmaMaximum, karmaStage, isTechAgent, attrLabelFor, nomenclatureLabel, resourceBarLabel, resourceStageLabel, forceActionLabel, forceFlux, attackRoll, weaponAttackAttrFor,
   splitStory, joinStory, stageIndexFor, LINEAGE_STAGES, type Character,
 } from '@/lib/game';
 import { SyncEditor, GakiPassive, WeaponPanel, NomenclaturesTab, AbilitiesTab, AbsorbPfAction, KarmaTest, AgonyPanel, hasAnchor, ANCHOR_NAME, type RollEntry } from './SheetExtras';
@@ -34,8 +34,8 @@ export function NpcFullSheet({ character, update, addRoll, setInitiative }: { ch
     : <div className={`karma-alert karma-${stage}${isTechAgent(character.lineage) ? ` nucleo-${stage}` : ''}`}><strong>{resourceStageLabel(character.lineage, stage)}</strong><span>{Math.round(character.karma / kMax * 100)}% · limite {kMax}</span></div>;
 
   return <div className="field-stack mt-4">
-    {!monster && <div className="overview-strip"><Meter label="PONTOS DE VIDA" current={character.pv_current} max={character.pv_max} tone="health" /><Meter label="PONTOS DE FLUXO" current={character.pf_current} max={character.pf_max} tone="flux" /><Meter label={resourceBarLabel(character.lineage)} current={character.karma} max={kMax} tone={isTechAgent(character.lineage) ? 'nucleo' : 'karma'} /></div>}
-    {monster && <div className="overview-strip"><Meter label="PONTOS DE VIDA" current={character.pv_current} max={character.pv_max} tone="health" /><Meter label="PONTOS DE FLUXO" current={character.pf_current} max={character.pf_max} tone="flux" /></div>}
+    {!monster && <div className="overview-strip"><Meter label="PONTOS DE VIDA" current={character.pv_current} max={character.pv_max} tone="health" /><Meter label={isTechAgent(character.lineage) ? "PODER DO NÚCLEO (PN)" : "PONTOS DE FLUXO (PF)"} current={character.pf_current} max={character.pf_max} tone="flux" /><Meter label={resourceBarLabel(character.lineage)} current={character.karma} max={kMax} tone={isTechAgent(character.lineage) ? 'nucleo' : 'karma'} /></div>}
+    {monster && <div className="overview-strip"><Meter label="PONTOS DE VIDA" current={character.pv_current} max={character.pv_max} tone="health" /><Meter label={isTechAgent(character.lineage) ? "PODER DO NÚCLEO (PN)" : "PONTOS DE FLUXO (PF)"} current={character.pf_current} max={character.pf_max} tone="flux" /></div>}
     {!monster && <AgonyPanel character={character} update={update} addRoll={addRoll} isMaster={true} />}
     <div className="tabbar" role="tablist">{TABS.map(t => <Button key={t} role="tab" aria-selected={tab === t} variant="ghost" onClick={() => setTab(t)} className={`tab ${tab === t ? 'tab-active' : ''}`}>{t === 'Nomenclaturas' ? nomenclatureLabel(character.lineage, true) : t}</Button>)}</div>
 
@@ -63,17 +63,17 @@ export function NpcFullSheet({ character, update, addRoll, setInitiative }: { ch
       <Panel title="Recursos"><div className="resource-grid">
         <Stepper label="PV ATUAL" value={character.pv_current} max={character.pv_max} tone="health" onChange={pv_current => update({ pv_current })} />
         <Stepper label="PV MÁXIMO" value={character.pv_max} tone="health" onChange={pv_max => update({ pv_max, pv_current: Math.min(character.pv_current, pv_max) })} />
-        <Stepper label="PF ATUAL" value={character.pf_current} max={character.pf_max} tone="flux" onChange={pf_current => update({ pf_current })} />
-        <Stepper label="PF MÁXIMO" value={character.pf_max} tone="flux" onChange={pf_max => update({ pf_max, pf_current: Math.min(character.pf_current, pf_max) })} />
+        <Stepper label={isTechAgent(character.lineage) ? "PN ATUAL" : "PF ATUAL"} value={character.pf_current} max={character.pf_max} tone="flux" onChange={pf_current => update({ pf_current })} />
+        <Stepper label={isTechAgent(character.lineage) ? "PN MÁXIMO" : "PF MÁXIMO"} value={character.pf_max} tone="flux" onChange={pf_max => update({ pf_max, pf_current: Math.min(character.pf_current, pf_max) })} />
         {!monster && <Stepper label={resourceBarLabel(character.lineage)} value={character.karma} max={kMax} tone={isTechAgent(character.lineage) ? 'nucleo' : 'karma'} onChange={karma => update({ karma })} />}
         <Stepper label="EXAUSTÃO" value={character.exhaustion} max={6} onChange={exhaustion => update({ exhaustion })} />
       </div>{karmaBox}</Panel>
       <Panel title="Ações rápidas"><div className="quick-actions">
-        <Button variant="outline" onClick={() => { const r = attackRoll(character[weaponAttrFor(character.lineage)]); addRoll({ expression: r.expression, dice: r.dice, modifier: 0, total: r.total, source: `Ataque de ${character.name}${r.fumble ? ' — FALHA CRÍTICA' : r.crit ? ' — CRÍTICO' : ''}`, crit: r.crit }); }}><Swords /> Ataque (d20 + dado)</Button>
+        <Button variant="outline" onClick={() => { const r = attackRoll(character[weaponAttackAttrFor(character)]); addRoll({ expression: r.expression, dice: r.dice, modifier: 0, total: r.total, source: `Ataque de ${character.name}${r.fumble ? ' — FALHA CRÍTICA' : r.crit ? ' — CRÍTICO' : ''}`, crit: r.crit }); }}><Swords /> Ataque (d20 + dado)</Button>
         <Button variant="outline" onClick={() => { const r = initiativeRoll(character.corpo); setInitiative(r.total); addRoll({ expression: `${character.corpo}d20 (maior) + ${character.corpo}`, dice: r.dice, modifier: character.corpo, total: r.total, source: `Iniciativa: ${character.name}` }); }}><Activity /> Iniciativa</Button>
         <Button variant="outline" className={isTechAgent(character.lineage) ? 'action-force-nucleo' : 'action-force-karma'} onClick={() => {
           const f = forceFlux(character.espirito);
-          addRoll({ expression: f.expression, dice: f.dice, modifier: 0, total: f.total, source: `${forceActionLabel(character.lineage)}: ${character.name} (+${f.pf} PF)` });
+          addRoll({ expression: f.expression, dice: f.dice, modifier: 0, total: f.total, source: `${forceActionLabel(character.lineage)}: ${character.name} (+${f.pf} ${isTechAgent(character.lineage) ? "PN" : "PF"})` });
           update({ pf_current: Math.min(character.pf_max, character.pf_current + f.pf), ...(monster ? {} : { karma: Math.min(kMax, character.karma + f.karma) }) });
         }}><Sparkles /> {forceActionLabel(character.lineage)}</Button>
         <AbsorbPfAction character={character} update={update} addRoll={addRoll} />

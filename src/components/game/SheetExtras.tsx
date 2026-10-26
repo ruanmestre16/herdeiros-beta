@@ -157,9 +157,9 @@ export function GakiPassive({ character, update, addRoll }: { character: Charact
   </div>;
 }
 
-const LINEAGE_WEAPON: Record<string, string> = { Humano: 'Arma de Vínculo (MENTE)', Arcadiano: 'Arma de Ego (ESPÍRITO)', Gaki: 'Corpo moldado (CORPO)', 'Agente Tecnológico': 'Arma de Núcleo (MENTE)' };
+const LINEAGE_WEAPON: Record<string, string> = { Humano: 'Arma de Vínculo (MENTE)', Arcadiano: 'Arma de Ego (ESPÍRITO)', Gaki: 'Corpo moldado (CORPO)', 'Agente Tecnológico': 'Arma de Núcleo (TECNOLOGIA)' };
 /**
- * Arma: o atributo vem da linhagem (Humano MENTE, Arcadiano ESPÍRITO, Gaki CORPO); arma comum, sem Vínculo nem Ego, soma sempre CORPO.
+ * Arma: Humano MENTE, Arcadiano ESPÍRITO, Gaki CORPO e Agente Tecnológico TECNOLOGIA; arma comum ou desarmado sempre usa CORPO.
  * Dano = dado da tabela + atributo (fixo). Evoluído (5 GS): dado do atributo no lugar do fixo. Dominado (7 GS): dado + fixo.
  */
 export function WeaponPanel({ character, update, addRoll }: { character: Character; update: Update; addRoll: AddRoll }) {
@@ -198,7 +198,7 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
       {st.weaponHistory.map((entry, i) => <p key={i} className="empty-copy">{new Date(entry.at).toLocaleString('pt-BR')} · {entry.from} → {entry.to}{entry.damageType ? ` · ${entry.damageType}` : ''}</p>)}
     </details> : null}
     {type && <p className="weapon-summary">Ataque <strong>1d20 + 1d{dieFor(character[wr.attr]) ?? 4} ({attrLabelFor(wr.attr, character.lineage)})</strong> · Dano <strong>{damageText}</strong>{st.weaponDamageType ? <span> · {st.weaponDamageType}</span> : null}{karma ? <strong className="text-karma"> + {karma} Karma</strong> : null}<br /><span>{type.note}{wr.rank === 1 ? ' Evoluída: o dado do atributo substitui o valor fixo.' : wr.rank >= 2 ? ' Dominada: dado + valor fixo do atributo.' : ''}{common && type.attr !== 'corpo' ? ' Arma comum não recebe evoluções.' : ''}</span></p>}
-    {tripleOk && <label className="anchor-toggle mt-3"><input type="checkbox" checked={triple} onChange={e => setTriple(e.target.checked)} /> Crítico Triplo (−{TRIPLE_CRIT_COST} PF: dados ×3 no crítico e crítico no d20 a partir de {stylizedThreshold} — gasta antes de saber se acerta)</label>}
+    {tripleOk && <label className="anchor-toggle mt-3"><input type="checkbox" checked={triple} onChange={e => setTriple(e.target.checked)} /> Crítico Triplo (−{TRIPLE_CRIT_COST} {isTechAgent(character.lineage) ? "PN" : "PF"}: dados ×3 no crítico e crítico no d20 a partir de {stylizedThreshold} — gasta antes de saber se acerta)</label>}
     <div className="quick-actions mt-3">
       <Button variant="outline" disabled={!type} onClick={() => {
         const tripled = triple && tripleOk;
@@ -221,6 +221,7 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
 
 /** Nomenclaturas: nome e tipo. Dano, crítico e custo de PF seguem a escala de Recitação (Direta 1d6/2 PF · Parcial 2d8/5 PF · Completa 6d8/12 PF). */
 export function NomenclaturesTab({ character, update, addRoll }: { character: Character; update: Update; addRoll: AddRoll }) {
+  const resource = isTechAgent(character.lineage) ? 'PN' : 'PF';
   const [draft, setDraft] = useState<{ name: string; kind: NomenclatureKind; family: string } | null>(null);
   const families = nomenclatureFamilies(character);
   const [pasteText, setPasteText] = useState('');
@@ -261,7 +262,7 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
         <Field label={`TIPO DE ${nomenclatureLabel(character.lineage).toUpperCase()}`}><select value={draft.kind} onChange={e => setDraft({ ...draft, kind: e.target.value as NomenclatureKind })}>
           {kinds.map(k => <option key={k} value={k}>{nomenclatureLevelLabel(character.lineage, k)}</option>)}
         </select></Field>
-        <p className="empty-copy">Dano <strong>{NOMENCLATURE_DICE[draft.kind]}</strong> (crítico {NOMENCLATURE_CRIT_DICE[draft.kind]}) · custo <strong className="text-flux">{NOMENCLATURE_COST[draft.kind]} PF</strong>. Os valores são fixos pelo Códice.</p>
+        <p className="empty-copy">Dano <strong>{NOMENCLATURE_DICE[draft.kind]}</strong> (crítico {NOMENCLATURE_CRIT_DICE[draft.kind]}) · custo <strong className="text-flux">{NOMENCLATURE_COST[draft.kind]} {resource}</strong>. Os valores são fixos pelo Códice.</p>
         <div className="flex gap-2"><Button disabled={!draft.name.trim()} onClick={() => { update({ nomenclatures: [...character.nomenclatures, { name: draft.name.trim(), cost: NOMENCLATURE_COST[draft.kind], kind: draft.kind, family: draft.family || draft.name.trim() }] }); closeDraft(); }}><Plus /> Salvar técnica</Button><Button variant="ghost" onClick={closeDraft}>Cancelar</Button></div>
       </div>
     </div>}
@@ -270,14 +271,14 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
       const t = techniqueRules(character, item);
       const parts = [t.dice, ...t.extraDice, ...(t.bonus ? [String(t.bonus)] : [])].join(' + ');
       return <div className="editable-row" key={i}>
-        <div className="nomen-head"><strong>{item.name}</strong><span>{nomenclatureLevelLabel(character.lineage, t.kind)} · dano {parts} (crítico {t.kind === 'Completa' ? `${t.critDice} puro` : `${t.critDice}${t.extraDice.length ? ` + ${t.extraDice.map(e => `2${e.slice(1)}`).join(' + ')}` : ''}${t.bonus ? ` + ${t.bonus}` : ''}`}) · <span className="text-flux">{t.cost} PF</span></span></div>
+        <div className="nomen-head"><strong>{item.name}</strong><span>{nomenclatureLevelLabel(character.lineage, t.kind)} · dano {parts} (crítico {t.kind === 'Completa' ? `${t.critDice} puro` : `${t.critDice}${t.extraDice.length ? ` + ${t.extraDice.map(e => `2${e.slice(1)}`).join(' + ')}` : ''}${t.bonus ? ` + ${t.bonus}` : ''}`}) · <span className="text-flux">{t.cost} {resource}</span></span></div>
         {item.effect && <p className="empty-copy" style={{ whiteSpace: 'pre-line' }}>{item.effect}</p>}
         <div className="row-actions">
           <Button size="sm" variant="outline" disabled={character.pf_current < t.cost} onClick={() => {
             const r = attackRoll(character.espirito); update({ pf_current: character.pf_current - t.cost });
             setResult({ name: item.name, attack: r.total, d20: r.d20, attrDie: r.attrDie, attrRoll: r.attrRoll, crit: r.crit, fumble: r.fumble });
             addRoll({ expression: r.expression, dice: r.dice, modifier: r.modifier, total: r.total, source: `${nomenclatureLabel(character.lineage)} · ${item.name} — ${nomenclatureLevelLabel(character.lineage, t.kind)} · acerto${r.fumble ? ' FALHA CRÍTICA' : r.crit ? ' CRÍTICO' : ''}`, crit: r.crit });
-          }} className="action-flux"><Sparkles /> Usar ({t.cost} PF)</Button>
+          }} className="action-flux"><Sparkles /> Usar ({t.cost} {resource})</Button>
           <Button size="sm" variant="outline" disabled={!result || result.name !== item.name || result.damage !== undefined || result.fumble} onClick={() => {
             if (!result) return;
             const d = nomenclatureDamage(character, item, result.crit, karmaDamageBonus(character));
@@ -287,7 +288,7 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
           <select aria-label="Nomenclatura a que esta versão pertence" value={techniqueKey(item)} onChange={e => update({ nomenclatures: character.nomenclatures.map((n, j) => j === i ? { ...n, family: e.target.value === '__own' ? n.name : e.target.value } : n) })}>{families.map(f => <option key={f.key} value={f.key}>Faz parte de: {f.name}</option>)}<option value="__own">Separar como nomenclatura própria</option></select>
           <Button size="icon" variant="ghost" title="Excluir técnica" aria-label="Excluir técnica" onClick={() => update({ nomenclatures: character.nomenclatures.filter((_, j) => j !== i) })}><Trash2 /></Button>
         </div>
-        {character.pf_current < t.cost && <p className="empty-copy">PF insuficientes: use Forçar o Fluxo (ação livre) para gerar PF, ao custo de Karma.</p>}
+        {character.pf_current < t.cost && <p className="empty-copy">{resource} insuficientes: use {forceActionLabel(character.lineage)} (ação livre) para gerar {resource}, ao custo de Karma.</p>}
       </div>;
     })}</div>; })}{!character.nomenclatures.length && <p className="empty-copy">Ainda não há {nomenclatureLabel(character.lineage, true).toLowerCase()} nesta ficha.</p>}</div>
   </div>;
@@ -503,6 +504,9 @@ export function AbsorbPfAction({ character, update, addRoll, tablemates = [], on
   const [dt,setDt]=useState(10);
   const [outcome,setOutcome]=useState('');
   const state=sheetState(character);
+  const tech = isTechAgent(character.lineage);
+  const resource = tech ? 'PN' : 'PF';
+  const attribute = tech ? 'TECNOLOGIA' : 'ESPÍRITO';
   const [busy,setBusy]=useState(false);
   /** Alvos elegíveis: mesma mesa (tablemates) e 2 ou mais de Elo, identificados pelo começo do nome. */
   const eligible=tablemates.filter(t=>t.id!==character.id&&syncLevelWith(character,t)>=SHARE_MIN_SYNC);
@@ -522,11 +526,12 @@ export function AbsorbPfAction({ character, update, addRoll, tablemates = [], on
       <div className="panel-head"><h3>{absorbActionLabel(character.lineage)} · {res.count}d20 ({isTechAgent(character.lineage)?"Tecnologia":"Espírito"} {res.espirito})</h3><Button size="sm" variant="ghost" onClick={() => setOpen(false)}>Fechar</Button></div>
       <p className="text-sm">Dados: <strong>{res.dice.join(' + ')}</strong> = soma <strong>{res.sum}</strong></p>
       <p className="text-sm mt-2">Maior dado: <strong>{res.highest}</strong> → faixa <strong>{res.band}</strong>{res.crit ? ' · CRÍTICO!' : ''}</p>
-      <p className="text-sm mt-2">Aplicado à soma inteira: <strong>{res.diceTotal} PF</strong></p>
-      <p className="text-sm mt-3">PF dos dados: <strong>{res.diceTotal}</strong> + Espírito: <strong>{res.espirito}</strong> = <strong>{res.total} PF absorvidos</strong>{res.crit ? ' · houve crítico (20)' : ''}</p>
-       <p className="muted-copy text-xs mt-1">PF atual limitado a {character.espirito*20} (Espírito × 20). Excedente: {state.excess} PF.</p>
+      <p className="text-sm mt-2">Aplicado à soma inteira: <strong>{res.diceTotal} {resource}</strong></p>
+      <p className="text-sm mt-3">{resource} dos dados: <strong>{res.diceTotal}</strong> + {attribute}: <strong>{res.espirito}</strong> = <strong>{res.total} {resource} absorvidos</strong>{res.crit ? ' · houve crítico (20)' : ''}</p>
+       <p className="muted-copy text-xs mt-1">{resource} atual limitado a {character.espirito*20} ({attribute} × 20). Excedente: {state.excess} {resource}.</p>
     </div>}
-    {state.excess>0&&<div className="game-panel flux-result col-span-full"><strong>{state.excess} PF excedentes {state.rounds>0?`· ${state.rounds} rodadas restantes`:''}</strong><div className="flex items-center gap-2 flex-wrap mt-2"><span className="field-kicker">AÇÃO PADRÃO: {state.standard?'GASTA':'DISPONÍVEL'}</span>{state.standard&&<Button size="sm" variant="ghost" onClick={()=>update({abilities:withSheetState(character,{standard:false})})}>Renovar Ação Padrão</Button>}</div><div className="field-stack mt-3"><Field label="DESTINO"><select value={choice} onChange={e=>setChoice(e.target.value as 'Partilhar'|'Manter')}><option>Manter</option><option>Partilhar</option></select></Field>{choice==='Partilhar'?<><Field label="ALVO (ELO 2 OU MAIS, MESMA MESA)"><select value={chosen?.id??''} onChange={e=>setTarget(e.target.value)} disabled={!eligible.length}>{!eligible.length&&<option value="">Nenhum alvo elegível</option>}{eligible.map(t=><option key={t.id} value={t.id}>{t.name} · Elo {syncLevelWith(character,t)}</option>)}</select></Field>{shareBlock&&<p className="empty-copy">{shareBlock}</p>}<Button disabled={!!shareBlock||busy||!chosen||!onShare} onClick={async()=>{if(!chosen||!onShare||busy)return;setBusy(true);const r=await onShare(chosen.id);setBusy(false);setOutcome(r.error??`Você transferiu ${r.amount} PF para ${chosen.name}. A Ação Padrão foi gasta.`)}}>{busy?'Transferindo...':'Partilhar PF (Ação Padrão)'}</Button></>:<><Button onClick={()=>{const rounds=rollDice(1,4)[0]??1;update({abilities:withSheetState(character,{rounds})});setOutcome(`${rounds} rodadas para usar ou desperdiçar os PF excedentes.`)}}><Dices/> Rolar 1d4 rodadas</Button><Button disabled={!state.rounds} onClick={()=>{setOutcome(`Expele ${state.excess} PF. Ação padrão: efeito positivo ou negativo a critério do Mestre.`);update({abilities:withSheetState(character,{excess:0,rounds:0})})}}>Expelir Fluxo</Button><Stepper label="DT DO MESTRE" value={dt} min={1} max={40} onChange={setDt}/><Button disabled={!state.rounds||!character.nomenclatures.length} onClick={()=>{const dice=rollDice(1,dieFor(character.espirito)??4);const success=(dice[0]??0)>=dt;setOutcome(`Teste de Espírito ${dice[0]} vs DT ${dt}: ${success?'PF somados à Nomenclatura':'falha; PF gastos sem efeito'}.`);update({abilities:withSheetState(character,{excess:0,rounds:0})})}}>Somar à Nomenclatura</Button></>}</div></div>}
+    {tech && state.excess > 0 && <p className="muted-copy text-xs">Descarga do Núcleo: o dano elétrico de uma descarga na arma equivale à metade dos PN excedentes descarregados (sem bônus de MENTE); a descarga no solo os dissipa. A aplicação ao próximo ataque depende da resolução do Mestre.</p>}
+    {state.excess>0&&<div className="game-panel flux-result col-span-full"><strong>{state.excess} {resource} excedentes {state.rounds>0?`· ${state.rounds} rodadas restantes`:''}</strong><div className="flex items-center gap-2 flex-wrap mt-2"><span className="field-kicker">AÇÃO PADRÃO: {state.standard?'GASTA':'DISPONÍVEL'}</span>{state.standard&&<Button size="sm" variant="ghost" onClick={()=>update({abilities:withSheetState(character,{standard:false})})}>Renovar Ação Padrão</Button>}</div><div className="field-stack mt-3"><Field label="DESTINO"><select value={choice} onChange={e=>setChoice(e.target.value as 'Partilhar'|'Manter')}><option>Manter</option><option>Partilhar</option></select></Field>{choice==='Partilhar'?<><Field label="ALVO (ELO 2 OU MAIS, MESMA MESA)"><select value={chosen?.id??''} onChange={e=>setTarget(e.target.value)} disabled={!eligible.length}>{!eligible.length&&<option value="">Nenhum alvo elegível</option>}{eligible.map(t=><option key={t.id} value={t.id}>{t.name} · Elo {syncLevelWith(character,t)}</option>)}</select></Field>{shareBlock&&<p className="empty-copy">{shareBlock}</p>}<Button disabled={!!shareBlock||busy||!chosen||!onShare} onClick={async()=>{if(!chosen||!onShare||busy)return;setBusy(true);const r=await onShare(chosen.id);setBusy(false);setOutcome(r.error??`Você transferiu ${r.amount} ${resource} para ${chosen.name}. A Ação Padrão foi gasta.`)}}>{busy?'Transferindo...':'Partilhar {resource} (Ação Padrão)'}</Button></>:<><Button onClick={()=>{const rounds=rollDice(1,4)[0]??1;update({abilities:withSheetState(character,{rounds})});setOutcome(`${rounds} rodadas para usar ou desperdiçar os ${resource} excedentes.`)}}><Dices/> Rolar 1d4 rodadas</Button><Button disabled={!state.rounds && !tech} onClick={()=>{setOutcome(`Expele ${state.excess} ${resource}. Ação padrão: efeito positivo ou negativo a critério do Mestre.`);update({abilities:withSheetState(character,{excess:0,rounds:0})})}}>{tech ? "Descarga no Solo · ação padrão" : "Expelir Fluxo"}</Button><Stepper label="DT DO MESTRE" value={dt} min={1} max={40} onChange={setDt}/><Button disabled={!state.rounds||!character.nomenclatures.length} onClick={()=>{const dice=rollDice(1,dieFor(character.espirito)??4);const success=(dice[0]??0)>=dt;setOutcome(`Teste de ${attribute} ${dice[0]} vs DT ${dt}: ${success?`${resource} somados à ${nomenclatureLabel(character.lineage)}`:`falha; ${resource} gastos sem efeito`}.`);update({abilities:withSheetState(character,{excess:0,rounds:0})})}}>Somar à {nomenclatureLabel(character.lineage)}</Button></>}</div></div>}
     {outcome&&<p role="status" className="auth-message col-span-full">{outcome}</p>}
   </>;
 }

@@ -3,7 +3,7 @@ import { Activity, ArrowRight, BookOpen, Brain, ChevronDown, Dices, Heart, Heart
 import { Button } from '@/components/ui/button';
 import {
   attackRoll, derived, dieFor, isTechAgent, joinStory, nomenclatureFamilies,
-  nomenclatureLabel, rollDice, splitStory, weaponAttrFor, type Character,
+  nomenclatureLabel, rollDice, splitStory, weaponAttackAttrFor, type Character,
 } from '@/lib/game';
 import {
   ANCHOR_NAME, AbsorbPfAction, AbilitiesTab, AgonyPanel, CoinsPanel, EffectEditor,
@@ -107,7 +107,7 @@ export function PlayerSheetUnified({ character, update, addRoll, onRoll, tablema
  const label = nomenclatureLabel(character.lineage,true);
  const select=(next:Section)=>{setSection(next);if(next==='Nomenclaturas'||next==='Habilidades'||next==='Inventário'||next==='História')onTabChange?.(next);else onTabChange?.('Geral')};
  const attributes=[{name:'CORPO',value:character.corpo},{name:'MENTE',value:character.mente},{name:tech?'TECNOLOGIA':'ESPÍRITO',value:character.espirito}];
- function hitRoll() {const attr=weaponAttrFor(character.lineage);const r=attackRoll(character[attr]);addRoll({expression:r.expression,dice:r.dice,modifier:0,total:r.total,crit:r.crit,source:`Ataque · ${character.name}${r.fumble?' — FALHA CRÍTICA':r.crit?' — CRÍTICO':''}`});setLastRoll(`Ataque: ${r.total} (${r.expression})${r.fumble?' · falha crítica':r.crit?' · crítico':''}`);}
+ function hitRoll() {const attr=weaponAttackAttrFor(character);const r=attackRoll(character[attr]);addRoll({expression:r.expression,dice:r.dice,modifier:0,total:r.total,crit:r.crit,source:`Ataque · ${character.name}${r.fumble?' — FALHA CRÍTICA':r.crit?' — CRÍTICO':''}`});setLastRoll(`Ataque: ${r.total} (${r.expression})${r.fumble?' · falha crítica':r.crit?' · crítico':''}`);}
  function initiativeRoll(){const dice=rollDice(Math.max(1,character.corpo),20);const total=Math.max(...dice)+character.corpo;addRoll({expression:`${character.corpo}d20 (maior) + ${character.corpo}`,dice,modifier:character.corpo,total,source:`Iniciativa · ${character.name}`});update({initiative:total});setLastRoll(`Iniciativa: ${total}`);}
  return <div className="hu-sheet" data-sheet="unificada">
    <div className="hu-hero">

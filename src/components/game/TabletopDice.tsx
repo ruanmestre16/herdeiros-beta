@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Dices, GripHorizontal, Minus, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { NOMENCLATURE_CRIT_DICE, absorbActionLabel, absorbFromDice, attrLabelFor, dieFor, forceActionLabel, forceFluxFromDice, karmaDamageBonus, karmaMaximum, parseDice, techniqueRules, weaponAttrFor, weaponByKey, weaponDiceFor, weaponRules, withSheetState, type Attr, type Character } from '@/lib/game';
+import { NOMENCLATURE_CRIT_DICE, absorbActionLabel, absorbFromDice, attrLabelFor, dieFor, forceActionLabel, isTechAgent, forceFluxFromDice, karmaDamageBonus, karmaMaximum, parseDice, nomenclatureLabel, techniqueRules, weaponAttrFor, weaponByKey, weaponDiceFor, weaponRules, withSheetState, type Attr, type Character } from '@/lib/game';
 import { damageDiceFaces, parseDamageFormula } from '@/lib/weapon-damage';
 import type { RollEntry } from './SheetExtras';
 
@@ -299,7 +299,7 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
     return { name: type.label, formula: chosen, eff, normal: { dice: normalTerms.map(t=>t.sides), signs: normalTerms.map(t=>t.sign), bonus: wr.bonus + flat }, crit: { dice: critTerms.map(t=>t.sides), signs: critTerms.map(t=>t.sign), bonus: wr.bonus + flat } };
   })();
   const presets = character ? (() => {
-    const atk = weaponAttrFor(character.lineage) as Attr; const lin = character.lineage;
+    const atk = (character.weapon_type ? weaponRules(character).attr : weaponAttrFor(character.lineage)) as Attr; const lin = character.lineage;
     const die = (a: Attr) => dieFor(character[a]) ?? 4;
     const d20s = (n: number) => Array.from({ length: Math.max(1, n) }, () => 20);
     type Preset = { key: string; label: string; dice: number[]; agg: Agg; bonus: number; fx?: (v: number[]) => Fx };
@@ -309,11 +309,11 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
       { key: 'ini', label: `Iniciativa · ${character.corpo}d20 (maior + ${character.corpo})`, dice: d20s(character.corpo), agg: 'max', bonus: character.corpo,
         fx: v => { const t = Math.max(0, ...v) + character.corpo; return { note: `Iniciativa ${t} registrada`, apply: () => ({ initiative: t }), log: { expression: `${v.length}d20 (maior ${Math.max(0, ...v)}) + ${character.corpo}`, dice: v, modifier: character.corpo, total: t, source: 'Iniciativa' } }; } },
       { key: 'abs', label: `${absorbActionLabel(lin)} · ${Math.max(1, character.espirito)}d20 (o maior define a faixa)`, dice: d20s(character.espirito), agg: 'sum', bonus: 0,
-        fx: v => { const r = absorbFromDice(v, character.espirito); return { result: r.total, note: `+${r.total} PF (maior ${r.highest}: ${r.band}; soma ${r.sum} vira ${r.diceTotal}, mais ${r.espirito} de Espírito)`,
+        fx: v => { const r = absorbFromDice(v, character.espirito); return { result: r.total, note: `+${r.total} ${isTechAgent(lin) ? "PN" : "PF"} (maior ${r.highest}: ${r.band}; soma ${r.sum} vira ${r.diceTotal}, mais ${r.espirito} de ${attrLabelFor("espirito", lin)})`,
           apply: c => { const cap = c.espirito * 20; const sum = c.pf_current + r.total; return { pf_current: Math.min(cap, sum), abilities: withSheetState(c, { excess: Math.max(0, sum - cap), rounds: 0 }) }; },
           log: { expression: `${r.count}d20 (soma ${r.sum}, maior ${r.highest}) + ${r.espirito}`, dice: v, modifier: r.espirito, total: r.total, source: `${absorbActionLabel(lin)} · ${r.band}`, crit: r.crit } }; } },
-      { key: 'flux', label: `${forceActionLabel(lin)} · ${Math.max(1, character.espirito)}d20 (metade vira PF)`, dice: d20s(character.espirito), agg: 'sum', bonus: 0,
-        fx: v => { const f = forceFluxFromDice(v); return { result: f.pf, note: `+${f.pf} PF e +${f.karma} Karma`,
+      { key: 'flux', label: `${forceActionLabel(lin)} · ${Math.max(1, character.espirito)}d20 (metade vira ${isTechAgent(lin) ? "PN" : "PF"})`, dice: d20s(character.espirito), agg: 'sum', bonus: 0,
+        fx: v => { const f = forceFluxFromDice(v); return { result: f.pf, note: `+${f.pf} ${isTechAgent(lin) ? "PN" : "PF"} e +${f.karma} Karma`,
           apply: c => ({ pf_current: Math.min(c.pf_max, c.pf_current + f.pf), karma: Math.min(karmaMaximum(c.mente, c.espirito), c.karma + f.karma) }),
           log: { expression: `${v.length}d20 = ${f.total}, metade`, dice: v, modifier: 0, total: f.pf, source: `${forceActionLabel(lin)} · +${f.karma} Karma` } }; } },
     ];
@@ -381,23 +381,23 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
             </div>
           </>}
           {character && character.nomenclatures.length > 0 && <>
-            <span className="field-kicker">NOMENCLATURAS</span>
+            <span className="field-kicker">{nomenclatureLabel(character.lineage, true).toUpperCase()}</span>
             {character.nomenclatures.map((n, i) => { const r = nomRolls(n); const spDie = dieFor(character.espirito) ?? 4; return <div className="tdice-nom" key={`${n.name}-${i}`}>
-              <span><strong>{n.name}</strong><small>{r.t.kind} · {r.t.cost} PF · {r.t.dice}{r.t.extraDice.length ? ` + ${r.t.extraDice.join(' + ')}` : ''}{r.t.bonus ? ` + ${r.t.bonus}` : ''}</small></span>
+              <span><strong>{n.name}</strong><small>{r.t.kind} · {r.t.cost} {isTechAgent(character.lineage) ? "PN" : "PF"} · {r.t.dice}{r.t.extraDice.length ? ` + ${r.t.extraDice.join(' + ')}` : ''}{r.t.bonus ? ` + ${r.t.bonus}` : ''}</small></span>
               <div className="tdice-pair">
-                <Button variant="outline" size="sm" title="Teste de acerto: 1d20 + dado de ESPÍRITO" onClick={() => launch([20, spDie], `Acerto · ${n.name}`, 'sum', 0, v => {
-                  if (character.pf_current < r.t.cost) return { block: `PF insuficientes para ${n.name} (${r.t.cost} PF). Use Forçar o Fluxo ou absorva PF.` };
+                <Button variant="outline" size="sm" title={`Teste de acerto: 1d20 + dado de ${attrLabelFor("espirito", character.lineage)}`} onClick={() => launch([20, spDie], `Acerto · ${n.name}`, 'sum', 0, v => {
+                  if (character.pf_current < r.t.cost) return { block: `${isTechAgent(character.lineage) ? "PN" : "PF"} insuficientes para ${n.name} (${r.t.cost} ${isTechAgent(character.lineage) ? "PN" : "PF"}). Use ${forceActionLabel(character.lineage)} ou ${absorbActionLabel(character.lineage)}.` };
                   const d20 = v[0] ?? 0;
-                  return { note: `−${r.t.cost} PF${d20 === 20 ? ' · CRÍTICO se acertar' : d20 === 1 ? ' · FALHA CRÍTICA' : ''}`, apply: c => ({ pf_current: Math.max(0, c.pf_current - r.t.cost) }), log: { expression: `1d20 + 1d${spDie}`, dice: v, modifier: 0, total: (v[0] ?? 0) + (v[1] ?? 0), source: `Nomenclatura · ${n.name} · acerto (−${r.t.cost} PF)`, crit: d20 === 20 } };
+                  return { note: `−${r.t.cost} ${isTechAgent(character.lineage) ? "PN" : "PF"}${d20 === 20 ? ' · CRÍTICO se acertar' : d20 === 1 ? ' · FALHA CRÍTICA' : ''}`, apply: c => ({ pf_current: Math.max(0, c.pf_current - r.t.cost) }), log: { expression: `1d20 + 1d${spDie}`, dice: v, modifier: 0, total: (v[0] ?? 0) + (v[1] ?? 0), source: `${nomenclatureLabel(character.lineage)} · ${n.name} · acerto (−${r.t.cost} ${isTechAgent(character.lineage) ? "PN" : "PF"})`, crit: d20 === 20 } };
                 })}>Acerto</Button>
                 <Button variant="outline" size="sm" title="Dano da Nomenclatura (quando acerta)" onClick={() => launch(r.normal.dice, `Dano · ${n.name}${karmaBonus ? ` (+${karmaBonus} Karma)` : ''}${r.eff}`, 'sum', r.normal.bonus + karmaBonus)}>Dano</Button>
                 <Button variant="outline" size="sm" title="Dano em crítico" onClick={() => launch(r.crit.dice, `Crítico · ${n.name}${karmaBonus ? ` (+${karmaBonus} Karma)` : ''}${r.eff}`, 'sum', r.crit.bonus + karmaBonus)}>Crítico</Button>
               </div>
             </div>; })}
           </>}
-          <label className="tdice-auto"><input type="checkbox" checked={reflect} disabled={!onApply} onChange={e => setReflect(e.target.checked)} /> Refletir na ficha (PF, Karma e iniciativa){!onApply ? ' · indisponível sem ficha sua' : ''}</label>
+          <label className="tdice-auto"><input type="checkbox" checked={reflect} disabled={!onApply} onChange={e => setReflect(e.target.checked)} /> Refletir na ficha ({character && isTechAgent(character.lineage) ? "PN" : "PF"}, Karma e iniciativa){!onApply ? ' · indisponível sem ficha sua' : ''}</label>
           {warn && <small role="alert" className="tdice-warn">{warn}</small>}
-          <small className="muted-copy">Com isso ligado, a Absorção e o Forçar o Fluxo somam PF (e Karma) na ficha quando os dados param, a Iniciativa é registrada e o Acerto de uma Nomenclatura desconta o custo em PF. O dano das armas e Nomenclaturas só é mostrado: quem sofre o dano é controlado no combate.</small>
+          <small className="muted-copy">Com isso ligado, a absorção e a energia do Núcleo/Fluxo atualizam PF ou PN (e Karma) na ficha, e o acerto das técnicas desconta seu custo. O dano das armas e Nomenclaturas só é mostrado: quem sofre o dano é controlado no combate.</small>
         </> : <small className="muted-copy">Abra uma ficha para rolar com os dados dela.</small>}
       </div>}
       <div className="tdice-history"><span className="field-kicker">ROLAGENS DA MESA (TUDO QUE FOI ROLADO)</span>

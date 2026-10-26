@@ -178,8 +178,8 @@ export function NewNpcDialog({ close, create, initialStep = 'choose' }: { close:
               <Field label="NOME"><input value={name} onChange={e=>setName(e.target.value)}/></Field>
               <Field label="CATEGORIA"><input value={category} onChange={e=>setCategory(e.target.value)}/></Field>
               <Stepper label={`NÍVEL DE AMEAÇA · ${threatTier(threat).toUpperCase()}`} value={threat} min={1} max={99} onChange={setThreat}/>
-              <div className="npc-stats"><Stepper label="PV MÁXIMO" value={pv} min={1} max={9999} tone="health" onChange={setPv}/><Stepper label="PF / NÚCLEO" value={pf} min={0} max={9999} tone="flux" onChange={setPf}/></div>
-              <div className="npc-stats">{(['corpo','mente','espirito'] as const).map(a=><Stepper key={a} label={a.toUpperCase()} value={attrs[a]} min={1} max={12} onChange={v=>setAttrs({...attrs,[a]:v})}/>)}</div>
+              <div className="npc-stats"><Stepper label="PV MÁXIMO" value={pv} min={1} max={9999} tone="health" onChange={setPv}/><Stepper label="PF / PN" value={pf} min={0} max={9999} tone="flux" onChange={setPf}/></div>
+              <div className="npc-stats">{(['corpo','mente','espirito'] as const).map(a=><Stepper key={a} label={a==='espirito' && category==='Agentes do Consórcio' ? 'TECNOLOGIA' : a.toUpperCase()} value={attrs[a]} min={1} max={12} onChange={v=>setAttrs({...attrs,[a]:v})}/>)}</div>
             </div>
           </details>
           <details className="hm-step-section"><summary>02 · Defesa, deslocamento e DTs</summary>
