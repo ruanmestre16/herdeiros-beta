@@ -1,0 +1,33 @@
+/* GS: mesma linguagem visual da Ficha Viva; controles utilizáveis em PC, mobile e APK. */
+.hu-gs-control{width:100%;min-width:0;display:grid;gap:11px}
+.hu-gs-main{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px}
+.hu-gs-value{display:flex;align-items:center;gap:11px;min-width:0}
+.hu-gs-label{display:flex;align-items:center;gap:7px;font-size:11px;font-weight:800;letter-spacing:.1em;color:#e0c083}
+.hu-gs-value>strong{font-size:clamp(27px,4vw,36px);line-height:1;color:#f5e8c6;font-variant-numeric:tabular-nums}
+.hu-gs-value>strong small{margin-left:3px;font-size:14px;font-weight:600;color:#aeb9c9}
+.hu-gs-buttons{display:flex;align-items:center;gap:8px}
+.hu-gs-buttons button{width:48px;height:48px;display:flex;align-items:center;justify-content:center;border:1px solid #b9955e7d;background:linear-gradient(160deg,#4a3933,#242a39);border-radius:11px;color:#ffe7b4;cursor:pointer;touch-action:manipulation;transition:background .12s,border-color .12s}
+.hu-gs-buttons button:hover:not(:disabled),.hu-gs-buttons button:focus-visible{background:#6d5136;border-color:#eac686;outline:2px solid #eac68655;outline-offset:2px}
+.hu-gs-buttons button:disabled{opacity:.38;cursor:not-allowed}
+.hu-gs-progress{height:10px;border-radius:50px;background:#0b111b;border:1px solid #ffffff24;overflow:hidden}
+.hu-gs-progress>span{display:block;height:100%;background:linear-gradient(90deg,#a77b4c,#ebc981);border-radius:50px;transition:width .14s}
+.hu-gs-markers{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.hu-gs-marker{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;padding:9px 6px;border:1px solid #ffffff25;border-radius:10px;color:#c1c6d1;background:#10162470}
+.hu-gs-marker strong{font-size:12px}
+.hu-gs-marker small{font-size:10px}
+.hu-gs-marker.ready{color:#fce1a2;background:#ba8a3a23;border-color:#e0bd79}
+.hu-gs-marker.completed{color:#c8f0d6;background:#43835b24;border-color:#73a78672}
+.hu-gs-feedback{font-size:12px;line-height:1.5;color:#bcc6d4;margin:0}
+.hu-gs-feedback.available{color:#f2d397;font-weight:700}
+.hu-gs-rule-note{font-size:11px;line-height:1.55;color:#abb5c3;margin:0}
+.hu-gs-compact{width:auto;display:inline-flex;gap:5px}
+.hu-gs-compact .hu-gs-main{gap:9px;flex-wrap:nowrap}
+.hu-gs-compact .hu-gs-value{gap:4px;flex-direction:row-reverse}
+.hu-gs-compact .hu-gs-value>strong{font-size:20px;white-space:nowrap}
+.hu-gs-compact .hu-gs-value>strong small{font-size:11px}
+.hu-gs-mini-label{font-size:10px;font-weight:800;color:#dabc7b;letter-spacing:.06em}
+.hu-gs-compact .hu-gs-buttons{gap:4px}
+.hu-gs-compact .hu-gs-buttons button{width:36px;height:36px;border-radius:8px}
+.hu-gs-compact .hu-gs-buttons button svg{width:17px;height:17px}
+@media(max-width:540px){.hu-gs-label{font-size:10px}.hu-gs-value>strong{font-size:29px}.hu-gs-buttons button{width:46px;height:46px}.hu-gs-marker{padding:8px 4px}.hu-gs-compact .hu-gs-buttons button{width:40px;height:40px}}
+@media(prefers-reduced-motion:reduce){.hu-gs-progress>span,.hu-gs-buttons button{transition:none}}

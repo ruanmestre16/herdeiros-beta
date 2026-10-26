@@ -12,6 +12,7 @@ import {
   type RollEntry,
 } from './SheetExtras';
 import { PlayerSheetCompact } from './PlayerSheetCompact';
+import { GsControl } from './GsControl';
 import './sheet-unified.css';
 
 type Section = 'Ficha' | 'Combate' | 'Nomenclaturas' | 'Habilidades' | 'Inventário' | 'História' | 'Evolução';
@@ -141,7 +142,7 @@ export function PlayerSheetUnified({ character, update, addRoll, onRoll, tablema
    {section==='Inventário'&&<InventoryPanel character={character} update={update}/>}
    {section==='História'&&<StoryPanel character={character} update={update}/>}
    {section==='Evolução'&&<div className="hu-content">
-     <section className="hu-section-card"><header className="hu-section-head"><div><span>JORNADA E DESPERTAR</span><h3>Seu caminho</h3><p>GS {character.gs}/10 · poderes, Elo, risco e descanso</p></div><BookOpen size={23}/></header><div className="hu-progress-rail"><span style={{width:`${Math.min(100,Math.max(0,character.gs*10))}%`}}/></div></section>
+     <section className="hu-section-card"><header className="hu-section-head"><div><span>JORNADA E DESPERTAR</span><h3>Seu caminho</h3><p>Ajuste seu GS e acompanhe a liberação dos marcos de evolução.</p></div><BookOpen size={23}/></header><GsControl character={character} onChange={gs=>update({gs})} disabled={readOnly}/></section>
      <Block title="Grau de Sincronia (GS)" icon={Sparkles} summary="Marcos de evolução, atributos e bônus" initiallyOpen><GsPanel character={character} update={update}/></Block>
      <Block title="Caminhos de evolução" icon={Brain} summary="Nomenclatura, corpo, arma e estágios"><PathPanel character={character} update={update} addRoll={addRoll}/><EffectEditor character={character} update={update}/>{character.lineage==='Arcadiano'&&<EgoWeaponPanel character={character} update={update} addRoll={addRoll}/>}{character.lineage==='Gaki'&&<GakiPassive character={character} update={update} addRoll={addRoll}/>}</Block>
      <Block title="Laços e Elo" icon={Heart} summary={`${character.sync.length} relações registradas`}><SyncEditor character={character} update={update}/></Block>
