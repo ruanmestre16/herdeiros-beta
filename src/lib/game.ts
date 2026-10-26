@@ -78,7 +78,8 @@ export const attrLabelFor = (attr: Attr, lineage?: string) => {
   if (lineage && isTechAgent(lineage) && attr === 'espirito') return 'TECNOLOGIA';
   return ATTR_LABEL[attr];
 };
-/** Atributo PADRÃO do ataque com arma: humanos MENTE (vontade), demais linhagens CORPO. Humanos podem escolher outro. */
+/** Arma de Núcleo e Habilidades de Núcleo do Agente usam TECNOLOGIA, armazenada no campo espirito por compatibilidade com Supabase.
+ * Armas comuns e ataques desarmados usam CORPO, independentemente da linhagem (Códice, cap. II/V). */
 export const weaponAttrFor = (lineage: string): Attr => isTechAgent(lineage) ? 'espirito' : lineage === 'Humano' ? 'mente' : lineage === 'Arcadiano' ? 'espirito' : 'corpo';
 
 export function rollDice(count: number, sides: number) { return Array.from({ length: count }, () => 1 + Math.floor(Math.random() * sides)); }
@@ -399,7 +400,8 @@ export function nomenclatureDamage(c: Character, n: Nomenclature, crit: boolean,
   if (crit && t.kind === 'Completa') return damageRoll(NOMENCLATURE_CRIT_DICE.Completa, extraBonus, false);
   return upgradedDamage(t.dice, t.bonus + extraBonus, crit, t.extraDice, mult);
 }
-/** Arma / Corpo: atributo da linhagem (Humano MENTE, Arcadiano ESPÍRITO, Gaki CORPO). Desarmado e arma comum somam sempre CORPO e nunca evoluem. */
+/** Arma / Corpo: Humano MENTE, Arcadiano ESPÍRITO, Gaki CORPO, Agente Tecnológico TECNOLOGIA.
+ * Armas comuns e desarmado: CORPO, sem evoluções, também para agentes. */
 export function weaponRules(c: Character, type = c.weapon_type, common = sheetState(c).weaponMode === 'comum') {
   const unarmed = weaponByKey(type)?.attr === 'corpo';
   const attr: Attr = unarmed || common ? 'corpo' : weaponAttrFor(c.lineage);
@@ -408,6 +410,10 @@ export function weaponRules(c: Character, type = c.weapon_type, common = sheetSt
   const eff = unarmed || common ? parseEffect('') : parseEffect(sheetState(c).specialEffect);
   return { attr, bonus: (rank === 1 ? 0 : c[attr]) + eff.flat, extraDice: [...(rank > 0 ? [`1d${dieFor(c[attr]) ?? 4}`] : []), ...eff.dice] as string[], rank, ignoreBlock: eff.ignoreBlock, effectNote: eff.raw };
 }
+/** Atributo efetivo de acerto da arma equipada, incluindo a escolha 'arma comum' (CORPO). */
+export const weaponAttackAttrFor = (character: Character): Attr => weaponRules(character).attr;
+/** Unidade do recurso no combate. O campo pf_current/pf_max guarda PF ou PN sem migração de banco. */
+export const energyUnitFor = (lineage: string) => isTechAgent(lineage) ? 'PN' : 'PF';
 /** Quem escolheu Arma / Corpo Estilizada no marco de 10 GS pode gastar 10 PF para o efeito único de crítico: dados ×3 no crítico E margem de crítico reduzida. */
 export function canTripleCrit(c: Character) {
   const st = sheetState(c);
