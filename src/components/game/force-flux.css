@@ -28,3 +28,15 @@
 .hff-panel[data-karma-stage="gaki"]{border-color:rgba(176,100,233,.46)}
 .hff-panel[data-karma-stage="berserker"]{border-color:rgba(138,70,196,.65)}
 .hff-panel[data-karma-stage="consumido"]{border-color:rgba(244,103,121,.70)}
+
+/* Ajuste manual do Karma ao lado dos PF, dentro de Combate → Fluxo e carga.
+   O painel de risco logo abaixo continua exibindo estados, descrição e pulsação. */
+.hff-karma-counter{align-content:start}
+.hff-karma-adjust{display:flex;align-items:center;gap:6px;margin-top:5px}
+.hff-karma-adjust button{display:grid;place-items:center;min-width:40px;min-height:40px;padding:0;border:1px solid rgba(186,121,213,.62);border-radius:10px;background:rgba(125,65,154,.14);color:inherit;cursor:pointer;transition:border-color .15s ease,background .15s ease}
+.hff-karma-adjust button:hover:not(:disabled){border-color:#d6a0f4;background:rgba(154,85,199,.23)}
+.hff-karma-adjust button:focus-visible{outline:2px solid #d6a0f4;outline-offset:2px}
+.hff-karma-adjust button:disabled{opacity:.32;cursor:not-allowed}
+.hff-panel[data-karma-stage="gaki"] .hff-karma-adjust button,
+.hff-panel[data-karma-stage="berserker"] .hff-karma-adjust button{border-color:rgba(188,127,240,.8);background:rgba(129,70,168,.24)}
+@media(max-width:530px){.hff-counters{grid-template-columns:repeat(2,minmax(0,1fr))}.hff-counters>div:last-child{grid-column:1/-1}}

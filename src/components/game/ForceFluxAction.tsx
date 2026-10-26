@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { AlertTriangle, Dices, Flame, Zap } from 'lucide-react';
+import { AlertTriangle, Dices, Flame, Minus, Plus, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   forceFlux, isTechAgent, karmaMaximum, karmaStage, sheetState, type Character,
@@ -44,8 +44,9 @@ export function ForceFluxAction({ character, update, addRoll }: {
   const tech = isTechAgent(character.lineage);
   const maxPf = Math.max(1, character.pf_max);
   const maxKarma = karmaMaximum(character.mente, character.espirito);
-  const stage = karmaStage(character.karma, maxKarma);
-  const percent = Math.min(100, Math.floor(Math.max(0, character.karma) / maxKarma * 100));
+  const currentKarma = Math.max(0, Math.min(maxKarma, Math.round(character.karma || 0)));
+  const stage = karmaStage(currentKarma, maxKarma);
+  const percent = Math.min(100, Math.floor(currentKarma / maxKarma * 100));
   const full = character.pf_current >= maxPf;
   const consumed = stage === 'consumido';
   // PF cheio ou Karma acima de 50/70% NÃO impedem Forçar Fluxo.
@@ -91,13 +92,22 @@ export function ForceFluxAction({ character, update, addRoll }: {
     </div>
     <div className="hff-counters" aria-label="Estado atual dos recursos">
       <div><span>PF disponíveis</span><strong>{character.pf_current}<small> / {maxPf}</small></strong></div>
-      <div><span>Karma acumulado</span><strong>{character.karma}<small> / {maxKarma}</small></strong></div>
+      <div className="hff-karma-counter">
+        <span>Karma acumulado</span>
+        <strong>{currentKarma}<small> / {maxKarma}</small></strong>
+        <div className="hff-karma-adjust" role="group" aria-label="Ajustar Karma durante o combate">
+          <button type="button" aria-label="Diminuir Karma em 1 ponto" title="Diminuir Karma em 1 ponto" disabled={currentKarma <= 0}
+            onClick={() => update({ karma: Math.max(0, currentKarma - 1) })}><Minus size={16}/></button>
+          <button type="button" aria-label="Aumentar Karma em 1 ponto" title="Aumentar Karma em 1 ponto" disabled={currentKarma >= maxKarma}
+            onClick={() => update({ karma: Math.min(maxKarma, currentKarma + 1) })}><Plus size={16}/></button>
+        </div>
+      </div>
       <div><span>Risco</span><strong>{percent}%</strong></div>
     </div>
     <div className="hff-meter" role="progressbar" aria-label="Karma acumulado" aria-valuemin={0} aria-valuemax={maxKarma} aria-valuenow={Math.min(maxKarma, Math.max(0, character.karma))}>
       <div style={{ width: `${percent}%` }} />
     </div>
-    <KarmaRiskPanel character={character} addRoll={addRoll} update={update}/>
+    <KarmaRiskPanel character={character} addRoll={addRoll} update={update} showAdjust={false}/>
     <div className="hff-buttons">
       <Button type="button" variant="outline" className="hff-force" onClick={force} disabled={!canForce} aria-label="Forçar o Fluxo: rolar Espírito para recuperar PF e receber Karma">
         <Dices size={18}/> Forçar o Fluxo

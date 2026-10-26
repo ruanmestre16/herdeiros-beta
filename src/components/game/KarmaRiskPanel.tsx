@@ -7,11 +7,13 @@ import './karma-risk.css';
  * e morte como desfecho padrão seguem a adaptação definida para esta mesa.
  * O Mestre continua responsável por resolver a narrativa e a DT dos testes.
  */
-export function KarmaRiskPanel({ character, addRoll, update, compact = false }: {
+export function KarmaRiskPanel({ character, addRoll, update, compact = false, showAdjust = true }: {
   character: Character;
   addRoll?: (entry: RollEntry) => void;
   update?: (patch: Partial<Character>) => void;
   compact?: boolean;
+  /** Oculta apenas os botões quando o ajuste já aparece no cabeçalho do combate. */
+  showAdjust?: boolean;
 }) {
   if (isTechAgent(character.lineage)) return null;
   const max = karmaMaximum(character.mente, character.espirito);
@@ -29,7 +31,7 @@ export function KarmaRiskPanel({ character, addRoll, update, compact = false }: 
     <div className="hkr-heading">
       <div className="hkr-heading-main"><span className="hkr-icon"><Icon size={19}/></span><div><small>{info.label}</small><strong>{info.name}</strong></div></div>
       <div className="hkr-quick-adjust">
-        {update && <div className="hkr-adjust-buttons" role="group" aria-label="Ajustar Karma diretamente">
+        {update && showAdjust && <div className="hkr-adjust-buttons" role="group" aria-label="Ajustar Karma diretamente">
           <button type="button" disabled={current <= 0} onClick={() => update({ karma: Math.max(0, current - 1) })} aria-label="Diminuir Karma em 1 ponto" title="Diminuir Karma em 1 ponto"><Minus size={16}/></button>
           <button type="button" disabled={current >= max} onClick={() => update({ karma: Math.min(max, current + 1) })} aria-label="Aumentar Karma em 1 ponto" title="Aumentar Karma em 1 ponto"><Plus size={16}/></button>
         </div>}
