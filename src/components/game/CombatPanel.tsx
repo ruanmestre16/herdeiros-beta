@@ -14,6 +14,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { weaponDiceFor } from '@/lib/game';
 import { rollDamageFormula } from '@/lib/weapon-damage';
 import { readBestiaryAttacks } from '@/lib/bestiary';
+import { PlayerCombatDashboard } from './PlayerCombatDashboard';
 import type { MonsterSheet } from './NewNpcDialog';
 
 type Combatant = {
@@ -211,6 +212,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   const [channelReady, setChannelReady] = useState(false);
   const [reactionRequest, setReactionRequest] = useState<ReactionRequest | null>(null);
   const [reactionSent, setReactionSent] = useState<string | null>(null);
+  const [showDetailedPlayer, setShowDetailedPlayer] = useState(false);
   const [masterReactionRequest, setMasterReactionRequest] = useState<ReactionRequest | null>(null);
   const [masterReactionAnswer, setMasterReactionAnswer] = useState<ReactionAnswer | null>(null);
 
@@ -779,56 +781,49 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
     </div>;
   }
 
-  /** Visualização compacta para janelinha desktop, navegador mobile e APK. */
-  if (compact && !masterMode) {
+  /** Mesmo painel em Mesa, janela separada do PC, mobile e APK. A lógica da batalha permanece aqui. */
+  if (compact && !masterMode && !showDetailedPlayer) {
     const defenseAttacker = reactionRequest ? combatants.find(c => c.id === reactionRequest.attackerId) : undefined;
     const defenseTarget = reactionRequest ? combatants.find(c => c.id === reactionRequest.targetId) : undefined;
     const defenseOption = defenseAttacker && reactionRequest ? findOption(defenseAttacker, reactionRequest.optionId) : undefined;
     const defenseChoices = defenseTarget && defenseOption && reactionAvailable(defenseTarget) ? reactionChoices(defenseOption, defenseTarget).filter(c => !c.disabled) : [];
-    const canSend = playerCanChooseAttack && !!target && !!option && option.pfCost <= (attacker?.pf ?? 0) && !sentIntentId;
-    return <div className="space-y-4 pb-6" aria-label="Painel rápido de combate">
-      <div className={`rounded-xl border p-4 ${isMyTurn ? 'border-primary bg-primary/10' : 'border-border bg-card'}`} role="status" aria-live="polite">
-        <span className="field-kicker">{campaign.combat_active ? `RODADA ${campaign.round}` : 'MESA EM ESPERA'}</span>
-        <h2 className="text-xl font-bold">{!campaign.combat_active ? 'Combate ainda não iniciado' : isMyTurn ? '⚔ É a sua vez!' : `Turno de ${current ? shownName(current) : '—'}`}</h2>
-        <p className="text-sm text-muted-foreground">{isMyTurn ? 'Escolha seu alvo e envie sua ação ao Mestre.' : 'Acompanhe a mesa. Você pode reagir mesmo fora do seu turno.'}</p>
-      </div>
-      {attacker && <div className="grid grid-cols-2 gap-2">
-        <div className="rounded-lg border border-border bg-card p-3"><p className="text-xs text-muted-foreground">{attacker.name} · PV</p><strong className="text-lg">{attacker.pv} / {attacker.pvMax}</strong></div>
-        <div className="rounded-lg border border-border bg-card p-3"><p className="text-xs text-muted-foreground">PF / PN</p><strong className="text-lg">{attacker.pf} / {attacker.pfMax}</strong></div>
-      </div>}
-      {reactionRequest && defenseTarget && <section className="rounded-xl border border-amber-500 bg-amber-500/10 p-4" aria-label="Reação pendente" role="region">
-        <div className="mb-3"><p className="field-kicker">REAÇÃO DO JOGADOR</p><h3 className="text-lg font-bold">🛡 Você está sendo atacado!</h3>
-          <p className="text-sm">{defenseAttacker ? shownName(defenseAttacker) : 'Adversário'} → {defenseOption?.label ?? 'Ataque'}</p></div>
-        {reactionSent === reactionRequest.requestId ? <p className="rounded-lg border border-border p-3">Reação enviada. Aguarde a resolução do Mestre.</p> : defenseChoices.length ? <div className="grid gap-2">
-          {defenseChoices.map(item => <Button key={item.value} className="min-h-12 h-auto whitespace-normal justify-start text-left" variant={item.value === 'esquivar' ? 'default' : 'outline'} onClick={() => void choosePlayerReaction(item.value)} disabled={!channelReady}>{item.label}</Button>)}
-        </div> : <p className="text-sm">Sem reação disponível nesta rodada. O Mestre resolverá o ataque.</p>}
-      </section>}
-      {attacker && campaign.combat_active && <section className="rounded-xl border border-border bg-card p-4 space-y-3">
-        <h3 className="font-bold">Atacar</h3>
-        {attackerLost && <p className="text-sm text-amber-400">Você sacrificou uma ação do turno ao defender uma técnica.</p>}
-        <label className="field"><span className="field-label">1. ESCOLHA O ALVO</span>
-          <select value={target?.id ?? ''} onChange={e => { setTargetId(e.target.value); setPending(null); }} disabled={!isMyTurn} className="min-h-12">
-            {targets.map(t => <option key={t.id} value={t.id}>{shownName(t)}{npcHides(t,'sheet') ? '' : ` · Esquiva ${t.esquiva}`}</option>)}
-          </select></label>
-        <label className="field"><span className="field-label">2. ESCOLHA SUA AÇÃO</span>
-          <select value={option?.id ?? ''} onChange={e => selectOption(e.target.value)} disabled={!isMyTurn} className="min-h-12">
-            <optgroup label="Armas">{weapons.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</optgroup>
-            <optgroup label={skillName}>{nomenclatures.map(o => <option key={o.id} value={o.id}>{o.label}</option>)}</optgroup>
-          </select></label>
-        {option && <p className="rounded-lg bg-secondary/50 p-3 text-sm">Acerto: 1d20 + dado de {attrLabelFor(option.hitAttr,lineage)} · Dano {option.dice.join(' + ')}{option.extra.length ? ` + ${option.extra.join(' + ')}` : ''}{option.fixed ? ` + ${option.fixed}` : ''}{option.pfCost ? ` · ${option.pfCost} PF` : ''}</p>}
-        <Button className="w-full min-h-12 text-base" disabled={!canSend || !channelReady} onClick={() => void sendAttackIntent()}>
-          <Swords /> {sentIntentId ? 'Enviado · aguardando Mestre' : !isMyTurn ? 'Aguarde seu turno' : 'Enviar ataque ao Mestre'}
-        </Button>
-      </section>}
-      {notice && <p className="rounded-lg border border-destructive p-3 text-sm" role="alert">{notice}</p>}
-      <section className="rounded-xl border border-border bg-card p-4"><h3 className="mb-2 font-bold">Últimos acontecimentos</h3>
-        {campaign.log.filter(l => !l.startsWith('☠KILL:')).slice(0, 5).map((line, i) => <p key={i} className="border-t border-border py-2 text-sm">{hideNpcNames(line, npcs)}</p>)}
-        {!campaign.log.length && <p className="text-sm text-muted-foreground">A batalha ainda não tem registros.</p>}
-      </section>
-    </div>;
+    const showSafeName = (c: Combatant) => shownName(c);
+    return <PlayerCombatDashboard
+      combatActive={campaign.combat_active}
+      round={campaign.round}
+      isMyTurn={isMyTurn}
+      currentId={current?.id}
+      currentName={current ? showSafeName(current) : '—'}
+      combatants={combatants.map(c => ({ ...c, name: showSafeName(c) }))}
+      character={attacker}
+      target={target ? { ...target, name: showSafeName(target) } : undefined}
+      targets={targets.map(c => ({ ...c, name: showSafeName(c), ...(npcHides(c, 'sheet') ? { esquiva: -1 } : {}), ...(npcHides(c, 'hp') ? { pv: -1, pvMax: -1 } : {}) }))}
+      options={options}
+      selectedOption={option}
+      abilities={attacker?.pc?.nomenclatures.map((n, i) => ({ id: `nom-${i}`, name: n.name, kind: nomenclatureLevelLabel(lineage, n.kind) })) ?? []}
+      skillName={skillName}
+      resourceName={attacker?.pc && isTechAgent(attacker.pc.lineage) ? 'PN' : 'PF'}
+      reactionReady={attacker ? reactionAvailable(attacker) : false}
+      hasLostAction={attackerLost}
+      reactionRequest={reactionRequest ? { id: reactionRequest.requestId, attackerName: defenseAttacker ? showSafeName(defenseAttacker) : 'Adversário', attackName: defenseOption?.label ?? 'Ataque' } : undefined}
+      reactionChoices={defenseChoices}
+      reactionSent={!!reactionRequest && reactionSent === reactionRequest.requestId}
+      sentAttack={!!sentIntentId}
+      connected={channelReady}
+      canSend={playerCanChooseAttack && !!target && !!option && option.pfCost <= (attacker?.pf ?? 0) && !sentIntentId && !reactionRequest}
+      notice={notice}
+      log={campaign.log.filter(l => !l.startsWith('☠KILL:')).slice(0, 6).map(l => hideNpcNames(l, npcs))}
+      onSelectTarget={id => { setTargetId(id); setPending(null); }}
+      onSelectOption={selectOption}
+      onSendAttack={sendAttackIntent}
+      onChooseReaction={value => choosePlayerReaction(value as Reaction)}
+      onShowDetailed={() => setShowDetailedPlayer(true)}
+    />;
   }
+  /** O modo detalhado preserva todas as técnicas especiais e controles anteriores. */
 
   return <div className="combat-layout">
+    {compact && !masterMode && showDetailedPlayer && <div className="mb-4 rounded-xl border border-primary/30 bg-card p-3"><Button variant="outline" className="min-h-11 w-full" onClick={() => setShowDetailedPlayer(false)}>← Voltar ao combate simplificado</Button></div>}
     <div className="stack">
       <section className="game-panel"><div className="panel-head"><h3>Ordem de iniciativa</h3><span className="field-kicker">RODADA {campaign.round}</span></div>
         <div className="combat-list">{combatants.map((c, i) => <div key={c.id} className={`combatant ${current?.id === c.id ? 'current' : ''}`}>
