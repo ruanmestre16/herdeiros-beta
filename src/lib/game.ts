@@ -108,8 +108,31 @@ export function damageRoll(dice: string, bonus: number, crit: boolean, mult = 2)
   const count = crit ? p.count * mult : p.count; const rolled = rollDice(count, p.sides);
   return { dice: rolled, bonus, total: rolled.reduce((a, b) => a + b, 0) + bonus, expression: `${count}d${p.sides}${bonus ? ` + ${bonus}` : ''}` };
 }
-/** Bônus de dano do Karma: 50% = +3, 70% = +5 em todo ataque. */
-export function karmaDamageBonus(c: Pick<Character, 'karma' | 'mente' | 'espirito'>) { const st = karmaStage(c.karma, karmaMaximum(c.mente, c.espirito)); return st === 'berserker' || st === 'consumido' ? 5 : st === 'gaki' ? 3 : 0; }
+/**
+ * O campo persistido `karma` é usado como medidor de DESTRUIÇÃO DO NÚCLEO em Agentes
+ * Tecnológicos para manter compatibilidade com fichas e Supabase existentes.
+ * No Códice, Forçar Núcleo produz Karma; a apresentação de colapso tecnológico
+ * (50/70/100%) é regra da campanha recuperada da versão antiga do aplicativo.
+ */
+export const coreDestructionMaximum = (c: Pick<Character, 'mente' | 'espirito'>) => karmaMaximum(c.mente, c.espirito);
+export const coreDestructionPercent = (c: Pick<Character, 'karma' | 'mente' | 'espirito'>) => Math.min(100, Math.max(0, Math.floor(c.karma / coreDestructionMaximum(c) * 100)));
+export const techCoreConsumed = (c: Pick<Character, 'lineage' | 'karma' | 'mente' | 'espirito'>) => isTechAgent(c.lineage) && karmaStage(c.karma, coreDestructionMaximum(c)) === 'consumido';
+export const coreRiskDetails = (c: Pick<Character, 'lineage' | 'karma' | 'mente' | 'espirito'>) => {
+  const stage = karmaStage(c.karma, coreDestructionMaximum(c));
+  if (!isTechAgent(c.lineage)) return null;
+  if (stage === 'consumido') return { title: 'NÚCLEO CONSUMIDO', text: '100% · colapso do Núcleo. Arma e Habilidades de Núcleo ficam inoperantes; o Mestre decide se há morte, perda da conexão tecnológica ou outra consequência narrativa.', damage: 0, stage };
+  if (stage === 'berserker') return { title: 'AUTODESTRUIÇÃO IMINENTE', text: '70% · +5 de dano em todos os ataques. Pulsos elétricos involuntários, instabilidade grave e risco de autodestruição, resolvidos com o Mestre.', damage: 5, stage };
+  if (stage === 'gaki') return { title: 'NÚCLEO INSTÁVEL', text: '50% · +3 de dano em todos os ataques. A potência sobe, as travas de segurança falham e a destruição avança.', damage: 3, stage };
+  return { title: 'NÚCLEO ESTÁVEL', text: 'Abaixo de 50% · Núcleo operacional, sem bônus por sobrecarga. Forçar Núcleo gera PN, mas acelera sua destruição.', damage: 0, stage };
+};
+/** Bônus de dano: Karma normal ou sobrecarga tecnológica (50%=+3, 70%=+5).
+ * Núcleo consumido (100%) não concede +5: não há energia operacional.
+ */
+export function karmaDamageBonus(c: Pick<Character, 'karma' | 'mente' | 'espirito'> & Partial<Pick<Character, 'lineage'>>) {
+  const st = karmaStage(c.karma, karmaMaximum(c.mente, c.espirito));
+  if (c.lineage && isTechAgent(c.lineage) && st === 'consumido') return 0;
+  return st === 'berserker' || st === 'consumido' ? 5 : st === 'gaki' ? 3 : 0;
+}
 /** Rótulos da barra de Karma / Destruição de Núcleo conforme linhagem e estágio. */
 export function resourceStageLabel(lineage: string, stage: ReturnType<typeof karmaStage>) {
   if (isTechAgent(lineage)) {
