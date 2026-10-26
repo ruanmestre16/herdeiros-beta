@@ -221,6 +221,7 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
     return missing.length ? [`${group}: falta ${missing.join(', ')}`] : [];
   });
   const differentCosts = parsed.filter(p => p.declaredCost !== undefined && p.declaredCost !== NOMENCLATURE_COST[p.kind]);
+  const hasThreeGrades = parsed.length === 3 && importedFamilies.length === 1 && incomplete.length === 0;
   const closeDraft = () => { setDraft(null); setPasteText(''); };
   const kinds: NomenclatureKind[] = ['Direta', 'Parcial', 'Completa'];
   return <div className="single-section">
@@ -229,12 +230,12 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
       <div className="panel-head"><h3>Nova {nomenclatureLabel(character.lineage)}</h3></div>
       <div className="field-stack">
         <Field label="COLE O TEXTO COMPLETO (DIRETA, PARCIAL E COMPLETA)">
-          <textarea rows={10} value={pasteText} onChange={e => setPasteText(e.target.value)} placeholder={'## NOMENCLATURA: NOME DA TÉCNICA\n### DIRETA — 2 PF\nNome: Nome do grau direto\nEfeito: ...\n### PARCIAL — 5 PF\nNome: Nome do grau parcial\nEfeito: ...\n### COMPLETA — 12 PF\nNome: Nome do grau completo\nEfeito: ...'} />
+          <textarea rows={10} value={pasteText} onChange={e => setPasteText(e.target.value)} placeholder={'## NOMENCLATURA: NOME DA TÉCNICA\n### NOMEAÇÃO DIRETA — 2 PF\nNome: Nome do grau direto\nEfeito: ...\n### RECITAÇÃO PARCIAL — 5 PF\nNome: Nome do grau parcial\nEfeito: ...\n### RECITAÇÃO COMPLETA — 12 PF\nNome: Nome do grau completo\nEfeito: ...'} />
         </Field>
         {pasteText.trim() && <div className="field-stack" role="status" aria-live="polite">
           <p className="empty-copy">{parsed.length
-            ? `Reconhecido: ${parsed.length} versão(ões) em ${importedFamilies.length} nomenclatura(s). ${parsed.map(p => `${p.family}: ${p.kind} · ${p.name} · ${NOMENCLATURE_DICE[p.kind]} (crítico ${NOMENCLATURE_CRIT_DICE[p.kind]}) · ${NOMENCLATURE_COST[p.kind]} PF`).join('  |  ')}`
-            : 'Nenhum grau reconhecido. Use DIRETA, PARCIAL e COMPLETA como títulos de linhas (com ou sem custo em PF).'}
+            ? `${hasThreeGrades ? 'Os três graus foram reconhecidos! Pronto para salvar. ' : ''}Reconhecido: ${parsed.length} versão(ões) em ${importedFamilies.length} nomenclatura(s). ${parsed.map(p => `${p.family}: ${p.kind} · ${p.name} · ${NOMENCLATURE_DICE[p.kind]} (crítico ${NOMENCLATURE_CRIT_DICE[p.kind]}) · ${NOMENCLATURE_COST[p.kind]} PF`).join('  |  ')}`
+            : 'Nenhum grau reconhecido. Use títulos como DIRETA, NOMEAÇÃO DIRETA, NOMENCLATURA DIRETA, AMEAÇA DIRETA, RECITAÇÃO PARCIAL e RECITAÇÃO COMPLETA (com ou sem PF).'}
           </p>
           {!!incomplete.length && <p className="empty-copy">Atenção: nem todas as nomenclaturas têm os três graus. {incomplete.join(' | ')}.</p>}
           {!!differentCosts.length && <p className="empty-copy">Atenção: o custo de PF do texto difere do Códice em {differentCosts.map(p => `${p.family} (${p.kind}: texto ${p.declaredCost}, sistema ${NOMENCLATURE_COST[p.kind]})`).join('; ')}. Ao salvar, prevalece o custo do Códice.</p>}
@@ -242,7 +243,7 @@ export function NomenclaturesTab({ character, update, addRoll }: { character: Ch
         {parsed.length > 0 && <div className="flex gap-2"><Button onClick={() => {
           update({ nomenclatures: [...character.nomenclatures, ...parsed.map(p => ({ name: p.name, cost: NOMENCLATURE_COST[p.kind], kind: p.kind, family: draft!.family || p.family, ...(p.effect ? { effect: p.effect } : {}) }))] });
           closeDraft();
-        }}><Plus /> Salvar {parsed.length} {parsed.length > 1 ? 'versões' : 'versão'} ({importedFamilies.length} {importedFamilies.length > 1 ? 'nomenclaturas' : 'nomenclatura'})</Button></div>}
+        }}><Plus /> {hasThreeGrades ? 'Salvar os 3 graus' : `Salvar ${parsed.length} ${parsed.length > 1 ? 'versões' : 'versão'} (${importedFamilies.length} ${importedFamilies.length > 1 ? 'nomenclaturas' : 'nomenclatura'})`}</Button></div>}
         <Field label="NOME DA TÉCNICA"><input value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} placeholder="Nome da técnica" /></Field>
         <Field label="FAZ PARTE DE"><select value={draft.family} onChange={e => setDraft({ ...draft, family: e.target.value })}><option value="">Nova nomenclatura</option>{families.map(f => <option key={f.key} value={f.key}>{f.name} (outra versão dela)</option>)}</select></Field>
         <Field label={`TIPO DE ${nomenclatureLabel(character.lineage).toUpperCase()}`}><select value={draft.kind} onChange={e => setDraft({ ...draft, kind: e.target.value as NomenclatureKind })}>
