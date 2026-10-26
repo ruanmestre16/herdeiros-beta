@@ -5,6 +5,7 @@ import {
   forceFlux, isTechAgent, karmaMaximum, karmaStage, sheetState, type Character,
 } from '@/lib/game';
 import type { RollEntry } from './SheetExtras';
+import { KarmaRiskPanel } from './KarmaRiskPanel';
 import './force-flux.css';
 
 type Update = (patch: Partial<Character>) => void;
@@ -47,7 +48,9 @@ export function ForceFluxAction({ character, update, addRoll }: {
   const percent = Math.min(100, Math.floor(Math.max(0, character.karma) / maxKarma * 100));
   const full = character.pf_current >= maxPf;
   const consumed = stage === 'consumido';
-  const canForce = !tech && !full && !consumed;
+  // PF cheio ou Karma acima de 50/70% NÃO impedem Forçar Fluxo.
+  // Só o estado terminal Consumido impede uma nova ação até decisão do Mestre.
+  const canForce = !tech && !consumed;
 
   function force() {
     if (!canForce) return;
@@ -77,13 +80,13 @@ export function ForceFluxAction({ character, update, addRoll }: {
 
   if (tech) return null;
 
-  return <section className="hff-panel" aria-label="Forçar o Fluxo">
+  return <section className="hff-panel" data-karma-stage={stage} aria-label="Forçar o Fluxo">
     <div className="hff-header">
       <div className="hff-icon"><Flame size={20} /></div>
       <div className="hff-heading">
         <span>ENERGIA SOB PRESSÃO · AÇÃO LIVRE</span>
         <strong>Forçar o Fluxo</strong>
-        <p>Quando os PF não bastam, force seus limites. O poder volta, mas o Karma aumenta.</p>
+        <p>Use quando os PF faltarem ou quando escolher arriscar mais poder. Mesmo com PF cheio, o Karma da rolagem é cobrado.</p>
       </div>
     </div>
     <div className="hff-counters" aria-label="Estado atual dos recursos">
@@ -94,22 +97,23 @@ export function ForceFluxAction({ character, update, addRoll }: {
     <div className="hff-meter" role="progressbar" aria-label="Karma acumulado" aria-valuemin={0} aria-valuemax={maxKarma} aria-valuenow={Math.min(maxKarma, Math.max(0, character.karma))}>
       <div style={{ width: `${percent}%` }} />
     </div>
+    <KarmaRiskPanel character={character} addRoll={addRoll} update={update}/>
     <div className="hff-buttons">
       <Button type="button" variant="outline" className="hff-force" onClick={force} disabled={!canForce} aria-label="Forçar o Fluxo: rolar Espírito para recuperar PF e receber Karma">
         <Dices size={18}/> Forçar o Fluxo
       </Button>
       <span>Rola {Math.max(1, character.espirito)}d20 de ESPÍRITO · ½ da soma = PF · ½ dos PF = Karma</span>
     </div>
-    {full && <p className="hff-note">Seu reservatório de PF já está cheio. Gaste PF antes de forçar o Fluxo.</p>}
-    {consumed && <p className="hff-danger" role="alert"><AlertTriangle size={17}/> Karma em 100%: resolva o estado Consumido com o Mestre antes de forçar novamente.</p>}
+    {full && <p className="hff-note">PF já está no máximo. Você ainda pode Forçar o Fluxo: o excedente não será armazenado, mas o Karma será recebido.</p>}
+    {consumed && <p className="hff-danger" role="alert"><AlertTriangle size={17}/> 100% de Karma: personagem consumido. Não é possível Forçar o Fluxo até a decisão narrativa do Mestre.</p>}
     {last && <div className="hff-result" role="status" aria-live="polite">
       <div className="hff-result-title"><Zap size={16}/><strong>Fluxo forçado</strong></div>
       <p>ESPÍRITO: {last.dice.join(' + ')} = <strong>{last.rolled}</strong>.</p>
       <p><strong>+{last.generated} PF</strong> gerados{last.stored !== last.generated ? ` · ${last.stored} armazenados (limite ${last.maxPf})` : ' e armazenados'}.</p>
       <p><strong>+{last.karmaGenerated} Karma</strong>{last.doubled ? ' (Âncora quebrada: dobrado)' : ''}{last.karmaApplied !== last.karmaGenerated ? ` · ${last.karmaApplied} até o limite` : ''}. Agora {last.nextKarma}/{last.maxKarma}.</p>
-      {last.stage === 'gaki' && <p className="hff-risk-note">50% de Karma: Distorção, +3 de dano (conforme o Códice).</p>}
-      {last.stage === 'berserker' && <p className="hff-risk-note">70% de Karma: Berserker, +5 de dano (conforme o Códice).</p>}
-      {last.stage === 'consumido' && <p className="hff-danger"><AlertTriangle size={16}/> 100%: Consumido pelo Karma. O Mestre resolve as consequências.</p>}
+      {last.stage === 'gaki' && <p className="hff-risk-note">Distorção: +3 de dano, resistência à dor e perda progressiva de empatia.</p>}
+      {last.stage === 'berserker' && <p className="hff-risk-note">Berserker: +5 de dano, imunidade à dor. Teste de MENTE quando o Mestre solicitar (até 1× por rodada).</p>}
+      {last.stage === 'consumido' && <p className="hff-danger"><AlertTriangle size={16}/> 100%: Consumido. Morte é o desfecho padrão da campanha; o Mestre decide a resolução narrativa.</p>}
     </div>}
   </section>;
 }

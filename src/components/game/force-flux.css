@@ -23,3 +23,8 @@
 .hff-danger,.hff-risk-note{color:#dc8f8b;font-size:12px;line-height:1.5;margin:0}
 .hff-danger{display:flex;align-items:center;gap:7px}
 @media(max-width:430px){.hff-panel{padding:12px;gap:11px}.hff-counters{gap:5px}.hff-counters>div{padding:8px 6px}.hff-counters strong{font-size:15px}.hff-counters span{font-size:9px}.hff-force{width:100%}.hff-buttons>span{min-width:0}}
+
+/* O sinal visual principal usa o cartão de Karma dentro do painel. */
+.hff-panel[data-karma-stage="gaki"]{border-color:rgba(176,100,233,.46)}
+.hff-panel[data-karma-stage="berserker"]{border-color:rgba(138,70,196,.65)}
+.hff-panel[data-karma-stage="consumido"]{border-color:rgba(244,103,121,.70)}
