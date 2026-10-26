@@ -21,24 +21,25 @@ export function NpcFullSheet({ character, update, addRoll, setInitiative }: { ch
   const [tab, setTab] = useState<Tab>('Geral');
   const monster = isMonster(character);
   const gaki = (character as MonsterSheet).gaki;
+  const beast = (character as MonsterSheet).bestiary;
   const kMax = karmaMaximum(character.mente, character.espirito);
   const stage = karmaStage(character.karma, kMax);
   const test = (attr: 'corpo' | 'mente' | 'espirito') => { const die = dieFor(character[attr]); if (die === undefined) return; const v = rollDice(1, die)[0]; if (v === undefined) return; addRoll({ expression: `1d${die}`, dice: [v], modifier: 0, total: v, source: `Teste de ${attrLabelFor(attr, character.lineage)}: ${character.name}` }); };
   const karmaBox = monster
-    ? <div className="karma-alert karma-gaki"><strong>GAKI · {gaki?.style.toUpperCase()}</strong><span>Ameaça {gaki?.threat} ({gaki ? threatTier(gaki.threat) : ''}) · Karma ∞</span></div>
+    ? <div className="karma-alert karma-gaki"><strong>{beast?.category ?? `GAKI · ${gaki?.style ?? ''}`}</strong><span>Ameaça {beast?.threat ?? gaki?.threat} ({threatTier(beast?.threat ?? gaki?.threat ?? 1)}) · {beast?.deslocamento ?? 'Karma ∞'}</span></div>
     : <div className={`karma-alert karma-${stage}${isTechAgent(character.lineage) ? ` nucleo-${stage}` : ''}`}><strong>{resourceStageLabel(character.lineage, stage)}</strong><span>{Math.round(character.karma / kMax * 100)}% · limite {kMax}</span></div>;
 
   return <div className="field-stack mt-4">
     {!monster && <div className="overview-strip"><Meter label="PONTOS DE VIDA" current={character.pv_current} max={character.pv_max} tone="health" /><Meter label="PONTOS DE FLUXO" current={character.pf_current} max={character.pf_max} tone="flux" /><Meter label={resourceBarLabel(character.lineage)} current={character.karma} max={kMax} tone={isTechAgent(character.lineage) ? 'nucleo' : 'karma'} /></div>}
     {monster && <div className="overview-strip"><Meter label="PONTOS DE VIDA" current={character.pv_current} max={character.pv_max} tone="health" /><Meter label="PONTOS DE FLUXO" current={character.pf_current} max={character.pf_max} tone="flux" /></div>}
-    <AgonyPanel character={character} update={update} addRoll={addRoll} isMaster={true} />
+    {!monster && <AgonyPanel character={character} update={update} addRoll={addRoll} isMaster={true} />}
     <div className="tabbar" role="tablist">{TABS.map(t => <Button key={t} role="tab" aria-selected={tab === t} variant="ghost" onClick={() => setTab(t)} className={`tab ${tab === t ? 'tab-active' : ''}`}>{t === 'Nomenclaturas' ? nomenclatureLabel(character.lineage, true) : t}</Button>)}</div>
 
     {tab === 'Geral' && <div className="two-col"><div className="stack">
       <Panel title="Identidade"><div className="field-stack">
         <TextInput label="Nome" value={character.name} onChange={name => update({ name })} />
         <div className="input-grid">
-          <label className="field"><span className="field-label">Linhagem</span><select value={character.lineage} onChange={e => update({ lineage: e.target.value, stage: LINEAGE_STAGES[e.target.value]?.[0]?.name ?? '' })}>{['Humano', 'Arcadiano', 'Gaki', 'Agente Tecnológico'].map(x => <option key={x}>{x}</option>)}</select></label>
+          <label className="field"><span className="field-label">Linhagem</span><select value={character.lineage} onChange={e => update({ lineage: e.target.value, stage: LINEAGE_STAGES[e.target.value]?.[0]?.name ?? '' })}>{(monster ? ['Criatura','Humano', 'Arcadiano', 'Gaki', 'Agente Tecnológico'] : ['Humano', 'Arcadiano', 'Gaki', 'Agente Tecnológico']).map(x => <option key={x}>{x}</option>)}</select></label>
           <label className="field"><span className="field-label">Caminho / Estágio</span><select value={(LINEAGE_STAGES[character.lineage] ?? [])[stageIndexFor(character.lineage, character.stage)]?.name ?? ''} onChange={e => update({ stage: e.target.value })}>{(LINEAGE_STAGES[character.lineage] ?? []).map((s, i) => <option key={s.name} value={s.name}>{i + 1}. {s.name}</option>)}</select></label>
         </div>
         <TextInput label="Conceito" value={character.concept} onChange={concept => update({ concept })} placeholder="Quem é este personagem?" />
@@ -51,8 +52,8 @@ export function NpcFullSheet({ character, update, addRoll, setInitiative }: { ch
       <WeaponPanel character={character} update={update} addRoll={addRoll} />
       </Panel>
       <Panel title="Atributos"><div className="attributes-grid">{(['corpo', 'mente', 'espirito'] as const).map(attr => <div className="attribute" key={attr}><span>{attrLabelFor(attr, character.lineage)}</span><strong>{character[attr]}</strong><small>1d{dieFor(character[attr])}</small><Button size="sm" variant="ghost" onClick={() => test(attr)}><Dices size={13} /> Rolar</Button></div>)}</div>
-        <div className="step-grid">{(['corpo', 'mente', 'espirito'] as const).map(attr => <Stepper key={attr} label={attrLabelFor(attr, character.lineage)} value={character[attr]} min={1} max={5} onChange={value => { const next = { ...character, [attr]: value }; const stats = derived(next.corpo); update({ [attr]: value, pv_max: stats.pv, pv_current: Math.min(next.pv_current, stats.pv), pf_max: next.espirito * 20, pf_current: Math.min(next.pf_current, next.espirito * 20) }); }} />)}</div>
-        <div className="defense-row">{[['ESQUIVA', derived(character.corpo).esquiva], ['BLOQUEIO', derived(character.corpo).bloqueio], ['DESLOCAMENTO', `${derived(character.corpo).deslocamento}m`]].map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>
+        <div className="step-grid">{(['corpo', 'mente', 'espirito'] as const).map(attr => <Stepper key={attr} label={attrLabelFor(attr, character.lineage)} value={character[attr]} min={1} max={5} onChange={value => { const next = { ...character, [attr]: value }; if (monster) { update({ [attr]: value }); } else { const stats = derived(next.corpo); update({ [attr]: value, pv_max: stats.pv, pv_current: Math.min(next.pv_current, stats.pv), pf_max: next.espirito * 20, pf_current: Math.min(next.pf_current, next.espirito * 20) }); } }} />)}</div>
+        <div className="defense-row">{[['ESQUIVA', beast?.esquiva ?? derived(character.corpo).esquiva], ['BLOQUEIO', beast?.bloqueio ?? derived(character.corpo).bloqueio], ['DESLOCAMENTO', beast?.deslocamento ?? `${derived(character.corpo).deslocamento}m`]].map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>
       </Panel>
     </div><div className="stack">
       <Panel title="Recursos"><div className="resource-grid">

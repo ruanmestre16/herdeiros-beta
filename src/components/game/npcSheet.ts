@@ -21,7 +21,7 @@ export function npcSheet(npc: Npc): Character | null {
   return { ...sheet, id: npc.id, name: npc.name, corpo: npc.corpo, mente: npc.mente, espirito: npc.espirito, pv_current: npc.pv_current, pv_max: npc.pv_max, pf_current: npc.pf_current, pf_max: npc.pf_max };
 }
 /** Gaki-monstro criado pelo botão Novo: Karma infinito. */
-export const isMonster = (sheet: Character) => !!(sheet as Character & { gaki?: unknown }).gaki;
+export const isMonster = (sheet: Character) => !!(sheet as Character & { gaki?: unknown; bestiary?: unknown }).gaki || !!(sheet as Character & { gaki?: unknown; bestiary?: unknown }).bestiary;
 /** Aplica uma mudança na ficha completa e devolve o NPC já atualizado (espelhando PV, PF, atributos, Esquiva e Bloqueio). */
 export function applyNpcSheetPatch(npc: Npc, partial: Partial<Character>): Npc {
   const sheet = npcSheet(npc); if (!sheet) return npc;
@@ -29,6 +29,6 @@ export function applyNpcSheetPatch(npc: Npc, partial: Partial<Character>): Npc {
   const next = { ...sheet, ...partial };
   const mirror: Record<string, unknown> = {};
   for (const k of NPC_MIRROR) if (k in partial) mirror[k] = (partial as Record<string, unknown>)[k];
-  if ('corpo' in partial) { const d = derived(next.corpo); mirror['esquiva'] = d.esquiva; mirror['bloqueio'] = d.bloqueio; }
+  if ('corpo' in partial && !(sheet as Character & { bestiary?: unknown }).bestiary) { const d = derived(next.corpo); mirror['esquiva'] = d.esquiva; mirror['bloqueio'] = d.bloqueio; }
   return { ...npc, ...(mirror as Partial<Npc>), notes: joinNpcNotes(text, next) };
 }
