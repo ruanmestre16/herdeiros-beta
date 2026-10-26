@@ -1,0 +1,25 @@
+/* Fluxo forçado: estilos isolados para ficha viva, mestre e navegadores móveis. */
+.hff-panel{display:grid;gap:13px;margin-top:14px;padding:17px;border:1px solid rgba(210,158,99,.35);border-radius:16px;background:linear-gradient(135deg,rgba(125,36,43,.15),rgba(30,20,29,.07) 75%);color:inherit}
+.hff-header{display:flex;gap:12px;align-items:flex-start}
+.hff-icon{display:grid;place-items:center;flex:none;width:39px;height:39px;border-radius:12px;background:rgba(191,58,69,.15);color:#e7a28f}
+.hff-heading{display:grid;gap:3px;min-width:0}
+.hff-heading>span{font-size:10px;letter-spacing:.14em;font-weight:800;color:#dc9f87}
+.hff-heading>strong{font-size:17px;letter-spacing:.01em}
+.hff-heading>p{margin:0;font-size:12px;line-height:1.5;opacity:.78}
+.hff-counters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.hff-counters>div{display:grid;gap:3px;padding:10px;border:1px solid rgba(220,170,120,.16);border-radius:11px;background:rgba(65,42,44,.08)}
+.hff-counters span{font-size:10px;opacity:.77}
+.hff-counters strong{font-size:17px;font-weight:760;font-variant-numeric:tabular-nums}
+.hff-counters strong small{font-size:12px;font-weight:500;opacity:.65}
+.hff-meter{height:8px;background:rgba(141,91,89,.2);border-radius:999px;overflow:hidden}
+.hff-meter>div{height:100%;background:linear-gradient(90deg,#c67e62,#c04850);border-radius:999px;transition:width .2s}
+.hff-buttons{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.hff-buttons>span{flex:1;min-width:170px;font-size:11px;line-height:1.5;opacity:.74}
+.hff-force{gap:7px;min-height:43px!important;border-color:rgba(220,120,99,.45)!important}
+.hff-result{padding:12px 13px;border-radius:11px;background:rgba(196,127,90,.11);border:1px solid rgba(204,128,110,.25);display:grid;gap:5px}
+.hff-result p{font-size:12px;line-height:1.5;margin:0;overflow-wrap:anywhere}
+.hff-result-title{display:flex;align-items:center;gap:8px;font-size:13px}
+.hff-note{font-size:12px;opacity:.72;margin:0}
+.hff-danger,.hff-risk-note{color:#dc8f8b;font-size:12px;line-height:1.5;margin:0}
+.hff-danger{display:flex;align-items:center;gap:7px}
+@media(max-width:430px){.hff-panel{padding:12px;gap:11px}.hff-counters{gap:5px}.hff-counters>div{padding:8px 6px}.hff-counters strong{font-size:15px}.hff-counters span{font-size:9px}.hff-force{width:100%}.hff-buttons>span{min-width:0}}

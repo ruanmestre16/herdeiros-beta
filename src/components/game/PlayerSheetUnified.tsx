@@ -15,6 +15,7 @@ import { PlayerSheetCompact } from './PlayerSheetCompact';
 import { GsControl } from './GsControl';
 import { TechAgentGsPanel, TechEyePanel } from './TechAgentGsPanel';
 import { TechCoreStability } from './TechCoreStability';
+import { ForceFluxAction } from './ForceFluxAction';
 import './sheet-unified.css';
 
 type Section = 'Ficha' | 'Combate' | 'Nomenclaturas' | 'Habilidades' | 'Inventário' | 'História' | 'Evolução';
@@ -130,7 +131,7 @@ export function PlayerSheetUnified({ character, update, addRoll, onRoll, tablema
        <p className="hu-muted">Quando você for atacado, suas reações continuam no painel de combate. Esta ficha não gasta sua reação automaticamente.</p>
      </section>
      <Block title="Arma e dano" icon={Swords} summary={`${character.weapon||'Arma não definida'} · editar tipo e dados`} initiallyOpen><WeaponPanel character={character} update={update} addRoll={addRoll}/></Block>
-     <Block title="Fluxo e carga" icon={Zap} summary={`Absorver ${resource}, partilhar e forçar o poder`}><FluxLinkToggle character={character} update={update}/><AbsorbPfAction character={character} update={update} addRoll={addRoll} tablemates={tablemates} {...(onShare?{onShare}:{})}/></Block>
+     <Block title="Fluxo e carga" icon={Zap} summary={tech ? "Absorver PN, partilhar e gerir o Núcleo" : "Absorver PF · Forçar o Fluxo · partilhar"}><FluxLinkToggle character={character} update={update}/><AbsorbPfAction character={character} update={update} addRoll={addRoll} tablemates={tablemates} {...(onShare?{onShare}:{})}/>{!tech&&<ForceFluxAction character={character} update={update} addRoll={addRoll}/>}</Block>
      <Block title="Agonia e recuperação" icon={HeartPulse} summary="Regras de 0 PV, testes e retorno"><AgonyPanel character={character} update={update} addRoll={addRoll} isMaster={isMaster}/></Block>
    </div>}
    {section==='Nomenclaturas'&&<div className="hu-content"><section className="hu-section-card">
@@ -152,7 +153,7 @@ export function PlayerSheetUnified({ character, update, addRoll, onRoll, tablema
      {!tech && <Block title="Caminhos de evolução" icon={Brain} summary="Nomenclatura, corpo, arma e estágios"><PathPanel character={character} update={update} addRoll={addRoll}/><EffectEditor character={character} update={update}/>{character.lineage==='Arcadiano'&&<EgoWeaponPanel character={character} update={update} addRoll={addRoll}/>}{character.lineage==='Gaki'&&<GakiPassive character={character} update={update} addRoll={addRoll}/>}</Block>}
      <Block title="Laços e Elo" icon={Heart} summary={`${character.sync.length} relações registradas`}><SyncEditor character={character} update={update}/></Block>
      <Block title="Moedas do Destino e Âncora" icon={Sparkles} summary="Resgates, rerrolagens e proteções"><CoinsPanel character={character} update={update}/></Block>
-     {tech?<Block title="Integridade e destruição do Núcleo" icon={Shield} summary="Forçar Núcleo, 50%, 70% e 100% · consequência narrativa" initiallyOpen><TechCoreStability character={character} update={update} addRoll={addRoll}/></Block>:<Block title="Karma e riscos" icon={Shield} summary="Testes contra o Karma e consequências"><KarmaTest character={character} update={update} addRoll={addRoll}/></Block>}
+     {tech?<Block title="Integridade e destruição do Núcleo" icon={Shield} summary="Forçar Núcleo, 50%, 70% e 100% · consequência narrativa" initiallyOpen><TechCoreStability character={character} update={update} addRoll={addRoll}/></Block>:<Block title="Karma e riscos" icon={Shield} summary="Forçar o Fluxo, testes de MENTE e consequências"><ForceFluxAction character={character} update={update} addRoll={addRoll}/><KarmaTest character={character} update={update} addRoll={addRoll}/></Block>}
      <Block title="Descanso" icon={HeartPulse} summary={tech?"Recuperação de PV · manutenção do Núcleo com o Mestre":"Recuperação de PV e redução de Karma"}><RestPanel character={character} update={update} addRoll={addRoll}/></Block>
    </div>}
    </fieldset>
