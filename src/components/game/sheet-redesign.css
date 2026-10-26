@@ -1,0 +1,87 @@
+/* Herdeiros · Criador guiado e ficha compacta. Escopo exclusivo para não afetar Mesa/Combate. */
+.h-sheet-overlay{position:fixed;inset:0;z-index:150;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(5,8,15,.82);backdrop-filter:blur(7px)}
+.h-sheet-wizard{--sheet-accent:#d9b878;--sheet-bg:#12151e;--sheet-edge:#404452;--sheet-muted:#a9afbe;width:min(900px,100%);max-height:min(94dvh,1000px);display:flex;flex-direction:column;overflow:hidden;background:linear-gradient(160deg,#232638,#11141c 75%);border:1px solid #555468;border-radius:18px;box-shadow:0 20px 100px #000b;color:#f4f0e9}
+.h-sheet-wizard-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;padding:22px 26px 16px;border-bottom:1px solid #ffffff1a;flex-shrink:0}
+.h-sheet-wizard-head h2{font-size:clamp(23px,3vw,31px);line-height:1.1;font-weight:750;letter-spacing:-.035em;margin:5px 0 7px}
+.h-sheet-wizard-head p{font-size:13px;line-height:1.5;color:var(--sheet-muted)}
+.h-sheet-kicker{font-size:10px;letter-spacing:.14em;font-weight:700;color:#e7c987}
+.h-sheet-progress{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;padding:15px 26px;flex-shrink:0}
+.h-sheet-progress-step{display:flex;align-items:center;justify-content:center;gap:8px;background:#ffffff08;color:#b8b9c5;border:1px solid #ffffff14;border-radius:11px;padding:9px 3px;min-height:44px;cursor:pointer}
+.h-sheet-progress-step.active{background:#ad8a4030;color:#f8dfaa;border-color:#c3a560}
+.h-sheet-progress-step.done{color:#b9dbbd;border-color:#729f7a55}
+.h-sheet-progress-step span:first-child{display:inline-flex;width:22px;height:22px;align-items:center;justify-content:center;border-radius:50%;background:#ffffff16;font-size:12px;font-weight:700}
+.h-sheet-progress-step small{font-size:12px;font-weight:600}
+.h-sheet-wizard-body{padding:8px 26px 26px;overflow-y:auto;overscroll-behavior:contain;min-height:0}
+.h-sheet-flow,.h-sheet-compact-flow{display:grid;gap:17px}
+.h-sheet-section-title h3{font-size:20px;font-weight:750;letter-spacing:-.02em}
+.h-sheet-section-title p{font-size:13px;color:#aab0bf;margin-top:5px;line-height:1.5}
+.h-sheet-field{display:grid;gap:7px;min-width:0}
+.h-sheet-field>span{font-size:12px;font-weight:700;color:#e0dde3}
+.h-sheet-field>span small{font-weight:500;opacity:.65}
+.h-sheet-field input,.h-sheet-field textarea,.h-sheet-field select{width:100%;max-width:100%;min-width:0;border:1px solid #4a4a56;border-radius:10px;background:#0c111a;color:#f3f3f5;min-height:44px;padding:10px 13px;font-size:16px;outline-offset:2px}
+.h-sheet-field textarea{resize:vertical;line-height:1.55}
+.h-sheet-field input:focus,.h-sheet-field textarea:focus,.h-sheet-field select:focus{outline:2px solid #d7b77a;outline-offset:1px}
+.h-sheet-lineage-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.h-sheet-choice{position:relative;min-height:118px;padding:14px 14px 13px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;border-radius:12px;border:1px solid #515362;background:#1b2130;color:#eae9ef;cursor:pointer;transition:border-color .15s,background .15s}
+.h-sheet-choice:hover,.h-sheet-choice:focus-visible{border-color:#c7ab71;outline-offset:2px}
+.h-sheet-choice.selected{border:2px solid #e4bc70;background:linear-gradient(140deg,#5b452e,#262838)}
+.h-sheet-choice>svg:first-child{color:#ecd4a0;margin-bottom:2px}
+.h-sheet-choice strong{font-size:15px}
+.h-sheet-choice small{font-size:11px;color:#d0c7b5}
+.h-sheet-choice>span{font-size:12px;color:#bdbfcd}
+.h-sheet-choice .h-sheet-picked{position:absolute;right:12px;top:12px;color:#e5c37e}
+.h-sheet-wizard-footer{flex-shrink:0;border-top:1px solid #ffffff1c;display:flex;justify-content:space-between;align-items:center;padding:15px 26px;gap:10px;background:#0b0f17}
+.h-sheet-wizard-footer>span{font-size:12px;color:#aeb5c0}
+.h-sheet-wizard-footer button{min-height:44px}
+.h-sheet-points{border:1px solid #8d784c75;background:#b796481a;border-radius:12px;padding:13px 16px;display:flex;align-items:center;justify-content:space-between;gap:12px}
+.h-sheet-points strong{font-size:27px;color:#f6d99b}
+.h-sheet-points small{font-size:11px;font-weight:400;color:#bdc2cf}
+.h-sheet-points.complete{border-color:#618e65a1;background:#4d805327}
+.h-sheet-attr-editor{display:flex;gap:12px;align-items:center;justify-content:space-between;border:1px solid #ffffff25;background:#ffffff08;padding:12px 14px;border-radius:13px;min-width:0}
+.h-sheet-attr-editor>div:first-child{flex:1;min-width:0}
+.h-sheet-attr-editor>div:first-child strong{display:block;font-size:13px}
+.h-sheet-attr-editor>div:first-child small{display:block;font-size:11px;opacity:.65;line-height:1.4}
+.h-sheet-dice-label{color:#e5c482;font-size:12px;white-space:nowrap}
+.h-sheet-step-buttons{display:flex;align-items:center;gap:10px}
+.h-sheet-step-buttons strong{font-size:22px;min-width:20px;text-align:center}
+.h-sheet-step-buttons button{width:42px;height:42px}
+.h-sheet-metrics{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.h-sheet-metrics>div{min-width:0;min-height:64px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;text-align:center;background:#ffffff0b;border:1px solid #ffffff22;border-radius:12px;padding:8px}
+.h-sheet-metrics small{font-size:10px;letter-spacing:.06em;color:#c1c2ce;line-height:1.2}
+.h-sheet-metrics strong{font-size:clamp(16px,2vw,22px);color:#f4e2ba;line-height:1.15}
+.h-sheet-help{color:#b9bfce;font-size:12px;line-height:1.55}
+.h-sheet-official{display:flex;align-items:center;gap:12px;padding:14px;border:1px solid #b99f674d;border-radius:12px;background:#e5bf6820}
+.h-sheet-official>div{flex:1}.h-sheet-official small{display:block;font-size:11px;color:#c9c6bd}.h-sheet-official strong{display:block;font-size:20px;color:#f6dc9b}
+.h-sheet-hint{display:flex;gap:12px;padding:14px;background:#ffffff10;border:1px solid #ffffff22;border-radius:12px;line-height:1.5;font-size:12px;color:#c8cad4}
+.h-sheet-hint svg{flex-shrink:0;color:#dfc38e}
+.h-sheet-error{font-size:12px;color:#ffabae;line-height:1.5}
+.h-sheet-preview{display:grid;gap:17px;padding:20px;border-radius:15px;border:1px solid #b69f684c;background:linear-gradient(140deg,#3a3340,#191d27)}
+.h-sheet-preview h3{font-size:27px;font-weight:750;line-height:1.25;margin:7px 0 2px}.h-sheet-preview p{font-size:12px;color:#d0ccd0}
+.h-sheet-preview-attrs{display:flex;flex-wrap:wrap;gap:8px}.h-sheet-preview-attrs>span{border-radius:10px;background:#0004;padding:10px 13px;font-size:11px;display:flex;align-items:center;gap:9px}.h-sheet-preview-attrs strong{font-size:16px;color:#e7c987}
+/* Ficha resumida: conserva os estilos de cor do RPG e evita uma página infinita. */
+.h-sheet-compact{--sheet-accent:#e7c987;--sheet-muted:#aeb3c2;margin:14px 0 22px;display:grid;gap:16px;min-width:0}
+.h-sheet-compact-nav{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.h-sheet-compact-nav button{display:flex;justify-content:center;align-items:center;gap:8px;border:1px solid #65647250;border-radius:10px;padding:12px 6px;min-height:48px;font-size:13px;font-weight:700;color:#d2d6df;background:#252635;cursor:pointer}
+.h-sheet-compact-nav button.active{background:#6e562b60;border-color:#c19b54;color:#f7e2b0}
+.h-sheet-compact-flow{border:1px solid #535465;border-radius:14px;background:linear-gradient(145deg,#242738,#171b27);padding:17px;color:#f5f0eb}
+.h-sheet-summary-hero{display:flex;justify-content:space-between;gap:15px;align-items:center;padding:4px 0 5px}.h-sheet-summary-hero h3{font-size:clamp(22px,3vw,30px);font-weight:800;line-height:1.1;margin:7px 0}.h-sheet-summary-hero p{font-size:12px;color:#c0c4d0}
+.h-sheet-hero-glyph{display:grid;place-items:center;border:1px solid #8c7645;border-radius:14px;background:#ab85351e;color:#ebcd90;width:55px;height:55px;flex-shrink:0}
+.h-sheet-compact-resources{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.h-sheet-compact-resources>div{background:#0003;border-radius:12px;padding:13px 15px;border:1px solid #ffffff15}
+.h-sheet-summary-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+.h-sheet-summary-grid>button{display:flex;align-items:center;gap:10px;min-width:0;min-height:71px;padding:12px;text-align:left;color:#f3f3f5;background:#ffffff09;border:1px solid #ffffff22;border-radius:12px;cursor:pointer}
+.h-sheet-summary-grid>button:hover,.h-sheet-summary-grid>button:focus-visible{background:#9e7d3b30;border-color:#d7ae63}
+.h-sheet-summary-grid>button>svg:first-child{color:#ebc88d;flex-shrink:0}.h-sheet-summary-grid>button>svg:last-child{margin-left:auto;color:#d3c1a1;flex-shrink:0}
+.h-sheet-summary-grid>button span{min-width:0;display:grid;gap:4px}.h-sheet-summary-grid>button strong{font-size:13px}.h-sheet-summary-grid>button small{font-size:11px;line-height:1.35;color:#aeb6c6;overflow-wrap:anywhere}
+.h-sheet-passive{border-left:3px solid #d5b670;padding:12px 14px;background:#c49d5722;border-radius:0 10px 10px 0}.h-sheet-passive span{display:block;font-size:10px;color:#e7cc91;letter-spacing:.07em}.h-sheet-passive strong{font-size:14px;display:block;margin:6px 0}.h-sheet-passive p{font-size:12px;color:#c5c8d3;line-height:1.5}
+.h-sheet-fields-two,.h-sheet-resource-edit{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.h-sheet-compact .h-sheet-field input,.h-sheet-compact .h-sheet-field textarea,.h-sheet-compact .h-sheet-field select{background:#0e1522}
+.h-sheet-compact .h-sheet-attr-editor>.stepper{flex:0 0 200px;max-width:200px}.h-sheet-compact .h-sheet-attr-editor>.stepper .mt-2{margin-top:3px}
+.h-sheet-compact .h-sheet-resource-edit>.stepper{padding:12px;border-radius:12px;border:1px solid #ffffff25;background:#ffffff09}
+@media(max-width:680px){.h-sheet-overlay{padding:0;align-items:stretch}.h-sheet-wizard{border-radius:0;max-height:100dvh;width:100%;border:0}.h-sheet-wizard-head{padding:18px 16px 12px}.h-sheet-progress{padding:12px 16px;gap:5px}.h-sheet-progress-step small{font-size:10px}.h-sheet-progress-step{gap:4px}.h-sheet-wizard-body{padding:4px 16px 20px}.h-sheet-wizard-footer{padding:13px 16px max(13px,env(safe-area-inset-bottom))}.h-sheet-compact-nav{grid-template-columns:repeat(2,minmax(0,1fr))}.h-sheet-summary-grid{grid-template-columns:minmax(0,1fr)}.h-sheet-fields-two{grid-template-columns:minmax(0,1fr)}.h-sheet-compact-flow{padding:14px}.h-sheet-compact .h-sheet-attr-editor>.stepper{flex-basis:140px;max-width:140px}.h-sheet-metrics small{font-size:9px}}
+@media(max-width:380px){.h-sheet-lineage-grid{grid-template-columns:minmax(0,1fr)}.h-sheet-compact-resources{grid-template-columns:minmax(0,1fr)}.h-sheet-compact .h-sheet-attr-editor{flex-wrap:wrap}.h-sheet-compact .h-sheet-attr-editor>.stepper{flex:1 1 100%;max-width:none}.h-sheet-metrics{grid-template-columns:repeat(2,minmax(0,1fr))}.h-sheet-progress-step small{font-size:9px}.h-sheet-progress-step{flex-direction:column}}
+@media(prefers-reduced-motion:reduce){.h-sheet-choice{transition:none}}
+
+/* Cards do Mestre recolhidos por padrão: status sem rolagem interminável. */
+.h-npc-summary{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;background:#ffffff08;border:1px solid #ffffff20;border-radius:12px;padding:14px;margin:6px 0 14px}.h-npc-summary-info{display:grid;gap:4px;min-width:0}.h-npc-summary-info strong{font-size:17px;color:#f5f1e9}.h-npc-summary-info small{font-size:12px;color:#b3bac9;line-height:1.45}.h-npc-summary-actions{display:flex;flex-wrap:wrap;gap:7px}.h-npc-summary-actions button{min-height:40px}@media(max-width:650px){.h-npc-summary-actions{width:100%}.h-npc-summary-actions button{flex:1}}
+
+.h-sheet-lineage-group{border:1px solid #ffffff1a;border-radius:12px;padding:12px;background:#ffffff05;display:grid;gap:9px}.h-sheet-lineage-group>strong{font-size:11px;color:#efcb8b;letter-spacing:.12em}.h-sheet-lineage-group>p{font-size:12px;color:#abb5c5;line-height:1.4}.h-sheet-lineage-group+.h-sheet-lineage-group{margin-top:8px}

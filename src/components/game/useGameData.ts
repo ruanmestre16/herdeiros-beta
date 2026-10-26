@@ -92,8 +92,8 @@ export function useGameData() {
     sheetTimers.current.set(character.id, setTimeout(() => { void flushSheet(character.id); }, 500));
     return Promise.resolve();
   }
-  async function addCharacter() {
-    const character = makeCharacter();
+  async function addCharacter(initial: Partial<Character> = {}) {
+    const character = { ...makeCharacter(), ...initial };
     if (userId) { const { data, error: err } = await supabase.from('sheets').insert({ ...character, user_id: userId }).select().single(); if (err) { setError(err.message); return null; } setCharacters(prev => [...prev, data as unknown as Character]); return data.id; }
     setCharacters(prev => [...prev, character]); return character.id;
   }
