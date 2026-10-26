@@ -4,6 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Stepper } from './Controls';
 import { derived, normalizeCharacter, karmaMaximum, LINEAGE_STAGES, type Character, type Npc } from '@/lib/game';
 import { BESTIARY, BESTIARY_CATEGORIES, BESTIARY_PDF, type BestiaryTemplate } from '@/lib/bestiary';
+import { mkConfigFor, mkCampaignCards, mkCampaignValues, mkNucleusProtocols, nucleusAsNomenclatures, splitBestiaryAbilities, type MasterAbility, type MkEdition, type MkPreset } from '@/lib/master-bestiary';
+import { MasterAbilityCards } from './MasterAbilityCards';
 
 /** Os dados especiais pertencem à ficha embutida do NPC: nenhuma migração no Supabase. */
 export type GakiMonster = { style: 'Animalístico' | 'Humano'; threat: number };
@@ -12,6 +14,10 @@ export type BestiaryMeta = {
   ataques: string; habilidades: string; dt: string; observacoes: string;
   pdfPage: number; esquiva: number; bloqueio: number;
   attackOverrides?: Record<string, { damage?: string; critical?: string; damageType?: string }>;
+  abilityCards?: MasterAbility[];
+  nucleusCards?: MasterAbility[];
+  gsCards?: MasterAbility[];
+  mkPreset?: MkPreset;
 };
 export type MonsterSheet = Character & { gaki?: GakiMonster; bestiary?: BestiaryMeta };
 export const GAKI_STYLES: GakiMonster['style'][] = ['Animalístico', 'Humano'];
@@ -44,31 +50,51 @@ export function NewNpcDialog({ close, create, initialStep = 'choose' }: { close:
   const [dts, setDts] = useState('');
   const [observacoes, setObservacoes] = useState('');
   const [page, setPage] = useState(0);
+  const [abilityCards, setAbilityCards] = useState<MasterAbility[]>([]);
+  const [gsCards, setGsCards] = useState<MasterAbility[]>([]);
+  const [nucleusCards,setNucleusCards] = useState<MasterAbility[]>([]);
+  const [edition,setEdition] = useState<MkEdition>('livro');
+  const [templateSource,setTemplateSource] = useState<BestiaryTemplate|null>(null);
   const [lineage, setLineage] = useState<(typeof LINEAGES)[number]>('Humano');
   const [stageIdx, setStageIdx] = useState(0);
   const [lAttrs, setLAttrs] = useState({ corpo: 1, mente: 1, espirito: 1 });
   const [concept, setConcept] = useState('');
   const [lName, setLName] = useState('');
+  const [lineageAbilities,setLineageAbilities] = useState<MasterAbility[]>([]);
+  const [lineageNucleus,setLineageNucleus] = useState<MasterAbility[]>([
+    {id:'lineage-rapid',name:'Ativação Rápida',description:'Defina o primeiro protocolo do Núcleo (1d6 de base).',type:'nucleo',cost:'2 PN'},
+    {id:'lineage-calibrated',name:'Ativação Calibrada',description:'Defina o protocolo intermediário do Núcleo (2d8 de base).',type:'nucleo',cost:'5 PN'},
+    {id:'lineage-full',name:'Ativação Plena',description:'Defina a autorização total (6d8 de base).',type:'nucleo',cost:'12 PN'},
+  ]);
 
+  const applyEdition=(t:BestiaryTemplate,nextEdition:MkEdition) => {
+    const values=mkCampaignValues(t,nextEdition);
+    setPv(values.pv);setPf(values.pf);setThreat(values.na);setEdition(nextEdition);
+    setAbilityCards(splitBestiaryAbilities(t.habilidades));
+    setGsCards(nextEdition==='campanha'?mkCampaignCards(t.id):[]);
+    setNucleusCards(nextEdition==='campanha'?mkNucleusProtocols(t.id):[]);
+  };
   const loadTemplate = (t: BestiaryTemplate) => {
-    setTemplateId(t.id); setCategory(t.category); setName(t.name);
-    setThreat(t.na); setPv(t.pv); setPf(t.pf); setEsquiva(t.esquiva); setBloqueio(t.bloqueio);
-    setDeslocamento(t.deslocamento); setAttrs({ corpo: t.corpo, mente: t.mente, espirito: t.espirito });
-    setNote(t.descricao); setAttacks(t.ataques); setAbilities(t.habilidades); setDts(t.dt);
-    setObservacoes(t.observacoes); setPage(t.page);
+    setTemplateSource(t);setTemplateId(t.id);setCategory(t.category);setName(t.name);
+    setEsquiva(t.esquiva);setBloqueio(t.bloqueio);
+    setDeslocamento(t.deslocamento);setAttrs({ corpo: t.corpo, mente: t.mente, espirito: t.espirito });
+    setNote(t.descricao);setAttacks(t.ataques);setAbilities(t.habilidades);setDts(t.dt);
+    setObservacoes(t.observacoes);setPage(t.page);
     setStyle(t.category.startsWith('Gakis') || t.category.startsWith('Mutagênicos') ? 'Humano' : 'Animalístico');
+    applyEdition(t,mkConfigFor(t.id)?'campanha':'livro');
     setStep('monster');
   };
   const startBlankMonster = () => {
     setTemplateId(''); setCategory('Monstro original'); setName(''); setThreat(1); setPv(25); setPf(0);
     setAttrs({ corpo: 1, mente: 1, espirito: 1 }); setEsquiva(10); setBloqueio(3);
     setDeslocamento('9 m'); setAttacks(''); setAbilities(''); setDts(''); setNote(''); setObservacoes(''); setPage(0);
+    setTemplateSource(null);setEdition('livro');setAbilityCards([]);setGsCards([]);setNucleusCards([]);
     setStep('monster');
   };
-  const finish = (sheet: MonsterSheet) => {
+  const finish = (sheet: MonsterSheet, kind: 'npc'|'inimigo'='inimigo') => {
     const d = derived(sheet.corpo);
     create({ sheet, npc: {
-      name: sheet.name, kind: 'inimigo', hidden: true, pv_current: sheet.pv_current, pv_max: sheet.pv_max,
+      name: sheet.name, kind, hidden: true, pv_current: sheet.pv_current, pv_max: sheet.pv_max,
       pf_current: sheet.pf_current, pf_max: sheet.pf_max, corpo: sheet.corpo, mente: sheet.mente, espirito: sheet.espirito,
       esquiva: sheet.bestiary?.esquiva ?? d.esquiva, bloqueio: sheet.bestiary?.bloqueio ?? d.bloqueio,
     } });
@@ -77,14 +103,17 @@ export function NewNpcDialog({ close, create, initialStep = 'choose' }: { close:
     const sheet: MonsterSheet = normalizeCharacter({
       id: crypto.randomUUID(), name: name.trim() || 'Monstro sem nome',
       lineage: category === 'Agentes do Consórcio' ? 'Agente Tecnológico' : category.startsWith('Gakis') || category.startsWith('Mutagênicos') ? 'Gaki' : 'Criatura',
-      stage: LINEAGE_STAGES['Gaki']?.[0]?.name ?? '', concept: note, ...attrs,
+      stage: category === 'Agentes do Consórcio' ? (LINEAGE_STAGES['Agente Tecnológico']?.[Math.max(0,(mkConfigFor(templateId)?.stage??1)-1)]?.name ?? '') : (LINEAGE_STAGES['Gaki']?.[0]?.name ?? ''),
+      gs: edition==='campanha'&&mkConfigFor(templateId)?10:0, concept: note, ...attrs,
       pv_current: pv, pv_max: pv, pf_max: pf, pf_current: pf,
     });
     sheet.karma = karmaMaximum(sheet.mente, sheet.espirito);
+    if (nucleusCards.length) sheet.nomenclatures=nucleusAsNomenclatures(nucleusCards);
     // O campo gaki só identifica Gakis; bestiary identifica qualquer tipo de monstro.
     if (category.startsWith('Gakis') || category.startsWith('Mutagênicos') || !templateId) sheet.gaki = { style, threat };
     sheet.bestiary = { templateId, category, threat, deslocamento, ataques: attacks, habilidades: abilities,
-      dt: dts, observacoes, pdfPage: page, esquiva, bloqueio };
+      dt: dts, observacoes, pdfPage: page, esquiva, bloqueio, abilityCards, nucleusCards, gsCards,
+      ...(templateSource && mkConfigFor(templateSource.id) ? {mkPreset: {edition,stage: edition==='campanha'?mkConfigFor(templateSource.id)!.stage:0, path: edition==='campanha'?mkConfigFor(templateSource.id)!.path:'Modelo do livro',description:edition==='campanha'?mkConfigFor(templateSource.id)!.description:'Valores oficiais do Bestiário'}} : {}) };
     finish(sheet);
   };
   const saveLineage = () => {
@@ -93,7 +122,9 @@ export function NewNpcDialog({ close, create, initialStep = 'choose' }: { close:
       id: crypto.randomUUID(), name: lName.trim() || 'Novo Herdeiro', lineage,
       stage: LINEAGE_STAGES[lineage]?.[stageIdx]?.name ?? '', concept, ...lAttrs,
       pv_current: d.pv, pv_max: d.pv, pf_max: lAttrs.espirito * 20, pf_current: lAttrs.espirito * 20,
-    }));
+      abilities: lineageAbilities.map(a=>({name:a.name,description:`${a.cost?`Custo ${a.cost}: `:''}${a.description}`})),
+      nomenclatures: lineage==='Agente Tecnológico' ? nucleusAsNomenclatures(lineageNucleus) : [],
+    }),'npc');
   };
   const filtered = BESTIARY.filter(t =>
     (categoryFilter === 'Todas' || categoryFilter === t.category) &&
@@ -119,7 +150,10 @@ export function NewNpcDialog({ close, create, initialStep = 'choose' }: { close:
         <div className="field-stack mt-4">
           <Field label="BUSCAR NO BESTIÁRIO"><div className="flex gap-2 items-center"><Search size={18}/><input value={filter} onChange={e=>setFilter(e.target.value)} placeholder="Nome do monstro..."/></div></Field>
           <Field label="CATEGORIA"><select value={categoryFilter} onChange={e=>setCategoryFilter(e.target.value)}><option>Todas</option>{BESTIARY_CATEGORIES.map(c=><option key={c}>{c}</option>)}</select></Field>
-          <div className="hm-choices" style={{maxHeight:360,overflowY:'auto'}}>{filtered.map(t=><button className="hm-choice" type="button" key={t.id} onClick={()=>loadTemplate(t)}><Skull size={21}/><strong>{t.name}</strong><small>NA {t.na} · {t.pv} PV · {t.category}</small></button>)}</div>
+          <div className="mb-catalog-grid">{filtered.map(t=><button className="mb-catalog-card" type="button" key={t.id} onClick={()=>loadTemplate(t)}>
+             <span className="mb-catalog-chip">{t.category}</span><strong>{t.name}</strong><div className="mb-catalog-values"><span>NA {t.na}</span><span>{t.pv} PV</span><span>Esquiva {t.esquiva}</span></div>
+             {mkConfigFor(t.id)&&<small>✦ Também disponível como versão reforçada</small>}
+           </button>)}</div>
           {!filtered.length&&<p className="empty-copy">Nenhum resultado.</p>}
           <a href={BESTIARY_PDF} target="_blank" rel="noreferrer" className="text-flux"><BookOpen size={15} style={{display:'inline'}}/> Ler PDF completo</a>
           <Button variant="outline" onClick={()=>setStep('choose')}><ArrowLeft size={16}/> Voltar</Button>
@@ -128,6 +162,14 @@ export function NewNpcDialog({ close, create, initialStep = 'choose' }: { close:
       {step==='monster'&&<>
         <h2>{templateId?'Monstro do Bestiário':'Monstro original'}</h2>
         <p className="empty-copy">Preencha o essencial primeiro; clique nas outras seções somente quando precisar. Nada será perdido na ficha.</p>
+        {templateSource && mkConfigFor(templateSource.id) && <div className="mb-quick-banner mt-4">
+          <div style={{flex:1,minWidth:190}}><strong>Agente Tecnológico · MK</strong><br/><small>Escolha os números oficiais ou a versão de campanha com os marcos de GS.</small></div>
+          <div className="mb-edition-picker" style={{flex:2}}>
+            <button type="button" aria-pressed={edition==='livro'} onClick={()=>applyEdition(templateSource,'livro')}><strong>Original do livro</strong><br/>PV {templateSource.pv} · PN {templateSource.pf}</button>
+            <button type="button" aria-pressed={edition==='campanha'} onClick={()=>applyEdition(templateSource,'campanha')}><strong>Reforçado · Campanha</strong><br/>PV {mkCampaignValues(templateSource,'campanha').pv} · PN {mkCampaignValues(templateSource,'campanha').pf}</button>
+          </div>
+          <small>{mkConfigFor(templateSource.id)?.description} O Mestre pode editar todos os dados.</small>
+        </div>}
         <div className="hu-hero-stats mt-4"><div><small>PV</small><strong>{pv}</strong></div><div><small>PF / PN</small><strong>{pf}</strong></div><div><small>ESQUIVA</small><strong>{esquiva}</strong></div><div><small>BLOQUEIO</small><strong>{bloqueio}</strong></div></div>
         <div className="field-stack mt-4">
           <details className="hm-step-section" open>
@@ -148,7 +190,14 @@ export function NewNpcDialog({ close, create, initialStep = 'choose' }: { close:
           </details>
           <details className="hm-step-section"><summary>03 · Ataques, dano e habilidades</summary>
             <div className="hm-step-body"><Field label="ATAQUES · ACERTO · DANO · CRÍTICO"><textarea rows={5} value={attacks} onChange={e=>setAttacks(e.target.value)}/></Field>
-              <Field label="HABILIDADES · EFEITOS · REGRAS"><textarea rows={5} value={abilities} onChange={e=>setAbilities(e.target.value)}/></Field>
+              <MasterAbilityCards title="Habilidades e protocolos" abilities={abilityCards} onChange={setAbilityCards}/>
+              {templateId && <details className="hm-step-section"><summary>Texto original do Bestiário (referência)</summary><div className="hm-step-body">
+                <p className="empty-copy">Os cartões são editáveis e independentes. O texto original é preservado para consulta.</p>
+                <textarea rows={5} value={abilities} onChange={e=>setAbilities(e.target.value)}/>
+              </div></details>}
+              {!templateId && <p className="empty-copy">Adicione habilidades pelos cartões acima, sem precisar escrever um texto corrido.</p>}
+              {nucleusCards.length>0&&<MasterAbilityCards title="Habilidades de Núcleo · 3 ativações" abilities={nucleusCards} onChange={setNucleusCards} type="nucleo"/>}
+              {gsCards.length>0 && <MasterAbilityCards title="Caminho de GS · versão reforçada" abilities={gsCards} onChange={setGsCards} type="gs"/>}
             </div>
           </details>
           <details className="hm-step-section"><summary>04 · Lore e anotações do Mestre</summary>
@@ -175,6 +224,11 @@ export function NewNpcDialog({ close, create, initialStep = 'choose' }: { close:
             <p className="empty-copy">PV {derived(lAttrs.corpo).pv} · {lineage==='Agente Tecnológico'?'PN':'PF'} máximo {lAttrs.espirito*20}. Como Mestre, você pode ajustar os números da ficha depois de criá-la.</p>
           </div></details>
           <details className="hm-step-section"><summary>02 · Conceito e história</summary><div className="hm-step-body"><Field label="CONCEITO"><input value={concept} onChange={e=>setConcept(e.target.value)}/></Field></div></details>
+          <details className="hm-step-section"><summary>03 · Habilidades e poderes iniciais</summary><div className="hm-step-body">
+            <MasterAbilityCards title="Habilidades do NPC" abilities={lineageAbilities} onChange={setLineageAbilities}/>
+            {lineage==='Agente Tecnológico'&&<MasterAbilityCards title="Ativações do Núcleo · nomes editáveis" abilities={lineageNucleus} onChange={setLineageNucleus} type="nucleo"/>}
+            <p className="empty-copy">Esses poderes entram na ficha da mesa e podem ser editados depois. As três Ativações usam os custos oficiais de 2, 5 e 12 PN.</p>
+          </div></details>
           <div className="hm-sticky-actions"><Button onClick={saveLineage}><Check size={17}/> Criar ficha na mesa</Button><Button variant="outline" onClick={()=>setStep('choose')}>Voltar</Button></div>
         </div>
       </>}

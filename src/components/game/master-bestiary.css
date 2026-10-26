@@ -1,0 +1,32 @@
+/* Herdeiros: cartões compactos, responsivos e acessíveis para o Mestre */
+.mb-kicker{color:var(--muted-foreground,#a1a1aa);font-size:.66rem;font-weight:800;letter-spacing:.13em}
+.mb-section-head{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:10px 0}
+.mb-section-head h3{font-weight:750;font-size:1.04rem;margin:3px 0}
+.mb-section-head h3 small{font-weight:500;color:var(--muted-foreground,#aaa);margin-left:5px}
+.mb-ability-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:9px}
+.mb-ability-card{border:1px solid var(--border,#ffffff2e);border-radius:13px;overflow:hidden;background:linear-gradient(135deg,#a77a2210,#14131840)}
+.mb-card-open{grid-column:1/-1;border-color:#ba995580}
+.mb-ability-trigger{display:flex;align-items:center;text-align:left;gap:10px;width:100%;min-height:62px;padding:11px 12px;color:inherit;background:transparent;cursor:pointer}
+.mb-ability-trigger:hover,.mb-ability-trigger:focus-visible{background:#c6aa6220;outline-offset:-3px}
+.mb-ability-icon{display:grid;place-items:center;flex:0 0 36px;height:36px;border:1px solid #b2965c65;border-radius:10px;color:#d7b877;background:#b99b5520}
+.mb-ability-icon.mb-gs{color:#a6c3f3;background:#6f93c522}
+.mb-ability-title{min-width:0;flex:1;display:grid;gap:2px}
+.mb-ability-title strong{font-size:.88rem;line-height:1.25;overflow-wrap:anywhere}
+.mb-ability-title small{font-size:.72rem;color:var(--muted-foreground,#aaa)}
+.mb-chevron{transition:transform .2s}.mb-card-open .mb-chevron{transform:rotate(180deg)}
+.mb-ability-body{padding:12px;border-top:1px solid var(--border,#ffffff22);display:grid;gap:12px}
+.mb-edit-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.mb-ability-text{white-space:pre-wrap;line-height:1.5;font-size:.88rem;overflow-wrap:anywhere}
+.mb-catalog-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,220px),1fr));gap:10px;max-height:440px;overflow:auto;padding:2px}
+.mb-catalog-card{color:inherit;text-align:left;border:1px solid var(--border,#ffffff33);border-radius:14px;background:linear-gradient(120deg,#18191d,#3f351920);padding:12px;cursor:pointer;display:grid;gap:7px;min-height:118px;transition:border .15s,transform .15s}
+.mb-catalog-card:hover,.mb-catalog-card:focus-visible{border-color:#ccac65;transform:translateY(-1px)}
+.mb-catalog-card strong{font-size:.91rem;line-height:1.2}
+.mb-catalog-card small{color:var(--muted-foreground,#aaa);font-size:.72rem}
+.mb-catalog-chip{font-size:.66rem;color:#e7cc90;border-radius:20px;background:#b19b5328;padding:3px 9px;justify-self:start}
+.mb-catalog-values{display:flex;gap:8px;flex-wrap:wrap;font-size:.72rem;opacity:.85}
+.mb-edition-picker{display:flex;gap:7px;flex-wrap:wrap;margin:10px 0}
+.mb-edition-picker button{flex:1;min-width:140px;border:1px solid var(--border,#ffffff32);color:inherit;border-radius:10px;padding:11px;text-align:left;font-size:.82rem;background:transparent}
+.mb-edition-picker button[aria-pressed=true]{border-color:#d1b56c;background:#c1a55325}
+.mb-quick-banner{border:1px solid #b39a6070;border-radius:12px;background:#b9a06a12;padding:11px 13px;display:flex;gap:11px;align-items:center;flex-wrap:wrap}
+.mb-quick-banner small{color:var(--muted-foreground,#aaa)}
+@media(max-width:540px){.mb-edit-grid{grid-template-columns:1fr}.mb-catalog-grid{grid-template-columns:1fr}.mb-catalog-card{min-height:90px}.mb-ability-trigger{min-height:56px}.mb-section-head{flex-wrap:wrap}}

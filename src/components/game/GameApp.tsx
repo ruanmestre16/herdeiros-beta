@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Activity, ArrowRight, ExternalLink, BookOpen, Check, ChevronDown, Copy, Dices, Eye, EyeOff, HeartPulse, LogIn, LogOut, Menu, Plus, ScrollText, Shield, Skull, Sparkles, Swords, Trash2, Users, X } from 'lucide-react';
+import { Activity, ArrowRight, ExternalLink, BookOpen, Check, ChevronDown, Copy, Dices, Eye, EyeOff, HeartPulse, LogIn, LogOut, Menu, Plus, ScrollText, Shield, Skull, Sparkles, Swords, Trash2, Users, UserRound, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Stepper, Meter, SectionHeading } from './Controls';
 import { useGameData } from './useGameData';
@@ -15,6 +15,8 @@ import { GsControl } from './GsControl';
 import { NewNpcDialog, type MonsterSheet, type BestiaryMeta } from './NewNpcDialog';
 import { BestiaryPage } from './BestiaryPage';
 import { readBestiaryAttacks } from '@/lib/bestiary';
+import { splitBestiaryAbilities, nucleusAsNomenclatures } from '@/lib/master-bestiary';
+import { MasterAbilityCards } from './MasterAbilityCards';
 import { WeaponDamageEditor } from './WeaponDamageEditor';
 import { rollDamageFormula } from '@/lib/weapon-damage';
 import { NpcFullSheet } from './NpcFullSheet';
@@ -119,8 +121,24 @@ export function GameApp({ combatOnly = false }: { combatOnly?: boolean } = {}) {
     corpo:npc.corpo,mente:npc.mente,espirito:npc.espirito,
     pv_current:npc.pv_current,pv_max:npc.pv_max,pf_current:npc.pf_current,pf_max:npc.pf_max,
   });
-  const {gaki:_gaki,bestiary:_bestiary,...clean}=full as MonsterSheet;
-  const id=await data.addCharacter({...clean,id:crypto.randomUUID(),initiative:null});
+  // O banco de fichas pessoais não possui colunas bestiary/gaki. O conteúdo do monstro
+  // é exportado para os campos já existentes (Habilidades e História) sem perder os poderes.
+  const {gaki:_gaki,bestiary:meta,...clean}=full as MonsterSheet;
+  const powers = meta ? [...(meta.abilityCards ?? splitBestiaryAbilities(meta.habilidades)),...(meta.nucleusCards??[]),...(meta.gsCards??[])] : [];
+  const importedAbilities = powers.map(a=>({name:a.name,description:`${a.cost?`Custo: ${a.cost}. `:''}${a.description}`}));
+  const sourceInfo = meta ? [
+    `BESTIÁRIO: ${meta.category} · NA ${meta.threat}`,
+    `Esquiva original: ${npc.esquiva} · Bloqueio original: ${npc.bloqueio}`,
+    `Ataques do modelo:\n${meta.ataques}`,
+    meta.dt?`DTs e testes:\n${meta.dt}`:'',
+    meta.observacoes?`Reservas e notas especiais:\n${meta.observacoes}`:'',
+    meta.mkPreset?`Progressão MK: ${meta.mkPreset.path}`:'',
+  ].filter(Boolean).join('\n\n') : '';
+  const id=await data.addCharacter({
+    ...clean,id:crypto.randomUUID(),initiative:null,
+    abilities:[...clean.abilities,...importedAbilities],
+    story:sourceInfo ? `${clean.story}${clean.story?'\n\n':''}${sourceInfo}` : clean.story,
+  });
   if(!id)return;
   setSheetId(id);setSheetTab('Geral');setOpenNpcId('');go('jogador');
  }
@@ -258,7 +276,7 @@ function NpcEditor({npc,update,remove,throwDice,addRoll,importSheet,defaultOpen=
     {(sheet as MonsterSheet | null)?.bestiary && (()=>{
       const meta=(sheet as MonsterSheet).bestiary as BestiaryMeta;
       const setMeta=(patch:Partial<BestiaryMeta>) => {
-        const next={...sheet, bestiary:{...meta,...patch}} as MonsterSheet;
+        const next={...sheet, bestiary:{...meta,...patch}, ...(patch.nucleusCards?{nomenclatures:nucleusAsNomenclatures(patch.nucleusCards)}:{})} as MonsterSheet;
         update({notes:joinNpcNotes(text,next), ...('esquiva' in patch?{esquiva:patch.esquiva}:{ }), ...('bloqueio' in patch?{bloqueio:patch.bloqueio}:{ })});
       };
       return <div className="field-stack mt-4" style={{padding:14,border:'1px solid var(--border, #7774)',borderRadius:10}}>
@@ -268,7 +286,13 @@ function NpcEditor({npc,update,remove,throwDice,addRoll,importSheet,defaultOpen=
         <label className="field"><span className="field-label">DESLOCAMENTO</span><input value={meta.deslocamento} onChange={e=>setMeta({deslocamento:e.target.value})}/></label>
         <label className="field"><span className="field-label">DTs / TESTES</span><textarea rows={3} value={meta.dt} onChange={e=>setMeta({dt:e.target.value})}/></label>
         <label className="field"><span className="field-label">ATAQUES, ACERTOS, DANOS E CRÍTICOS</span><textarea rows={5} value={meta.ataques} onChange={e=>setMeta({ataques:e.target.value})}/></label>
-        <label className="field"><span className="field-label">HABILIDADES E EFEITOS</span><textarea rows={6} value={meta.habilidades} onChange={e=>setMeta({habilidades:e.target.value})}/></label>
+        <MasterAbilityCards title="Habilidades individuais" abilities={meta.abilityCards ?? splitBestiaryAbilities(meta.habilidades)} onChange={abilityCards=>setMeta({abilityCards})}/>
+        {(meta.nucleusCards?.length??0)>0&&<MasterAbilityCards title="Habilidades de Núcleo · três ativações" abilities={meta.nucleusCards!} onChange={nucleusCards=>setMeta({nucleusCards})} type="nucleo"/>}
+        {(meta.gsCards?.length??0)>0&&<MasterAbilityCards title="Marcos de GS · Agente Tecnológico" abilities={meta.gsCards!} onChange={gsCards=>setMeta({gsCards})} type="gs"/>}
+        {meta.mkPreset&&<div className="mb-quick-banner"><div><strong>{meta.mkPreset.edition==='campanha'?'Versão reforçada da campanha':'Modelo original do livro'}</strong><br/><small>{meta.mkPreset.path} · {meta.mkPreset.description}</small></div></div>}
+        <details className="hm-step-section"><summary>Texto original e detalhes brutos do livro</summary><div className="hm-step-body">
+         <label className="field"><span className="field-label">HABILIDADES TRANSCRITAS</span><textarea rows={5} value={meta.habilidades} onChange={e=>setMeta({habilidades:e.target.value,abilityCards:splitBestiaryAbilities(e.target.value)})}/></label>
+        </div></details>
         <label className="field"><span className="field-label">NOTAS / RESERVAS ESPECIAIS</span><textarea rows={2} value={meta.observacoes} onChange={e=>setMeta({observacoes:e.target.value})}/></label>
         {meta.pdfPage>0&&<a className="text-flux" href={`/bestiario/Herdeiros_Bestiario_Completo.pdf#page=${meta.pdfPage}`} target="_blank" rel="noreferrer">Abrir ficha original · página {meta.pdfPage}</a>}
         <p className="empty-copy">PV, PF, Esquiva e Bloqueio são editáveis acima. Alterar CORPO não redefine as defesas de monstros.</p>

@@ -9,6 +9,8 @@ import {
 import { SyncEditor, GakiPassive, WeaponPanel, NomenclaturesTab, AbilitiesTab, AbsorbPfAction, KarmaTest, AgonyPanel, hasAnchor, ANCHOR_NAME, type RollEntry } from './SheetExtras';
 import { isMonster } from './npcSheet';
 import { threatTier, type MonsterSheet } from './NewNpcDialog';
+import { splitBestiaryAbilities, nucleusAsNomenclatures } from '@/lib/master-bestiary';
+import { MasterAbilityCards } from './MasterAbilityCards';
 
 const TABS = ['Geral', 'Nomenclaturas', 'Habilidades', 'Inventário', 'História'] as const;
 type Tab = (typeof TABS)[number];
@@ -22,6 +24,8 @@ export function NpcFullSheet({ character, update, addRoll, setInitiative }: { ch
   const monster = isMonster(character);
   const gaki = (character as MonsterSheet).gaki;
   const beast = (character as MonsterSheet).bestiary;
+  const cards = beast?.abilityCards ?? splitBestiaryAbilities(beast?.habilidades ?? '');
+  const saveBestiary=(patch:Partial<NonNullable<MonsterSheet['bestiary']>>)=>{if(beast)update({bestiary:{...beast,...patch},...(patch.nucleusCards?{nomenclatures:nucleusAsNomenclatures(patch.nucleusCards)}:{})} as Partial<Character>);};
   const kMax = karmaMaximum(character.mente, character.espirito);
   const stage = karmaStage(character.karma, kMax);
   const test = (attr: 'corpo' | 'mente' | 'espirito') => { const die = dieFor(character[attr]); if (die === undefined) return; const v = rollDice(1, die)[0]; if (v === undefined) return; addRoll({ expression: `1d${die}`, dice: [v], modifier: 0, total: v, source: `Teste de ${attrLabelFor(attr, character.lineage)}: ${character.name}` }); };
@@ -76,8 +80,8 @@ export function NpcFullSheet({ character, update, addRoll, setInitiative }: { ch
       </div>{!monster && <KarmaTest character={character} addRoll={addRoll} update={update} />}</Panel>
     </div></div>}
 
-    {tab === 'Nomenclaturas' && <NomenclaturesTab character={character} update={update} addRoll={addRoll} />}
-    {tab === 'Habilidades' && <AbilitiesTab character={character} update={update} addRoll={addRoll} />}
+    {tab === 'Nomenclaturas' && <div className="field-stack">{beast&&<MasterAbilityCards title="Habilidades de Núcleo e protocolos" abilities={[...cards.filter(a=>a.type==='nucleo'),...(beast.nucleusCards??[])]} onChange={changed=>{const other=cards.filter(a=>a.type!=='nucleo');const ids=new Set((beast.nucleusCards??[]).map(a=>a.id));saveBestiary({abilityCards:[...other,...changed.filter(a=>!ids.has(a.id))],nucleusCards:changed.filter(a=>ids.has(a.id))});}} type="nucleo"/>}<NomenclaturesTab character={character} update={update} addRoll={addRoll}/></div>}
+    {tab === 'Habilidades' && <div className="field-stack">{beast&&<MasterAbilityCards title="Habilidades do Bestiário" abilities={cards.filter(a=>a.type!=='nucleo')} onChange={changed=>{const nucleus=cards.filter(a=>a.type==='nucleo');saveBestiary({abilityCards:[...changed,...nucleus]});}}/>}{!!beast?.gsCards?.length&&<MasterAbilityCards title="Evolução · Marcos de GS" type="gs" abilities={beast.gsCards} onChange={gsCards=>saveBestiary({gsCards})}/>}<AbilitiesTab character={character} update={update} addRoll={addRoll}/></div>}
 
     {tab === 'Inventário' && <div className="single-section"><SectionHeading number="03" title="Inventário" aside={<div className="flex gap-2 flex-wrap">
       {!hasAnchor(character) && <Button size="sm" variant="outline" className="action-karma" onClick={() => update({ inventory: [...character.inventory, { name: ANCHOR_NAME, quantity: 1 }] })}><Sparkles /> {ANCHOR_NAME}</Button>}
