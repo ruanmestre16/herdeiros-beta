@@ -1,3 +1,5 @@
+import { parseDamageFormula } from './weapon-damage';
+
 export type Character = {
   id: string; name: string; lineage: string; stage: string; concept: string; weapon: string;
   corpo: number; mente: number; espirito: number; pv_current: number; pv_max: number;
@@ -45,6 +47,13 @@ export const WEAPONS: WeaponType[] = [
   { key: 'fogo', label: 'Armas à distância (fogo, arco, besta)', dice: ['1d12'], attr: 'atributo', note: '1d12 + atributo (crítico 2d12 + atributo). Varia com tipo, calibre, manutenção, munição e pressão emocional do disparo.' },
 ];
 export const weaponByKey = (key: string) => WEAPONS.find(w => w.key === key);
+/** Dado próprio da ficha. Para golpes genéricos e outras armas, usa sempre a tabela. */
+export function weaponDiceFor(c: Pick<Character, 'weapon_type' | 'weapon_dice'>, type = c.weapon_type) {
+  const official = weaponByKey(type)?.dice[0] ?? '';
+  if (type !== c.weapon_type || !official) return official;
+  return parseDamageFormula(c.weapon_dice)?.normalized ?? official;
+}
+
 /** Garante que o dado escolhido pertence à tabela da arma (nunca acima do limite). */
 export function cappedWeaponDice(type: string, _dice?: string) { const w = weaponByKey(type); if (!w) return null; return w.dice[0]!; }
 
@@ -158,8 +167,8 @@ export function counterRoll(c: { corpo: number; mente: number; espirito: number 
 export function normalizeCharacter(c: Partial<Character> & { id: string }): Character { return { ...makeCharacter(), ...c, abilities: Array.isArray(c.abilities) ? c.abilities : [], sync: Array.isArray(c.sync) ? c.sync : [], nomenclatures: Array.isArray(c.nomenclatures) ? c.nomenclatures : [], inventory: Array.isArray(c.inventory) ? c.inventory : [], weapon_type: c.weapon_type ?? '', weapon_dice: c.weapon_dice ?? '', initiative: c.initiative ?? null } as Character; }
 
 // Persistent rule state shares the existing JSON abilities field; no table changes.
-export type SheetState = { excess: number; rounds: number; agony: boolean; failures: number; stable: boolean; dead: boolean; standard: boolean; agonyDt: number; coins: number; anchorBroken: boolean; weaponMode: 'linhagem' | 'comum'; path: 'arma' | 'nomenclatura' | ''; weaponRank: number; nomRank: number; milestones: string[]; milestoneChoices: Record<string, string>; techniqueUpgrades: Record<string, { improved?: 'dano' | 'alcance'; mastered?: boolean; favorite?: string }>; attributeFloor: Partial<Record<Attr, number>>; attributeBudget: number; highestStage: number; specialEffect: string; fluxLink: boolean; mimic: { name: string; effect: string }[]; mimicClosed: string[]; ecoUsed: boolean; trueWeapon: boolean; relic: { name: string; text: string } };
-export const emptySheetState: SheetState = { excess: 0, rounds: 0, agony: false, failures: 0, stable: false, dead: false, standard: false, agonyDt: 6, coins: 0, anchorBroken: false, weaponMode: 'linhagem', path: '', weaponRank: 0, nomRank: 0, milestones: [], milestoneChoices: {}, techniqueUpgrades: {}, attributeFloor: {}, attributeBudget: 0, highestStage: 0, specialEffect: '', fluxLink: false, mimic: [], mimicClosed: [], ecoUsed: false, trueWeapon: false, relic: { name: '', text: '' } };
+export type SheetState = { excess: number; rounds: number; agony: boolean; failures: number; stable: boolean; dead: boolean; standard: boolean; agonyDt: number; coins: number; anchorBroken: boolean; weaponDamageType: string; weaponHistory?: { at: string; from: string; to: string; damageType: string }[]; weaponMode: 'linhagem' | 'comum'; path: 'arma' | 'nomenclatura' | ''; weaponRank: number; nomRank: number; milestones: string[]; milestoneChoices: Record<string, string>; techniqueUpgrades: Record<string, { improved?: 'dano' | 'alcance'; mastered?: boolean; favorite?: string }>; attributeFloor: Partial<Record<Attr, number>>; attributeBudget: number; highestStage: number; specialEffect: string; fluxLink: boolean; mimic: { name: string; effect: string }[]; mimicClosed: string[]; ecoUsed: boolean; trueWeapon: boolean; relic: { name: string; text: string } };
+export const emptySheetState: SheetState = { excess: 0, rounds: 0, agony: false, failures: 0, stable: false, dead: false, standard: false, agonyDt: 6, coins: 0, anchorBroken: false, weaponDamageType: '', weaponMode: 'linhagem', path: '', weaponRank: 0, nomRank: 0, milestones: [], milestoneChoices: {}, techniqueUpgrades: {}, attributeFloor: {}, attributeBudget: 0, highestStage: 0, specialEffect: '', fluxLink: false, mimic: [], mimicClosed: [], ecoUsed: false, trueWeapon: false, relic: { name: '', text: '' } };
 export function sheetState(c: Character): SheetState {
   try { return { ...emptySheetState, ...JSON.parse(c.abilities.find(a => a.kind === 'state')?.description ?? '{}') } as SheetState; }
   catch { return { ...emptySheetState }; }
