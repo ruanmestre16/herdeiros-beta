@@ -1,25 +1,19 @@
 import type { NomenclatureKind } from './game';
 
-/** Importador tolerante a Markdown/texto simples, sem depender de preços de PF. */
+/** Uma versão pronta para o cadastro. Os PF efetivos continuam definidos pelo Códice. */
 export type ParsedNomenclatureTechnique = {
   kind: NomenclatureKind;
   name: string;
   family: string;
   effect: string;
-  /** Custo declarado no texto: apenas informativo; o Códice continua definindo o custo real. */
   declaredCost?: number;
 };
 
-type Draft = {
-  kind: NomenclatureKind;
-  name: string;
-  family: string;
-  lines: string[];
-  waitingForName: boolean;
-  declaredCost?: number;
-};
+type Draft = ParsedNomenclatureTechnique & { lines: string[]; waitingForName: boolean };
 
-/** Remove marcação apenas para reconhecer cabeçalhos; o texto do efeito é preservado. */
+type GradeHeading = { kind: NomenclatureKind; title: string; cost?: number };
+
+/** Retira apenas a decoração do cabeçalho. Não altera descrições nem recitações. */
 function plain(line: string): string {
   return line.trim()
     .replace(/^>\s*/, '')
@@ -36,77 +30,119 @@ function fold(value: string): string {
   return value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
 }
 
-function asTitle(value: string): string {
+function title(value: string): string {
   return plain(value).replace(/\s+/g, ' ').replace(/\s*[:\-–—]\s*$/, '').trim();
 }
 
 function readCost(value: string): number | undefined {
-  const match = fold(value).match(/\b(\d+)\s*(?:p\.?\s*f\.?|pontos?\s+de\s+fluxo)\b/);
-  return match ? Number(match[1]) : undefined;
+  const cleaned = fold(value);
+  const standard = cleaned.match(/\b(\d+)\s*(?:p\.?\s*f\.?|pontos?\s+de\s+fluxo)\b/);
+  const inverted = cleaned.match(/\bpf\s*[:=]?\s*(\d+)\b/);
+  return standard ? Number(standard[1]) : inverted ? Number(inverted[1]) : undefined;
 }
 
-function modeHeading(value: string): { kind: NomenclatureKind; title: string; cost?: number } | null {
-  const cleaned = asTitle(value).replace(/^\d{1,3}\s*[.):\-]\s*/, '');
+const PREFIX_WORDS = new Set([
+  'nomenclatura', 'nomenclaturas', 'nomeacao', 'recitacao', 'ameaca',
+  'ativacao', 'manifestacao', 'invocacao', 'liberacao', 'tecnica', 'ataque',
+  'grau', 'nivel', 'estagio', 'modo', 'forma', 'versao', 'etapa', 'tipo',
+  'de', 'da', 'do', 'das', 'dos', 'em', 'na', 'no', 'sua', 'seu',
+  'i', 'ii', 'iii', '1', '2', '3',
+]);
+
+/**
+ * Reconhece cabeçalhos, não frases narrativas, como:
+ *  - DIRETA — 2 PF; NOMEAÇÃO DIRETA; RECITAÇÃO PARCIAL; RECITAÇÃO COMPLETA
+ *  - NOMENCLATURA DIRETA; AMEAÇA DIRETA; MANIFESTAÇÃO COMPLETA
+ *  - GRAU I: DIRETA; ATIVAÇÃO DE FORMA PARCIAL; DIRETA: NOME — PF 2
+ * Aceita Markdown, emojis, custo opcional e maiúsculas/minúsculas.
+ */
+function gradeHeading(raw: string): GradeHeading | null {
+  if (/^\s*>/.test(raw)) return null; // A fala de um personagem não é cabeçalho.
+  const cleaned = title(raw).replace(/^\d{1,3}\s*[.):\-–—]\s*/, '');
   const normalized = fold(cleaned);
-  // Aceita: "### DIRETA — 2 PF", "Versão: Parcial", "Modo completo (12 PF)" e similares.
-  const match = normalized.match(/^(?:(?:grau|versao|nivel|modo|forma|recitacao|tecnica|estagio)\s*(?:\d+)?\s*[:\-–—]?\s*)?(direta|direto|parcial|completa|completo)(?=$|[\s:()\[\]\/|\-–—])/);
-  if (!match) return null;
-  const token = match[1]!;
-  const kind: NomenclatureKind = token.startsWith('diret') ? 'Direta' : token === 'parcial' ? 'Parcial' : 'Completa';
-  const originalTail = cleaned.slice(match[0].length);
-  const cost = readCost(originalTail);
-  const tailWithoutCost = originalTail
+  const match = /\b(direta|direto|parcial|completa|completo)\b/.exec(normalized);
+  if (!match || match.index === undefined) return null;
+
+  const prefix = normalized.slice(0, match.index).trim();
+  const prefixTokens = prefix.split(/[^a-z0-9]+/).filter(Boolean);
+  if (prefixTokens.some(word => !PREFIX_WORDS.has(word))) return null;
+  // Uma palavra após "direta" sem marcador é provavelmente parte de uma frase.
+  const tail = cleaned.slice(match.index + match[0].length);
+  if (tail.trim() && !/^[\s:|/\-–—(\[]/.test(tail)) return null;
+
+  const cost = readCost(tail);
+  const stripped = tail
     .replace(/\b(?:custo\s*[:=]?\s*)?\d+\s*(?:p\.?\s*f\.?|pontos?\s+de\s+fluxo)\b/ig, '')
+    .replace(/\bpf\s*[:=]?\s*\d+\b/ig, '')
+    .replace(/\b(?:nome(?:\s+da\s+tecnica)?|titulo)\s*:\s*/i, '')
     .replace(/[()[\]]/g, '')
-    .replace(/^[\s:|\/\-–—]+|[\s:|\/\-–—]+$/g, '')
+    .replace(/^[\s:|/\-–—]+|[\s:|/\-–—]+$/g, '')
     .trim();
-  // Não classifica frases narrativas que por acaso começam com "direta...".
-  if (!/^[\s:|\/\-–—(\[]/.test(originalTail) && originalTail.trim() && cost === undefined) return null;
-  if (tailWithoutCost.split(/\s+/).length > 12 || /[.!?][\s\S]+/.test(tailWithoutCost)) return null;
-  return { kind, title: asTitle(tailWithoutCost), ...(cost !== undefined ? { cost } : {}) };
+
+  // "DIRETA (NOMEAÇÃO)" / "PARCIAL (RECITAÇÃO)" identificam o tipo, não o nome.
+  const leftover = fold(stripped);
+  const suffixIsType = /^(?:nomenclatura|nomeacao|recitacao|manifestacao|ativacao|ameaca|tecnica)$/.test(leftover);
+  const name = suffixIsType ? '' : title(stripped);
+  if (name.split(/\s+/).length > 14 || /[.!?].+/.test(name)) return null;
+  // Sem custo/nome, evite interpretar uma oração que começa com "Ataque direto...".
+  if (prefixTokens.length && name && cost === undefined && !/^\s*#{1,6}\s/.test(raw) && !/^\s*\*\*/.test(raw)) {
+    const first = prefixTokens[0];
+    if (first === 'ataque' || first === 'ameaca') return null;
+  }
+  return {
+    kind: match[0].startsWith('diret') ? 'Direta' : match[0] === 'parcial' ? 'Parcial' : 'Completa',
+    title: name,
+    ...(cost !== undefined ? { cost } : {}),
+  };
 }
 
-function familyHeading(value: string, headingLevel: number): string | null {
-  const text = asTitle(value);
-  // Cabeçalhos independentes de número de '#': "NOMENCLATURA: ..." / "TÉCNICA 1 — ...".
-  const named = text.match(/^(?:nomenclatura|tecnica)(?:\s+\d{1,3})?\s*[:\-–—]\s*(.+)$/i);
-  if (named) return asTitle(named[1]!);
-  // "## 1. CURA PRECISA" e "## 2 - CÍRCULO DA VIDA".
+/** Nome de família explicitamente marcado ou numerado. */
+function explicitFamily(raw: string, headingLevel: number): string | null {
+  const text = title(raw);
+  const named = fold(text).match(/^(?:nomenclatura|tecnica)(?:\s+\d{1,3})?\s*[:\-–—]\s*(.+)$/);
+  if (named) return title(text.slice(named.index! + named[0].length - named[1]!.length));
   if (headingLevel > 0 && headingLevel <= 3) {
-    const numbered = value.trim().replace(/^#{1,6}\s*/, '').replace(/\*\*/g, '').match(/^\s*\d{1,3}\s*[.):\-–—]\s*(.+)$/);
-    if (numbered) return asTitle(numbered[1]!);
+    const numbered = raw.trim().replace(/^#{1,6}\s*/, '').replace(/\*\*/g, '')
+      .match(/^\s*\d{1,3}\s*[.):\-–—]\s*(.+)$/);
+    if (numbered) return title(numbered[1]!);
   }
-  // "## CURA PRECISA" dentro de uma seção de Nomenclaturas (ainda não é um grau).
-  if (headingLevel === 2 && text && !/^(?:nomenclaturas?|habilidades?|atributos|combate|arma|caracteristicas)\b/i.test(fold(text))) return text;
   return null;
 }
 
-function isLikelyTitle(value: string, headingLevel: number): boolean {
+function likelyName(raw: string, headingLevel: number): boolean {
+  if (/^\s*>/.test(raw)) return false;
+  const text = title(raw);
+  if (!text || /[.!?]$/.test(text)) return false;
+  if (/^(?:efeito|cura|dano|alcance|custo|duracao|reducao|teste)\s*:/i.test(fold(text))) return false;
   if (headingLevel > 0) return true;
-  const text = asTitle(value);
-  if (!text || /[.!?]$/.test(text) || value.trim().startsWith('>')) return false;
-  if (/^(?:efeito|cura|dano|alcance|custo|duracao)\s*:/i.test(fold(text))) return false;
   if (text.split(/\s+/).length > 10) return false;
   const letters = text.replace(/[^\p{L}]/gu, '');
-  if (letters && letters === letters.toUpperCase()) return true;
-  return text.split(/\s+/).filter(w => /^\p{Lu}/u.test(w)).length >= 2;
+  return !!letters && letters === letters.toUpperCase();
 }
 
-function effectLine(raw: string): string {
-  return raw.trim().replace(/\\([*_])/g, '$1');
+function isClosingHeading(normalized: string): boolean {
+  return /^(?:identidade(?:\s+da\s+tecnica)?|consideracoes\s+finais|resumo\s+da\s+tecnica|notas\s+finais|habilidade\s+propria|habilidades|atributos|caracteristicas\s+de\s+combate)\s*$/.test(normalized);
+}
+
+function isEffectHeading(normalized: string): boolean {
+  return /^(?:efeitos?|exemplos?|observacoes?|mecanica|duracao|alcance|uso|descricao|condicoes)\b/.test(normalized)
+    || /^(?:dano|reducao|cura|defesa)\s*[:—-]\s*/.test(normalized);
 }
 
 /**
- * Um documento pode conter várias nomenclaturas, cada qual com até três graus.
- * A divisão não depende de "PF" nem de títulos inventados a partir das descrições.
+ * Importa uma ou várias nomenclaturas. Cada "grau" encerra o efeito do anterior.
+ * Apenas os títulos dos graus são normalizados; os efeitos ficam intactos.
+ * Um texto sem cabeçalhos de grau retorna [], sem inventar dados.
  */
 export function parseNomenclatureText(text: string): ParsedNomenclatureTechnique[] {
   const drafts: Draft[] = [];
   let current: Draft | null = null;
   let family = '';
+  let documentTitle = '';
   let insideNomenclatures = false;
   let sectionLevel = 0;
   let closedSection = false;
+  let pendingFamily = '';
 
   for (const raw of text.replace(/\r\n?/g, '\n').replace(/\u00a0/g, ' ').split('\n')) {
     if (!raw.trim()) continue;
@@ -123,61 +159,99 @@ export function parseNomenclatureText(text: string): ParsedNomenclatureTechnique
       continue;
     }
     if (closedSection) continue;
-
-    const mode = modeHeading(raw);
-    if (mode) {
-      current = { kind: mode.kind, name: mode.title, family, lines: [], waitingForName: !mode.title, ...(mode.cost !== undefined ? { declaredCost: mode.cost } : {}) };
-      drafts.push(current);
-      continue;
-    }
-
-    // Nome de nova família: antes de considerar um título solto ou um efeito.
-    const familyName = familyHeading(raw, headingLevel);
-    if (familyName) {
-      family = familyName;
-      current = null;
-      continue;
-    }
-
-    // Um título de seção principal encerra a importação do bloco de nomenclaturas.
-    // Exceção: título logo após o cabeçalho de um grau ("# CURA PRECISA: ...").
-    if (insideNomenclatures && headingLevel > 0 && headingLevel <= sectionLevel && !current?.waitingForName) {
-      insideNomenclatures = false;
+    if (headingLevel > 0 && isClosingHeading(normalized) && drafts.length > 0) {
       closedSection = true;
       current = null;
       continue;
     }
 
+    // O grau tem prioridade sobre outros títulos: "NOMENCLATURA DIRETA" NÃO é nome de família.
+    const grade = gradeHeading(raw);
+    if (grade) {
+      if (pendingFamily) {
+        family = pendingFamily;
+        pendingFamily = '';
+      }
+      const newDraft: Draft = {
+        kind: grade.kind,
+        name: grade.title,
+        family,
+        effect: '',
+        lines: [],
+        waitingForName: !grade.title,
+        ...(grade.cost !== undefined ? { declaredCost: grade.cost } : {}),
+      };
+      drafts.push(newDraft);
+      current = newDraft;
+      continue;
+    }
+
+    const namedFamily = explicitFamily(raw, headingLevel);
+    if (namedFamily) {
+      family = namedFamily;
+      pendingFamily = '';
+      current = null;
+      continue;
+    }
+
+    // Família sem número dentro de "# NOMENCLATURAS": "## CURA DAS SOMBRAS".
+    if (insideNomenclatures && !current && headingLevel === sectionLevel + 1
+      && !isEffectHeading(normalized)) {
+      family = title(raw);
+      pendingFamily = '';
+      continue;
+    }
+
+    // As seções principais após NOMENCLATURAS encerram o importador.
+    if (insideNomenclatures && headingLevel > 0 && headingLevel <= sectionLevel && !current?.waitingForName) {
+      closedSection = true;
+      current = null;
+      continue;
+    }
+
+    if (headingLevel === 1 && !documentTitle && !current) {
+      documentTitle = title(raw);
+    }
+
+    // "## NOVA FAMÍLIA" após uma família completa (sem numeração).
+    // Não confunda subtítulos "## EFEITO — ..." com novos poderes.
+    const finishedCurrentFamily = current && ['Direta', 'Parcial', 'Completa'].every(kind =>
+      drafts.some(d => d.kind === kind && (d.family || documentTitle) === (current!.family || documentTitle)),
+    );
+    if (headingLevel === 2 && insideNomenclatures && !isEffectHeading(normalized)
+      && !gradeHeading(raw) && finishedCurrentFamily && !/^\d+\s/.test(label)) {
+      pendingFamily = title(raw);
+      // Só aplica a família quando surgir o próximo grau: subtítulos ainda pertencem ao efeito.
+    }
+
+    // No começo de um bloco "# NOMENCLATURA X" sem famílias explícitas,
+    // o nome do documento serve como família de fallback.
     if (!current) continue;
-    const nameMatch = label.match(/^(?:nome(?:\s+da\s+tecnica)?|titulo)\s*:\s*(.+)$/i);
-    if (nameMatch) {
-      current.name = asTitle(nameMatch[1]!);
+    const explicitName = label.match(/^(?:nome(?:\s+da\s+tecnica)?|titulo)\s*:\s*(.+)$/i);
+    if (explicitName) {
+      current.name = title(explicitName[1]!);
       current.waitingForName = false;
       continue;
     }
-    if (current.declaredCost === undefined && /^(?:custo\s*:\s*)?\d+\s*(?:p\.?\s*f\.?|pontos?\s+de\s+fluxo)\s*$/i.test(normalized)) {
+    if (current.declaredCost === undefined && /^(?:custo\s*:\s*)?(?:\d+\s*(?:p\.?\s*f\.?|pontos?\s+de\s+fluxo)|pf\s*[:=]?\s*\d+)\s*$/i.test(normalized)) {
       current.declaredCost = readCost(label);
       continue;
     }
-    if (current.waitingForName && isLikelyTitle(raw, headingLevel)) {
-      current.name = asTitle(raw);
+    if (current.waitingForName && likelyName(raw, headingLevel)) {
+      current.name = title(raw);
       current.waitingForName = false;
       continue;
     }
-    current.lines.push(effectLine(raw));
+    current.lines.push(raw.trim().replace(/\\([*_])/g, '$1'));
   }
 
-  // Sem cabeçalho de família, as versões do mesmo texto ficam ligadas à primeira técnica.
-  const firstNamed = drafts.find(d => d.name)?.name;
-  const defaultFamily = firstNamed || 'Nomenclatura importada';
-  return drafts.map(d => {
-    const group = d.family || defaultFamily;
-    return {
-      kind: d.kind,
-      family: group,
-      name: d.name || `${group} — ${d.kind}`,
-      effect: d.lines.join('\n').trim(),
-      ...(d.declaredCost !== undefined ? { declaredCost: d.declaredCost } : {}),
-    };
-  });
+  const defaultFamily = documentTitle && !/^(?:nomenclaturas?|tecnicas?)$/i.test(fold(documentTitle))
+    ? documentTitle : drafts.find(d => d.name)?.name || 'Nomenclatura importada';
+  return drafts.map(d => ({
+    kind: d.kind,
+    family: d.family || defaultFamily,
+    name: d.name || `${d.family || defaultFamily} — ${d.kind}`,
+    effect: d.lines.join('\n').trim(),
+    ...(d.declaredCost !== undefined ? { declaredCost: d.declaredCost } : {}),
+  }));
 }
