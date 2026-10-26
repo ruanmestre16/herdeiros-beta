@@ -52,7 +52,7 @@ export function GsControl({ character, onChange, compact = false, disabled = fal
       </div>
       <div className="hu-gs-markers" aria-label="Marcos de evolução">
         {markers.map(({gs,completed,ready,reached,needsPrevious}) => <div key={gs} className={`hu-gs-marker ${completed ? 'completed' : ready ? 'ready' : 'locked'}`}>
-          <strong>{gs} GS</strong><small>{completed ? 'Concluído' : ready ? 'Liberado' : reached && needsPrevious ? 'Escolha o caminho' : 'Bloqueado'}</small>
+          <strong>{gs} GS</strong><small>{completed ? 'Concluído' : ready ? 'Liberado' : reached && needsPrevious ? (tech && stage === 1 ? 'Conclua o marco anterior' : 'Escolha o caminho') : 'Bloqueado'}</small>
         </div>)}
       </div>
       <p className={`hu-gs-feedback ${available.length ? 'available' : ''}`} role="status" aria-live="polite">
