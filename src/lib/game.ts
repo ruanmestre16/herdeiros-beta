@@ -130,8 +130,10 @@ export const coreRiskDetails = (c: Pick<Character, 'lineage' | 'karma' | 'mente'
  */
 export function karmaDamageBonus(c: Pick<Character, 'karma' | 'mente' | 'espirito'> & Partial<Pick<Character, 'lineage'>>) {
   const st = karmaStage(c.karma, karmaMaximum(c.mente, c.espirito));
-  if (c.lineage && isTechAgent(c.lineage) && st === 'consumido') return 0;
-  return st === 'berserker' || st === 'consumido' ? 5 : st === 'gaki' ? 3 : 0;
+  // Consumido = estado terminal, inclusive para linhagens não tecnológicas.
+  // Não concede o bônus de Berserker aos 100% do limite.
+  if (st === 'consumido') return 0;
+  return st === 'berserker' ? 5 : st === 'gaki' ? 3 : 0;
 }
 /** Rótulos da barra de Karma / Destruição de Núcleo conforme linhagem e estágio. */
 export function resourceStageLabel(lineage: string, stage: ReturnType<typeof karmaStage>) {
