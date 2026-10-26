@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { Dices, GripHorizontal, Minus, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
-import { NOMENCLATURE_CRIT_DICE, absorbActionLabel, absorbFromDice, attrLabelFor, dieFor, forceActionLabel, forceFluxFromDice, karmaDamageBonus, karmaMaximum, parseDice, techniqueRules, weaponAttrFor, weaponByKey, weaponRules, withSheetState, type Attr, type Character } from '@/lib/game';
+import { NOMENCLATURE_CRIT_DICE, absorbActionLabel, absorbFromDice, attrLabelFor, dieFor, forceActionLabel, forceFluxFromDice, karmaDamageBonus, karmaMaximum, parseDice, techniqueRules, weaponAttrFor, weaponByKey, weaponDiceFor, weaponRules, withSheetState, type Attr, type Character } from '@/lib/game';
+import { damageDiceFaces, parseDamageFormula } from '@/lib/weapon-damage';
 import type { RollEntry } from './SheetExtras';
 
 /**
@@ -291,7 +292,11 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
     const type = weaponByKey(character.weapon_type); if (!type) return null;
     const wr = weaponRules(character);
     const eff = `${wr.ignoreBlock ? ` · ignora ${wr.ignoreBlock >= 999 ? 'todo o' : `${wr.ignoreBlock} de`} bloqueio` : ''}${wr.effectNote ? ` · Efeito: ${wr.effectNote}` : ''}`;
-    return { name: type.label, eff, normal: { dice: expand([...type.dice, ...wr.extraDice]), bonus: wr.bonus }, crit: { dice: expand([...type.dice, ...wr.extraDice], 2), bonus: wr.bonus } };
+    const chosen = weaponDiceFor(character);
+    const normalTerms = [...damageDiceFaces(chosen), ...wr.extraDice.flatMap(e=>damageDiceFaces(e))];
+    const critTerms = [...damageDiceFaces(chosen, 2), ...wr.extraDice.flatMap(e=>damageDiceFaces(e, 2))];
+    const flat = parseDamageFormula(chosen)?.flat ?? 0;
+    return { name: type.label, formula: chosen, eff, normal: { dice: normalTerms.map(t=>t.sides), signs: normalTerms.map(t=>t.sign), bonus: wr.bonus + flat }, crit: { dice: critTerms.map(t=>t.sides), signs: critTerms.map(t=>t.sign), bonus: wr.bonus + flat } };
   })();
   const presets = character ? (() => {
     const atk = weaponAttrFor(character.lineage) as Attr; const lin = character.lineage;
@@ -371,8 +376,8 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
           {weaponRoll && weaponRoll.normal.dice.length > 0 && <>
             <span className="field-kicker">ARMA · {weaponRoll.name.toUpperCase()}</span>
             <div className="tdice-pair">
-              <Button variant="outline" size="sm" onClick={() => launch(weaponRoll.normal.dice, `Dano · ${weaponRoll.name}${karmaBonus ? ` (+${karmaBonus} Karma)` : ''}${weaponRoll.eff}`, 'sum', weaponRoll.normal.bonus + karmaBonus)}><Dices /> Dano</Button>
-              <Button variant="outline" size="sm" onClick={() => launch(weaponRoll.crit.dice, `Dano crítico · ${weaponRoll.name}${karmaBonus ? ` (+${karmaBonus} Karma)` : ''}${weaponRoll.eff}`, 'sum', weaponRoll.crit.bonus + karmaBonus)}><Dices /> Crítico</Button>
+              <Button variant="outline" size="sm" onClick={() => launch(weaponRoll.normal.dice, `Dano · ${weaponRoll.name}${karmaBonus ? ` (+${karmaBonus} Karma)` : ''}${weaponRoll.eff}`, 'sum', weaponRoll.normal.bonus + karmaBonus, v => ({result:Math.max(0,v.reduce((a,n,i)=>a+n*(weaponRoll.normal.signs[i]??1),weaponRoll.normal.bonus+karmaBonus)),note:`Dano da ficha: ${weaponRoll.formula} (dados negativos são subtraídos)`}))}><Dices /> Dano</Button>
+              <Button variant="outline" size="sm" onClick={() => launch(weaponRoll.crit.dice, `Dano crítico · ${weaponRoll.name}${karmaBonus ? ` (+${karmaBonus} Karma)` : ''}${weaponRoll.eff}`, 'sum', weaponRoll.crit.bonus + karmaBonus, v => ({result:Math.max(0,v.reduce((a,n,i)=>a+n*(weaponRoll.crit.signs[i]??1),weaponRoll.crit.bonus+karmaBonus)),note:`Crítico da ficha: ${weaponRoll.formula} (dados negativos são subtraídos)`}))}><Dices /> Crítico</Button>
             </div>
           </>}
           {character && character.nomenclatures.length > 0 && <>

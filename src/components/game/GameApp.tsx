@@ -11,7 +11,9 @@ import { KarmaTest, hasAnchor, ANCHOR_NAME, SyncEditor, GakiPassive, WeaponPanel
 import { CombatPanel } from './CombatPanel';
 import { NewNpcDialog, type MonsterSheet, type BestiaryMeta } from './NewNpcDialog';
 import { BestiaryPage } from './BestiaryPage';
-import { readBestiaryAttacks, rollBestiaryDice } from '@/lib/bestiary';
+import { readBestiaryAttacks } from '@/lib/bestiary';
+import { WeaponDamageEditor } from './WeaponDamageEditor';
+import { rollDamageFormula } from '@/lib/weapon-damage';
 import { NpcFullSheet } from './NpcFullSheet';
 import { LineagesPage } from './LineagesPage';
 import { KillCallFx } from './KillCallFx';
@@ -164,7 +166,9 @@ function NpcEditor({npc,update,remove,throwDice,addRoll,importSheet,defaultOpen=
   const [open,setOpen]=useState(defaultOpen);
   const { text } = splitNpcNotes(npc.notes);
   const sheet = npcSheet(npc);
-  const beastAttacks = (sheet as MonsterSheet | null)?.bestiary ? readBestiaryAttacks((sheet as MonsterSheet).bestiary!.ataques) : [];
+  const monsterMeta = (sheet as MonsterSheet | null)?.bestiary;
+  const beastAttacks = monsterMeta ? readBestiaryAttacks(monsterMeta.ataques) : [];
+  const weaponEdits = monsterMeta?.attackOverrides ?? {};
   const updateSheet=(partial:Partial<Character>)=>{
     if(!sheet)return;
     const next={...sheet,...partial};
@@ -200,11 +204,28 @@ function NpcEditor({npc,update,remove,throwDice,addRoll,importSheet,defaultOpen=
     <div className="row-actions">
       {beastAttacks.length ? <div className="field-stack" style={{width:'100%'}}>
         <span className="field-kicker">ATAQUES DO BESTIÁRIO · ROLAGENS COMPARTILHADAS</span>
-        {beastAttacks.map((a,i)=><div key={i} className="flex gap-2 flex-wrap items-center">
-          <Button size="sm" variant="outline" onClick={()=>{const r=attackRoll(a.attribute);addRoll({expression:r.expression,dice:r.dice,modifier:0,total:r.total,source:`${npc.name} · ${a.name}${r.fumble?' — FALHA CRÍTICA':r.crit?' — CRÍTICO':''}`,crit:r.crit});}}><Swords/> {a.name} · acerto</Button>
-          {a.damage&&<Button size="sm" variant="outline" onClick={()=>{const r=rollBestiaryDice(a.damage);if(r)addRoll({...r,source:`Dano · ${npc.name} · ${a.name}`});}}>Dano: {a.damage}</Button>}
-          {a.critical&&<Button size="sm" variant="outline" onClick={()=>{const r=rollBestiaryDice(a.critical);if(r)addRoll({...r,source:`Crítico · ${npc.name} · ${a.name}`});}}>Crítico: {a.critical}</Button>}
-        </div>)}
+        {beastAttacks.map((a,i)=>{
+          const override = weaponEdits[String(i)];
+          const damage = override?.damage || a.damage;
+          const critical = override?.critical || (override?.damage ? '' : a.critical);
+          const saveAttack = (changes: {damage?: string; critical?: string; damageType?: string}) => {
+            if (!monsterMeta || !sheet) return;
+            const next = {...weaponEdits, [String(i)]: {...override, ...changes}};
+            update({notes:joinNpcNotes(text,{...sheet,bestiary:{...monsterMeta,attackOverrides:next}} as MonsterSheet)});
+          };
+          return <div key={i} className="field-stack" style={{width:'100%',padding:10,border:'1px solid var(--border, #7774)',borderRadius:10}}>
+            <strong>{a.name}</strong>
+            <div className="flex gap-2 flex-wrap items-center">
+              <Button size="sm" variant="outline" onClick={()=>{const r=attackRoll(a.attribute);addRoll({expression:r.expression,dice:r.dice,modifier:0,total:r.total,source:`${npc.name} · ${a.name}${r.fumble?' — FALHA CRÍTICA':r.crit?' — CRÍTICO':''}`,crit:r.crit});}}><Swords/> Acerto</Button>
+              {damage&&<Button size="sm" variant="outline" onClick={()=>{const r=rollDamageFormula(damage,0,false);addRoll({expression:r.expression,dice:r.dice,modifier:r.bonus,total:r.total,source:`Dano · ${npc.name} · ${a.name}${override?.damageType ? ` (${override.damageType})` : ''}`});}}>Dano: {damage}</Button>}
+              {damage&&<Button size="sm" variant="outline" onClick={()=>{const r=rollDamageFormula(critical || damage,0,!critical);addRoll({expression:r.expression,dice:r.dice,modifier:r.bonus,total:r.total,source:`Crítico · ${npc.name} · ${a.name}`});}}>Crítico: {critical || `2× (${damage})`}</Button>}
+            </div>
+            {a.damage && <WeaponDamageEditor label={`DANO · ${a.name}`} base={a.damage} value={damage} damageType={override?.damageType ?? ''} onSave={(nextDamage,nextType)=>saveAttack({damage:nextDamage,damageType:nextType})}/>}
+            {damage && <WeaponDamageEditor label="CRÍTICO ESPECIAL (OPCIONAL)" base={a.critical || damage} value={critical || (!override?.damage && a.critical ? a.critical : damage)} onSave={(nextCritical)=>saveAttack({critical:nextCritical})}/>}
+            <Button size="sm" variant="ghost" onClick={()=>saveAttack({critical:''})}>Usar crítico automático (dobrar dados atuais)</Button>
+            <p className="empty-copy">Sem crítico especial, o sistema dobra os dados personalizados no combate. Valores fixos não dobram.</p>
+          </div>;
+        })}
       </div> : <Button size="sm" variant="outline" onClick={()=>{const r=attackRoll(npc.corpo);addRoll({expression:r.expression,dice:r.dice,modifier:0,total:r.total,source:`Ataque de ${npc.name}${r.fumble?' — FALHA CRÍTICA':r.crit?' — CRÍTICO':''}`,crit:r.crit});}}><Swords/> Rolar ataque</Button>}
       {!sheet
         ? <Button size="sm" variant="outline" onClick={()=>{const first=normalizeCharacter({id:npc.id,name:npc.name,corpo:npc.corpo,mente:npc.mente,espirito:npc.espirito,pv_current:npc.pv_current,pv_max:npc.pv_max,pf_current:npc.pf_current,pf_max:npc.pf_max,lineage:'Gaki',stage:LINEAGE_STAGES['Gaki']?.[0]?.name??''});update({notes:joinNpcNotes(text,first)});setOpen(true)}}><Sparkles/> Ativar ficha completa</Button>

@@ -11,6 +11,7 @@ export type BestiaryMeta = {
   templateId: string; category: string; threat: number; deslocamento: string;
   ataques: string; habilidades: string; dt: string; observacoes: string;
   pdfPage: number; esquiva: number; bloqueio: number;
+  attackOverrides?: Record<string, { damage?: string; critical?: string; damageType?: string }>;
 };
 export type MonsterSheet = Character & { gaki?: GakiMonster; bestiary?: BestiaryMeta };
 export const GAKI_STYLES: GakiMonster['style'][] = ['Animalístico', 'Humano'];

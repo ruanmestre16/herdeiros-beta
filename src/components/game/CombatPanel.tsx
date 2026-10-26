@@ -11,6 +11,10 @@ import {
 import { AbsorbPfAction, type RollEntry } from './SheetExtras';
 import { npcSheet, isMonster, applyNpcSheetPatch } from './npcSheet';
 import { supabase } from '@/integrations/supabase/client';
+import { weaponDiceFor } from '@/lib/game';
+import { rollDamageFormula } from '@/lib/weapon-damage';
+import { readBestiaryAttacks } from '@/lib/bestiary';
+import type { MonsterSheet } from './NewNpcDialog';
 
 type Combatant = {
   id: string; kind: 'pc' | 'npc'; name: string; pv: number; pvMax: number; pf: number; pfMax: number;
@@ -19,8 +23,8 @@ type Combatant = {
 };
 /** Opção de ataque: dado base + valor fixo + dados extras (evoluções) + bônus de Karma. Tudo vem das tabelas do Códice (game.ts). */
 type AttackOption = {
-  id: string; label: string; hitAttr: Attr; dice: string[]; fixed: number; extra: string[]; pfCost: number; karma: number;
-  nomenclature: boolean; nomKind?: NomenclatureKind; melee: boolean; critFlat?: string; fusion?: boolean; /** Efeito do 10 GS escrito pelo jogador: bloqueio que o golpe ignora e nota mostrada no resultado. */ ignoreBlock?: number; effectNote?: string;
+  id: string; label: string; hitAttr: Attr; hitValue?: number; dice: string[]; fixed: number; extra: string[]; pfCost: number; karma: number;
+  nomenclature: boolean; nomKind?: NomenclatureKind; melee: boolean; critFlat?: string; fusion?: boolean; /** Efeito do 10 GS escrito pelo jogador: bloqueio que o golpe ignora e nota mostrada no resultado. */ ignoreBlock?: number; effectNote?: string; /** Crítico explícito das criaturas do Bestiário. */ criticalDamage?: string;
 };
 /** Habilidades de GS escolhidas antes do ataque: Ataque Extra, Vingança Karmática e Mimetismo. */
 type Special = { extra?: 'basic' | 'refined'; venge?: boolean; mimic?: string; eco?: boolean };
@@ -62,10 +66,13 @@ function toCombatants(party: Character[], npcs: Npc[]): Combatant[] {
 /** Monta uma opção de arma: PC usa weaponRules (atributo da linhagem + evolução de GS); NPC ataca com CORPO. */
 function weaponOption(c: Combatant, id: string, prefix: string, key: string): AttackOption | null {
   const w = weaponByKey(key); if (!w) return null;
-  const karma = c.pc ? karmaDamageBonus(c.pc) : 0;
-  const rules = c.pc ? weaponRules(c.pc, key) : { attr: 'corpo' as Attr, bonus: c.corpo, extraDice: [] as string[], rank: 0, ignoreBlock: 0, effectNote: '' };
-  const parts = [w.dice[0]!, ...rules.extraDice, ...(rules.bonus ? [attrLabelFor(rules.attr, c.pc?.lineage)] : [])];
-  return { id, label: `${prefix} (${parts.join(' + ')})`, hitAttr: rules.attr, dice: [w.dice[0]!], fixed: rules.bonus, extra: rules.extraDice, pfCost: 0, karma, nomenclature: false, melee: key !== 'fogo', ...(rules.ignoreBlock ? { ignoreBlock: rules.ignoreBlock } : {}), ...(rules.effectNote ? { effectNote: rules.effectNote } : {}) };
+  const owner = c.pc ?? (c.npc ? npcSheet(c.npc) : null);
+  const karma = c.kind === 'pc' && c.pc ? karmaDamageBonus(c.pc) : 0;
+  const rules = owner ? weaponRules(owner, key) : { attr: 'corpo' as Attr, bonus: c.corpo, extraDice: [] as string[], rank: 0, ignoreBlock: 0, effectNote: '' };
+  const base = owner ? weaponDiceFor(owner, key) : w.dice[0]!;
+  const damageKind = owner && key === owner.weapon_type ? sheetState(owner).weaponDamageType : '';
+  const parts = [base, ...rules.extraDice, ...(rules.bonus ? [attrLabelFor(rules.attr, c.pc?.lineage)] : [])];
+  return { id, label: `${prefix} (${parts.join(' + ')})${damageKind ? ` · ${damageKind}` : ''}`, hitAttr: rules.attr, dice: [base], fixed: rules.bonus, extra: rules.extraDice, pfCost: 0, karma, nomenclature: false, melee: key !== 'fogo', ...(rules.ignoreBlock ? { ignoreBlock: rules.ignoreBlock } : {}), ...(rules.effectNote ? { effectNote: rules.effectNote } : {}) };
 }
 function optionsFor(c: Combatant): AttackOption[] {
   const opts: AttackOption[] = [];
@@ -82,7 +89,20 @@ function optionsFor(c: Combatant): AttackOption[] {
       opts.push({ id: `nom-${i}`, label: `${nomenclatureLabel(pc.lineage)} · ${n.name} · ${nomenclatureLevelLabel(pc.lineage, n.kind)} (dano ${parts.join(' + ')} · ${t.cost} PF)`, hitAttr: 'espirito', dice: [t.dice], fixed: t.bonus, extra: t.extraDice, pfCost: t.cost, karma, nomenclature: true, nomKind: t.kind, melee: false, ...(t.ignoreBlock ? { ignoreBlock: t.ignoreBlock } : {}), ...(t.effectNote ? { effectNote: t.effectNote } : {}), ...(t.kind === 'Completa' ? { critFlat: NOMENCLATURE_CRIT_DICE.Completa } : {}) });
     });
   } else {
-    WEAPONS.filter(w => w.attr !== 'corpo').forEach(w => add(weaponOption(c, `npc-${w.key}`, `Arma · ${w.label}`, w.key)));
+    const sheet = c.npc ? npcSheet(c.npc) as MonsterSheet | null : null;
+    const beast = sheet?.bestiary;
+    if (beast) {
+      const edits = beast.attackOverrides ?? {};
+      readBestiaryAttacks(beast.ataques).forEach((a, i) => {
+        const overrides = edits[String(i)];
+        const damage = overrides?.damage || a.damage;
+        if (!damage) return;
+        const critical = overrides?.critical || (overrides?.damage ? undefined : a.critical);
+        opts.push({ id: `best-${i}`, label: `${a.name} (${damage}${overrides?.damageType ? ` · ${overrides.damageType}` : ''})`, hitAttr: 'corpo', hitValue: a.attribute, dice: [damage], fixed: 0, extra: [], pfCost: 0, karma: 0, nomenclature: false, melee: true, ...(critical ? { criticalDamage: critical } : {}), effectNote: `Acerto: ${a.hit}` });
+      });
+    }
+    if (sheet?.weapon_type && weaponByKey(sheet.weapon_type)) add(weaponOption(c, 'npc-arma', `Arma · ${sheet.weapon || weaponByKey(sheet.weapon_type)?.label}`, sheet.weapon_type));
+    if (!beast) WEAPONS.filter(w => w.attr !== 'corpo').forEach(w => add(weaponOption(c, `npc-${w.key}`, `Arma · ${w.label}`, w.key)));
   }
   return opts;
 }
@@ -105,7 +125,8 @@ function isGaki(c?: Combatant) { return !!c && (c.pc?.lineage === 'Gaki' || (!!c
 /** Dano de uma opção. Crítico dobra todos os dados (triplica com Crítico Triplo); Completa crítica é 12d8 puro. */
 function optionDamage(o: AttackOption, dice: string, crit: boolean, extraFixed = 0, mult = 2) {
   if (crit && o.critFlat) return damageRoll(o.critFlat, o.karma + extraFixed, false);
-  return upgradedDamage(dice, o.fixed + o.karma + extraFixed, crit, o.extra, mult);
+  if (crit && o.criticalDamage) return rollDamageFormula(o.criticalDamage, o.fixed + o.karma + extraFixed, false);
+  return rollDamageFormula(dice, o.fixed + o.karma + extraFixed, crit, o.extra, mult);
 }
 const READ_BONUS = [3, 5, 8];
 const ARCADIAN_PF = [2, 4, 8];
@@ -306,7 +327,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
 
   function rollAreaAttack() {
     if (!attacker || !option || !areaTargets.length || option.pfCost > attacker.pf || attackerLost) return;
-    const r = attackRoll(attacker[option.hitAttr]);
+    const r = attackRoll(option.hitValue ?? attacker[option.hitAttr]);
     const results = areaTargets.map(t => { const hit = !r.fumble && r.total >= t.esquiva; return { id: t.id, name: t.name, esquiva: t.esquiva, hit, crit: hit && r.nat20 }; });
     const crit = results.some(x => x.crit);
     const gain = results.some(x => x.hit) ? arcadianGain(attacker) : 0;
@@ -370,7 +391,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
       if (reaction === 'completa' && (o.nomKind !== 'Completa' || completaLast[t.id])) return fail('Bloqueio contra Completa: só contra Nomenclatura Completa e não pode ser consecutivo.');
     }
     const esqEff = t.esquiva - (reaction === 'danca' && dn && dn.round === campaign.round ? danceStep(dn.enemies) * dn.evaded : 0);
-    const r = extraOn ? extraAttackRoll(a[o.hitAttr], esqEff, refined, critThreshold) : attackRoll(a[o.hitAttr], esqEff, critThreshold);
+    const r = extraOn ? extraAttackRoll(o.hitValue ?? a[o.hitAttr], esqEff, refined, critThreshold) : attackRoll(o.hitValue ?? a[o.hitAttr], esqEff, critThreshold);
     let hit = false; let countered: Pending['countered'];
     if (!r.fumble) {
       if (reaction === 'nenhuma' || reaction === 'bloquear' || reaction === 'parcial' || reaction === 'completa') hit = true;
@@ -619,7 +640,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
               {selectedSkill && (masterMode ? attackButtons() : <Button className="mt-3" disabled={!playerCanChooseAttack || !!sentIntentId || (option?.pfCost ?? 0) > attacker.pf} onClick={() => void sendAttackIntent()}><Swords /> {sentIntentId ? 'Ataque enviado ao Mestre' : 'Enviar ataque ao Mestre'}</Button>)}
             </div>
           </div>
-          {option && <p className="weapon-summary">Acerto: <strong>1d20 + 1d{dieFor(attacker[option.hitAttr]) ?? 4} ({attrLabelFor(option.hitAttr, lineage)})</strong> vs Esquiva <strong>{target.esquiva}</strong> · Dano <strong>{dice}{option.extra.length ? ` + ${option.extra.join(' + ')}` : ''}{option.fixed ? ` + ${option.fixed}` : ''}</strong>{option.karma ? <strong className="text-karma"> + {option.karma} Karma</strong> : null}{option.pfCost ? <> · Custo <strong className="text-flux">{option.pfCost} PF</strong> (tem <span className="text-flux">{attacker.pf}</span>)</> : null}{option.critFlat ? <> · crítico: <strong>{option.critFlat}</strong> puro</> : null}</p>}
+          {option && <p className="weapon-summary">Acerto: <strong>1d20 + 1d{dieFor(option.hitValue ?? attacker[option.hitAttr]) ?? 4} ({attrLabelFor(option.hitAttr, lineage)})</strong> vs Esquiva <strong>{target.esquiva}</strong> · Dano <strong>{dice}{option.extra.length ? ` + ${option.extra.join(' + ')}` : ''}{option.fixed ? ` + ${option.fixed}` : ''}</strong>{option.karma ? <strong className="text-karma"> + {option.karma} Karma</strong> : null}{option.pfCost ? <> · Custo <strong className="text-flux">{option.pfCost} PF</strong> (tem <span className="text-flux">{attacker.pf}</span>)</> : null}{option.critFlat ? <> · crítico: <strong>{option.critFlat}</strong> puro</> : null}</p>}
           {mode !== 'single' ? <>
           {area && <div className={`combat-banner ${area.crit ? 'banner-crit' : area.results.some(x => x.hit) ? 'banner-hit' : 'banner-miss'}`}>
             <strong>{area.fumble ? 'FALHA CRÍTICA! ' : area.crit ? 'CRÍTICO! ' : ''}Acerto {area.total}</strong>

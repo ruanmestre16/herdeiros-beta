@@ -5,13 +5,15 @@ import { Stepper } from './Controls';
 import {
   ELO_ACTIONS, LINEAGE_STAGES, NOMENCLATURE_COST, NOMENCLATURE_DICE, NOMENCLATURE_CRIT_DICE, REST_TYPES, TRIPLE_CRIT_COST, WEAPONS,
   attackRoll, absorbPf, canTripleCrit, combinedRoll, stylizedCritThreshold, nomenclatureDamage, nomenclatureLabel, nomenclatureLevelLabel, applyMilestone, milestoneKey, milestoneNeedsTechnique, milestoneOptions, milestoneOptionsFor, milestonePath, nomenclatureFamilies, techniqueKey, restRoll, stageIndexFor,
-  describeEffect, damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, weaponRules, techniqueRules, upgradedDamage, isTechAgent, absorbActionLabel, attrLabelFor, sheetState, withSheetState,
+  describeEffect, damageRoll, dieFor, karmaDamageBonus, karmaMaximum, rollDice, weaponByKey, weaponDiceFor, weaponRules, techniqueRules, upgradedDamage, isTechAgent, absorbActionLabel, attrLabelFor, sheetState, withSheetState,
   SHARE_MIN_SYNC, PROTECTION_MIN_ELO, syncLevelWith, pfShareBlock, pathLevels, mimicCapacity, FLUX_LINK_COST, MIMIC_RECORD_COST, mimicUseCost, vengeanceCost, ECO_COST, EXTRA_COST, EXTRA_REFINED_COST, CHAMADO_COST,
   agonyStatus, agonyEnter, agonyFailure, agonyUndo, agonyLeave, agonySacrifice, AGONY_MAX_FAILURES,
   type Attr, type Character, type NomenclatureKind, type RestType,
 } from '@/lib/game';
 import { milestoneText } from '@/lib/milestones';
 import { parseNomenclatureText } from '@/lib/nomenclature-parser';
+import { rollDamageFormula } from '@/lib/weapon-damage';
+import { WeaponDamageEditor } from './WeaponDamageEditor';
 
 export type RollEntry = { expression: string; dice: number[]; modifier: number; total: number; source?: string; crit?: boolean };
 type Update = (partial: Partial<Character>) => void;
@@ -166,7 +168,7 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
   const [triple, setTriple] = useState(false);
   const st = sheetState(character);
   const type = weaponByKey(character.weapon_type);
-  const dice = type ? type.dice[0]! : '';
+  const dice = type ? weaponDiceFor(character) : '';
   const common = st.weaponMode === 'comum';
   const wr = weaponRules(character);
   const karma = karmaDamageBonus(character);
@@ -185,7 +187,17 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
         <option value="comum">Arma comum (soma sempre CORPO)</option>
       </select></Field>
     </div>
-    {type && <p className="weapon-summary">Ataque <strong>1d20 + 1d{dieFor(character[wr.attr]) ?? 4} ({attrLabelFor(wr.attr, character.lineage)})</strong> · Dano <strong>{damageText}</strong>{karma ? <strong className="text-karma"> + {karma} Karma</strong> : null}<br /><span>{type.note}{wr.rank === 1 ? ' Evoluída: o dado do atributo substitui o valor fixo.' : wr.rank >= 2 ? ' Dominada: dado + valor fixo do atributo.' : ''}{common && type.attr !== 'corpo' ? ' Arma comum não recebe evoluções.' : ''}</span></p>}
+    {type && <WeaponDamageEditor base={type.dice[0]!} value={dice} damageType={st.weaponDamageType}
+      onSave={(damage, damageType) => {
+        if (damage !== dice || damageType !== st.weaponDamageType) update({ weapon_dice: damage, abilities: withSheetState(character, {
+          weaponDamageType: damageType, weaponHistory: [{at: new Date().toISOString(), from: dice, to: damage, damageType}, ...(st.weaponHistory ?? [])].slice(0, 20),
+        }) });
+        setLast(null); setDmg(null);
+      }} />}
+    {st.weaponHistory?.length ? <details className="mt-2"><summary className="field-kicker" style={{cursor:'pointer'}}>HISTÓRICO DE ALTERAÇÕES DE DANO ({st.weaponHistory.length})</summary>
+      {st.weaponHistory.map((entry, i) => <p key={i} className="empty-copy">{new Date(entry.at).toLocaleString('pt-BR')} · {entry.from} → {entry.to}{entry.damageType ? ` · ${entry.damageType}` : ''}</p>)}
+    </details> : null}
+    {type && <p className="weapon-summary">Ataque <strong>1d20 + 1d{dieFor(character[wr.attr]) ?? 4} ({attrLabelFor(wr.attr, character.lineage)})</strong> · Dano <strong>{damageText}</strong>{st.weaponDamageType ? <span> · {st.weaponDamageType}</span> : null}{karma ? <strong className="text-karma"> + {karma} Karma</strong> : null}<br /><span>{type.note}{wr.rank === 1 ? ' Evoluída: o dado do atributo substitui o valor fixo.' : wr.rank >= 2 ? ' Dominada: dado + valor fixo do atributo.' : ''}{common && type.attr !== 'corpo' ? ' Arma comum não recebe evoluções.' : ''}</span></p>}
     {tripleOk && <label className="anchor-toggle mt-3"><input type="checkbox" checked={triple} onChange={e => setTriple(e.target.checked)} /> Crítico Triplo (−{TRIPLE_CRIT_COST} PF: dados ×3 no crítico e crítico no d20 a partir de {stylizedThreshold} — gasta antes de saber se acerta)</label>}
     <div className="quick-actions mt-3">
       <Button variant="outline" disabled={!type} onClick={() => {
@@ -198,8 +210,8 @@ export function WeaponPanel({ character, update, addRoll }: { character: Charact
       }}><Swords /> Atacar (1d20 + 1d{dieFor(character[wr.attr]) ?? 4})</Button>
       <Button variant="outline" disabled={!type || !last || last.fumble} onClick={() => {
         const crit = !!last?.crit;
-        const d = upgradedDamage(dice, bonus, crit, wr.extraDice, last?.tripled ? 3 : 2); setDmg({ total: d.total, dice: d.dice, bonus, crit });
-        addRoll({ expression: d.expression, dice: d.dice, modifier: bonus, total: d.total, source: `Dano da arma${crit ? ` — CRÍTICO (dados ${last?.tripled ? '×3' : 'dobrados'})` : ''}${wr.ignoreBlock ? ` · ignora ${wr.ignoreBlock >= 999 ? 'todo o' : `${wr.ignoreBlock} de`} bloqueio` : ''}${wr.effectNote ? ` · Efeito: ${wr.effectNote}` : ''}`, crit });
+        const d = rollDamageFormula(dice, bonus, crit, wr.extraDice, last?.tripled ? 3 : 2); setDmg({ total: d.total, dice: d.dice, bonus, crit });
+        addRoll({ expression: d.expression, dice: d.dice, modifier: bonus, total: d.total, source: `Dano da arma${st.weaponDamageType ? ` (${st.weaponDamageType})` : ''}${crit ? ` — CRÍTICO (dados ${last?.tripled ? '×3' : 'dobrados'})` : ''}${wr.ignoreBlock ? ` · ignora ${wr.ignoreBlock >= 999 ? 'todo o' : `${wr.ignoreBlock} de`} bloqueio` : ''}${wr.effectNote ? ` · Efeito: ${wr.effectNote}` : ''}`, crit });
       }} className={last?.crit ? 'action-critical' : ''}><Dices /> Rolar dano{last?.crit ? ' crítico' : ''}</Button>
     </div>
     {last && <div className={`combat-banner ${last.fumble ? 'banner-miss' : last.crit ? 'banner-crit' : 'banner-neutral'}`}><strong>{last.fumble ? 'FALHA CRÍTICA! 1 NATURAL' : last.crit ? `CRÍTICO! ${last.d20} NO D20` : `ATAQUE: ${last.total}`}</strong><span>1d20 [{last.d20}] + 1d{last.attrDie} [{last.attrRoll}] = {last.total}{last.fumble ? ' · erra sempre, qualquer que seja a soma' : last.crit ? ' · só é crítico se o total superar ou igualar a Esquiva do alvo; dados de dano dobrados' : ' · compare com a Esquiva do alvo (empate favorece quem ataca)'}</span></div>}
