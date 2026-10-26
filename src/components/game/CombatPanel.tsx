@@ -15,6 +15,7 @@ import { weaponDiceFor } from '@/lib/game';
 import { rollDamageFormula } from '@/lib/weapon-damage';
 import { readBestiaryAttacks } from '@/lib/bestiary';
 import { PlayerCombatDashboard } from './PlayerCombatDashboard';
+import { MasterCombatDashboard } from './MasterCombatDashboard';
 import type { MonsterSheet } from './NewNpcDialog';
 
 type Combatant = {
@@ -213,6 +214,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
   const [reactionRequest, setReactionRequest] = useState<ReactionRequest | null>(null);
   const [reactionSent, setReactionSent] = useState<string | null>(null);
   const [showDetailedPlayer, setShowDetailedPlayer] = useState(false);
+  const [showDetailedMaster, setShowDetailedMaster] = useState(false);
   const [masterReactionRequest, setMasterReactionRequest] = useState<ReactionRequest | null>(null);
   const [masterReactionAnswer, setMasterReactionAnswer] = useState<ReactionAnswer | null>(null);
 
@@ -674,111 +676,91 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
 
   const readKey = attacker && target ? `${attacker.id}>${target.id}` : '';
   const canRead = masterMode && !!attacker?.pc && isHuman(attacker.pc.lineage) && !!target;
-  /** Painel rápido do Mestre: mesma mesa e mesmas regras do painel completo. */
-  if (compact && masterMode) {
-    const selectedTarget = target;
-    const resolvedInQueue = incomingIntents.map(intent => {
+  /** Mesmo painel visual no Mestre → Combate e na janela independente.
+   *  As regras e gravações permanecem nas funções originais acima. */
+  if (masterMode && !showDetailedMaster) {
+    const queue = incomingIntents.map(intent => {
       const a = combatants.find(c => c.id === intent.attackerId);
       const t = combatants.find(c => c.id === intent.targetId);
       const o = a ? findOption(a, intent.optionId) : undefined;
-      return { intent, a, t, o };
+      const ready = !!t && reactionAvailable(t);
+      return {
+        id: intent.requestId,
+        attacker: a?.name ?? intent.senderName,
+        target: t?.name ?? 'Alvo indisponível',
+        attack: o?.label ?? intent.optionId,
+        canRequestReaction: !!t?.pc && ready,
+        reactionReady: ready,
+        choices: a && t && o && ready ? reactionChoices(o, t) : [],
+        valid: !!a && !!t && !!o,
+      };
     });
-    const canTakeAction = !!attacker && !!selectedTarget && !!option && campaign.combat_active && option.pfCost <= attacker.pf && !attackerLost;
-    return <div className="space-y-4 pb-8" aria-label="Painel rápido do Mestre">
-      <section className="rounded-xl border border-primary/50 bg-card p-4 space-y-3" aria-live="polite">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div><span className="field-kicker">MESTRE · {campaign.combat_active ? `RODADA ${campaign.round}` : 'MESA EM ESPERA'}</span>
-            <h2 className="text-xl font-bold">{campaign.combat_active ? `Vez de ${current?.name ?? '—'}` : 'Combate parado'}</h2></div>
-          <span className={`rounded-full px-3 py-1 text-xs font-medium border ${channelReady ? 'border-primary/50 text-foreground' : 'border-amber-500 text-amber-500'}`}>{channelReady ? '● Mesa conectada' : '○ Reconectando'}</span>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button className="min-h-11 flex-1" disabled={!combatants.length} onClick={() => {
-            if (campaign.combat_active && (incomingIntents.length || masterReactionRequest)) { setNotice('Resolva ou cancele as ações pendentes antes de encerrar o combate.'); return; }
-            toggleCombat();
-          }}>{campaign.combat_active ? 'Encerrar combate' : 'Iniciar combate'}</Button>
-          <Button className="min-h-11 flex-1" variant="outline" disabled={!campaign.combat_active} onClick={nextTurn}>Próximo turno <ArrowRight size={16}/></Button>
-        </div>
-        {notice && <div className="rounded-lg border border-amber-500/60 p-3 text-sm" role="alert">{notice}</div>}
-      </section>
-
-      <section className="rounded-xl border border-border bg-card p-4 space-y-3" aria-label="Fila de ações recebidas">
-        <div className="flex items-center justify-between gap-2"><h3 className="font-bold">Ações dos jogadores</h3><span className="rounded-full bg-primary/10 px-2 py-1 text-xs">{incomingIntents.length} pendente(s)</span></div>
-        {!channelReady && <p className="text-xs text-amber-500">Aguardando conexão com a mesa. Pedidos só chegam enquanto a janela está conectada.</p>}
-        {masterReactionRequest && <div className="rounded-lg border border-primary p-3 space-y-2" role="status">
-          <strong className="block">🛡 Reação solicitada</strong>
-          <p className="text-sm">{combatants.find(c=>c.id===masterReactionRequest.targetId)?.name ?? 'Alvo'}: {masterReactionAnswer?.requestId===masterReactionRequest.requestId ? `respondeu ${REACTION_NAME[masterReactionAnswer.reaction]}` : 'aguardando escolha do jogador'}</p>
-          <div className="flex flex-wrap gap-2">
-            {masterReactionAnswer?.requestId===masterReactionRequest.requestId && <Button size="sm" className="min-h-11" onClick={resolvePlayerReaction}><Shield size={16}/> Resolver reação</Button>}
-            <Button size="sm" variant="outline" className="min-h-11" onClick={()=>void cancelPlayerRequest(masterReactionRequest.requestId)}>Cancelar pedido</Button>
-          </div>
-        </div>}
-        {!incomingIntents.length && !masterReactionRequest && <p className="text-sm text-muted-foreground">Nenhum ataque aguardando. Quando o jogador enviar uma ação, ela aparecerá aqui.</p>}
-        {resolvedInQueue.map(({intent,a,t,o}) => <div key={intent.requestId} className="rounded-lg border border-border bg-background p-3 space-y-2">
-          <strong className="block text-sm">{a?.name ?? intent.senderName} <ArrowRight className="inline size-4"/> {t?.name ?? 'Alvo indisponível'}</strong>
-          <p className="text-xs text-muted-foreground break-words">{o?.label ?? intent.optionId}{intent.triple ? ' · Crítico Triplo' : ''}</p>
-          {!a || !t || !o ? <Button variant="outline" size="sm" onClick={()=>void cancelPlayerRequest(intent.requestId)}>Descartar pedido inválido</Button> : <>
-            {t.pc && reactionAvailable(t) && <Button size="sm" className="min-h-11 w-full" disabled={!channelReady || !!masterReactionRequest} onClick={()=>void askPlayerReaction(intent)}><Shield size={16}/> Solicitar reação ao jogador</Button>}
-            <p className="text-xs text-muted-foreground">{reactionAvailable(t) ? 'Ou escolha uma reação manualmente, se necessário:' : 'Alvo sem reação disponível; ainda vale comparar o ataque com a Esquiva.'}</p>
-            <div className="grid grid-cols-2 gap-2">
-              {(reactionAvailable(t) ? reactionChoices(o, t) : [{value:'esquivar' as Reaction, label:'Resolver sem reação'}]).map(choice=><Button key={choice.value} variant="outline" size="sm" className="h-auto min-h-11 whitespace-normal text-xs" disabled={!!masterReactionRequest || ('disabled' in choice && !!choice.disabled)} onClick={()=>resolveIncomingIntent(intent, choice.value)}>{REACTION_NAME[choice.value]}</Button>)}
-            </div>
-            <Button size="sm" variant="ghost" className="text-xs" disabled={!channelReady} onClick={()=>void cancelPlayerRequest(intent.requestId)}>Recusar ação</Button>
-          </>}
-        </div>)}
-      </section>
-
-      <section className="rounded-xl border border-border bg-card p-4 space-y-3" aria-label="Atacar com monstros ou personagens">
-        <div className="flex items-center gap-2"><Swords size={18}/><h3 className="font-bold">Executar ataque</h3></div>
-        {!campaign.combat_active && <p className="text-sm text-muted-foreground">Inicie o combate antes de atacar.</p>}
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className="field"><span className="field-label">QUEM ATACA</span>
-            <select value={attacker?.id ?? ''} onChange={e=>{setAttackerId(e.target.value);selectOption('desarmado_leve');setTargetId('')}}>{combatants.map(c=><option key={c.id} value={c.id}>{c.kind==='npc'?'☠ ':''}{c.name}</option>)}</select>
-          </label>
-          <label className="field"><span className="field-label">ALVO</span>
-            <select value={selectedTarget?.id ?? ''} onChange={e=>{setTargetId(e.target.value);setPending(null);setArea(null)}}>{targets.map(c=><option key={c.id} value={c.id}>{c.name} (Esq {c.esquiva})</option>)}</select>
-          </label>
-        </div>
-        <label className="field"><span className="field-label">ARMA / GOLPE / NOMENCLATURA</span>
-          <select value={option?.id ?? ''} onChange={e=>selectOption(e.target.value)}>{options.map(o=><option value={o.id} key={o.id}>{o.label}</option>)}</select>
-        </label>
-        <label className="field"><span className="field-label">REAÇÃO DO ALVO (SE O MESTRE CONTROLAR)</span>
-          <select value={reactionValid} onChange={e=>setChosenReaction(e.target.value as Reaction)} disabled={!selectedTarget || !reactionAvailable(selectedTarget)}>
-            {reactionOptions.map(r=><option key={r.value} value={r.value} disabled={r.disabled}>{r.label}</option>)}
-          </select>
-        </label>
-        {selectedTarget?.pc && <Button variant="outline" className="w-full min-h-11" disabled={!channelReady || !!masterReactionRequest || !campaign.combat_active} onClick={()=>void askPlayerReaction()}><Shield size={16}/> Pedir reação ao jogador</Button>}
-        <Button className="w-full min-h-12" disabled={!canTakeAction || !!masterReactionRequest} onClick={rollAttack}><Dices size={16}/> Rolar ataque</Button>
-        {pending && <div className="rounded-lg border border-border bg-background p-3 space-y-2" aria-live="polite">
-          <strong>{pending.fumble ? 'Falha crítica' : pending.countered ? 'Contra-ataque venceu' : pending.hit ? (pending.crit ? 'Acerto crítico!' : 'Ataque acertou') : 'Ataque não acertou'}</strong>
-          <p className="text-sm">Rolagem {pending.total} · Esquiva {pending.esquiva} · Reação {REACTION_NAME[pending.reaction]}</p>
-          {!pending.damage && (pending.hit || pending.countered) && <Button className="w-full min-h-11" onClick={rollDamage}>Rolar dano <Dices size={16}/></Button>}
-          {pending.damage && <p className="text-sm">Dano final: <strong>{pending.damage.final}</strong> · {pending.damage.raw} bruto</p>}
-        </div>}
-      </section>
-
-      <section className="rounded-xl border border-border bg-card p-4 space-y-3" aria-label="Iniciativa e fichas">
-        <h3 className="font-bold">Combatentes e recursos</h3>
-        {combatants.map(c=><div key={c.id} className={`rounded-lg border p-3 space-y-2 ${current?.id===c.id&&campaign.combat_active?'border-primary bg-primary/5':'border-border'}`}>
-          <div className="flex items-center justify-between gap-2"><div className="min-w-0"><strong className="block break-words">{current?.id===c.id&&campaign.combat_active?'▶ ':''}{c.name}</strong><span className="text-xs text-muted-foreground">{c.kind==='npc'?'Monstro/NPC':'Herdeiro'} · Iniciativa {c.initiative ?? '—'} · Esquiva {c.esquiva} · Bloqueio {c.bloqueio}</span></div>
-            {openSheet && <Button variant="outline" size="sm" className="shrink-0 min-h-10" onClick={()=>openSheet(c)}>Ficha</Button>}
-          </div>
-          <div className="grid grid-cols-2 gap-2 text-sm"><span>PV <strong>{c.pv}/{c.pvMax}</strong></span><span>PF <strong>{c.pf}/{c.pfMax}</strong></span></div>
-          <div className="flex gap-2 flex-wrap items-center">
-            <Button size="sm" variant="outline" title={`Tirar 1 PV de ${c.name}`} onClick={()=>setResources(c,Math.max(0,c.pv-1),null)}>−1 PV</Button>
-            <Button size="sm" variant="outline" title={`Tirar 5 PV de ${c.name}`} onClick={()=>setResources(c,Math.max(0,c.pv-5),null)}>−5 PV</Button>
-            <Button size="sm" variant="outline" title={`Curar 5 PV de ${c.name}`} onClick={()=>setResources(c,Math.min(c.pvMax,c.pv+5),null)}>+5 PV</Button>
-            <Button size="sm" variant="outline" onClick={()=>{setAttackerId(c.id);selectOption('desarmado_leve');setTargetId('')}}><Crosshair size={14}/> Atacar</Button>
-            <Button size="sm" variant="ghost" title={`Rolar iniciativa de ${c.name}`} onClick={()=>c.npc?rollNpcInitiative(c.npc):rollPcInitiative(c)}><Dices size={14}/> Ini.</Button>
-          </div>
-        </div>)}
-        {!combatants.length && <p className="text-sm text-muted-foreground">Sem personagens ou monstros cadastrados.</p>}
-      </section>
-      <section className="rounded-xl border border-border bg-card p-4 space-y-2"><h3 className="font-bold">Registro da batalha</h3>
-        {campaign.log.filter(line=>!line.startsWith('☠KILL:')).slice(0,5).map((line,i)=><p className="border-t border-border pt-2 text-sm break-words" key={i}>{line}</p>)}
-        {!campaign.log.length && <p className="text-sm text-muted-foreground">Nenhum evento registrado.</p>}
-      </section>
-      <p className="text-xs text-muted-foreground">A fila de pedidos ainda usa mensagens temporárias do Supabase Realtime: mantenha Mestre e jogadores conectados. Recursos e turno são salvos na mesa.</p>
-    </div>;
+    const selectedTarget = target;
+    const canTakeAction = !!attacker && !!selectedTarget && !!option && campaign.combat_active
+      && option.pfCost <= attacker.pf && !attackerLost && !masterReactionRequest;
+    const selectedIsAvailable = !!selectedTarget && reactionAvailable(selectedTarget);
+    return <MasterCombatDashboard
+      combatActive={campaign.combat_active}
+      round={campaign.round}
+      currentId={current?.id}
+      currentName={current?.name ?? '—'}
+      connected={channelReady}
+      combatants={combatants.map(c => ({ id: c.id, kind: c.kind, name: c.name, pv: c.pv,
+        pvMax: c.pvMax, pf: c.pf, pfMax: c.pfMax, esquiva: c.esquiva,
+        bloqueio: c.bloqueio, initiative: c.initiative,
+        reactionReady: reactionAvailable(c), lostAction: lostAction[c.id] }))}
+      attackerId={attacker?.id}
+      targetId={selectedTarget?.id}
+      selectedOptionId={option?.id}
+      options={options.map(o => ({ id: o.id, name: o.label.replace(/\s*\([^)]*\)\s*$/, ''),
+        damage: [o.dice[0], ...o.extra, ...(o.fixed ? [String(o.fixed)] : []),
+          ...(o.karma ? [`${o.karma} Karma`] : [])].filter(Boolean).join(' + '),
+        cost: o.pfCost, kind: o.nomenclature ? 'power' as const : 'weapon' as const,
+        powerLevel: o.nomKind }))}
+      reactions={selectedIsAvailable ? reactionOptions : []}
+      selectedReaction={selectedIsAvailable ? reactionValid : ''}
+      targetReactionReady={selectedIsAvailable}
+      canRoll={canTakeAction}
+      canAskReaction={!!selectedTarget?.pc && selectedIsAvailable}
+      pending={pending ? {
+        heading: pending.fumble ? 'Falha crítica' : pending.countered ? 'Contra-ataque venceu'
+          : pending.hit ? pending.crit ? 'Acerto crítico!' : 'Ataque acertou' : 'Ataque não acertou',
+        roll: pending.total, esquiva: pending.esquiva, reaction: REACTION_NAME[pending.reaction],
+        canRollDamage: !pending.damage && (pending.hit || !!pending.countered),
+        ...(pending.damage ? { damage: { raw: pending.damage.raw,
+          final: pending.damage.final, block: pending.damage.block } } : {}),
+      } : undefined}
+      queue={queue}
+      request={masterReactionRequest ? {
+        id: masterReactionRequest.requestId,
+        attacker: combatants.find(c => c.id === masterReactionRequest.attackerId)?.name ?? 'Atacante',
+        target: combatants.find(c => c.id === masterReactionRequest.targetId)?.name ?? 'Alvo',
+        ...(masterReactionAnswer?.requestId === masterReactionRequest.requestId
+          ? { answer: REACTION_NAME[masterReactionAnswer.reaction] } : {}),
+      } : undefined}
+      notice={notice}
+      log={campaign.log.filter(line => !line.startsWith('☠KILL:')).slice(0, 12)}
+      onToggleCombat={toggleCombat}
+      onNextTurn={nextTurn}
+      onSelectAttacker={id => { if (pending && !pending.damage && (pending.hit || pending.countered)) { setNotice('Role o dano pendente antes de mudar o atacante.'); return; } setAttackerId(id); setTargetId(''); selectOption('desarmado_leve'); setPending(null); setArea(null); }}
+      onSelectTarget={id => { if (pending && !pending.damage && (pending.hit || pending.countered)) { setNotice('Role o dano pendente antes de mudar o alvo.'); return; } setTargetId(id); setPending(null); setArea(null); setChosenReaction('esquivar'); }}
+      onSelectOption={id => { if (pending && !pending.damage && (pending.hit || pending.countered)) { setNotice('Role o dano pendente antes de mudar o golpe.'); return; } selectOption(id); }}
+      onSelectReaction={value => setChosenReaction(value as Reaction)}
+      onRollAttack={rollAttack}
+      onRollDamage={rollDamage}
+      onAskReaction={() => askPlayerReaction()}
+      onAskQueueReaction={id => { const intent = incomingIntents.find(i => i.requestId === id); if (intent) return askPlayerReaction(intent); }}
+      onResolveQueue={(id, reaction) => { const intent = incomingIntents.find(i => i.requestId === id); if (intent) resolveIncomingIntent(intent, reaction as Reaction); }}
+      onCancelQueue={id => cancelPlayerRequest(id)}
+      onResolveReaction={resolvePlayerReaction}
+      onCancelReaction={() => masterReactionRequest ? cancelPlayerRequest(masterReactionRequest.requestId) : undefined}
+      onAdjustPv={(id, delta) => { const c = combatants.find(x => x.id === id);
+        if (c) setResources(c, Math.max(0, Math.min(c.pvMax, c.pv + delta)), null); }}
+      onRollInitiative={id => { const c = combatants.find(x => x.id === id);
+        if (c?.npc) rollNpcInitiative(c.npc); else if (c) rollPcInitiative(c); }}
+      onOpenSheet={openSheet ? id => { const c = combatants.find(x => x.id === id); if (c) openSheet(c); } : undefined}
+      onShowDetailed={() => setShowDetailedMaster(true)}
+    />;
   }
 
   /** Mesmo painel em Mesa, janela separada do PC, mobile e APK. A lógica da batalha permanece aqui. */
@@ -824,6 +806,7 @@ export function CombatPanel({ campaign, party, npcs, saveCampaign, saveNpc, upda
 
   return <div className="combat-layout">
     {compact && !masterMode && showDetailedPlayer && <div className="mb-4 rounded-xl border border-primary/30 bg-card p-3"><Button variant="outline" className="min-h-11 w-full" onClick={() => setShowDetailedPlayer(false)}>← Voltar ao combate simplificado</Button></div>}
+    {masterMode && showDetailedMaster && <div className="mb-4 rounded-xl border border-primary/30 bg-card p-3"><Button variant="outline" className="min-h-11" onClick={() => setShowDetailedMaster(false)}>← Voltar ao painel visual do Mestre</Button></div>}
     <div className="stack">
       <section className="game-panel"><div className="panel-head"><h3>Ordem de iniciativa</h3><span className="field-kicker">RODADA {campaign.round}</span></div>
         <div className="combat-list">{combatants.map((c, i) => <div key={c.id} className={`combatant ${current?.id === c.id ? 'current' : ''}`}>
