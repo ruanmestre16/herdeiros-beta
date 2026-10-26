@@ -1,7 +1,6 @@
 import { useState } from 'react';
-import { AlertTriangle, Cpu, ShieldCheck, Skull, Sparkles, Zap } from 'lucide-react';
+import { AlertTriangle, Cpu, Minus, Plus, ShieldCheck, Skull, Sparkles, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Stepper } from './Controls';
 import {
   coreDestructionMaximum, coreDestructionPercent, coreRiskDetails,
   forceFlux, isTechAgent, techCoreConsumed, type Character,
@@ -19,6 +18,7 @@ export function TechCoreStability({ character, update, addRoll, compact = false 
   const [last, setLast] = useState('');
   if (!isTechAgent(character.lineage)) return null;
   const max = coreDestructionMaximum(character);
+  const current = Math.max(0, Math.min(max, Math.round(character.karma || 0)));
   const percent = coreDestructionPercent(character);
   const risk = coreRiskDetails(character)!;
   const consumed = techCoreConsumed(character);
@@ -38,7 +38,13 @@ export function TechCoreStability({ character, update, addRoll, compact = false 
     <header className="tc-heading">
       <span className="tc-icon">{consumed ? <Skull size={21} /> : percent >= 50 ? <AlertTriangle size={21} /> : <ShieldCheck size={21} />}</span>
       <div><span className="tc-overline">AGENTE TECNOLÓGICO · SOBRECARGA</span><strong>{risk.title}</strong></div>
-      <span className="tc-percent">{percent}%<small>destruição</small></span>
+      <span className="tc-quick-adjust">
+        {update && <span className="tc-adjust-buttons" role="group" aria-label="Ajustar destruição do Núcleo diretamente">
+          <button type="button" disabled={current <= 0} onClick={() => update({ karma: Math.max(0, current - 1) })} aria-label="Diminuir destruição do Núcleo em 1 ponto" title="Diminuir destruição do Núcleo em 1 ponto"><Minus size={16}/></button>
+          <button type="button" disabled={current >= max} onClick={() => update({ karma: Math.min(max, current + 1) })} aria-label="Aumentar destruição do Núcleo em 1 ponto" title="Aumentar destruição do Núcleo em 1 ponto"><Plus size={16}/></button>
+        </span>}
+        <span className="tc-percent">{percent}%<small>{current}/{max} · destruição</small></span>
+      </span>
     </header>
     <div className="tc-meter" role="progressbar" aria-valuenow={Math.min(max, character.karma)} aria-valuemin={0} aria-valuemax={max} aria-label="Destruição acumulada do Núcleo">
       <div style={{width:`${percent}%`}} />
@@ -53,7 +59,7 @@ export function TechCoreStability({ character, update, addRoll, compact = false 
       <div className={percent>=100?'tc-reached':''}><strong>100%</strong><span>Núcleo Consumido</span><small>Colapso e decisão narrativa</small></div>
     </div>}
     {update&&<div className="tc-actions">
-      {!compact&&<Stepper label="DESTRUIÇÃO ACUMULADA" value={Math.min(max,character.karma)} min={0} max={max} tone="nucleo" onChange={karma=>update({karma})}/>}
+
       {addRoll&&<Button type="button" variant="outline" className="tc-force" disabled={consumed} onClick={force}><Zap size={17}/> Forçar Núcleo</Button>}
       <span className="tc-force-hint"><Cpu size={15}/> Rola {Math.max(1,character.espirito)}d20 de TECNOLOGIA: metade vira PN; metade dos PN gerados aumenta a destruição.</span>
     </div>}

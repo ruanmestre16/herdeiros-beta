@@ -30,3 +30,14 @@
 @keyframes hkr-glow-dark{0%,100%{box-shadow:0 0 0 1px rgba(127,48,183,.3),0 0 12px rgba(123,50,195,.25)}50%{box-shadow:0 0 0 2px rgba(160,86,227,.8),0 0 26px rgba(149,63,228,.55)}}
 @media(max-width:440px){.hkr-panel{padding:11px}.hkr-heading-main{gap:7px}.hkr-heading-main strong{font-size:14px}.hkr-percentage strong{font-size:18px}}
 @media(prefers-reduced-motion:reduce){.hkr-gaki,.hkr-berserker{animation:none;box-shadow:0 0 0 2px var(--hkr-edge)}}
+
+/* Ajuste imediato do Karma, inclusive nos cartões compactos e pulsantes. */
+.hkr-quick-adjust{display:flex;align-items:center;justify-content:flex-end;gap:10px;margin-left:auto}
+.hkr-adjust-buttons{display:flex;align-items:center;gap:5px}
+.hkr-adjust-buttons button{display:grid;place-items:center;min-width:38px;min-height:38px;border-radius:10px;border:1px solid var(--hkr-edge);background:rgba(128,84,150,.16);color:var(--hkr-ink);cursor:pointer;transition:background .15s ease,border-color .15s ease}
+.hkr-adjust-buttons button:hover:not(:disabled){background:rgba(177,112,224,.26);border-color:var(--hkr-accent)}
+.hkr-adjust-buttons button:focus-visible{outline:2px solid var(--hkr-accent);outline-offset:2px}
+.hkr-adjust-buttons button:disabled{cursor:not-allowed;opacity:.35}
+.hkr-gaki .hkr-adjust-buttons button,.hkr-berserker .hkr-adjust-buttons button,.hkr-consumido .hkr-adjust-buttons button{background:rgba(255,255,255,.09);border-color:rgba(243,215,255,.37)}
+.hkr-compact .hkr-quick-adjust{gap:7px}
+@media(max-width:480px){.hkr-quick-adjust{width:100%;justify-content:space-between;margin-left:0}.hkr-percentage{text-align:right}}

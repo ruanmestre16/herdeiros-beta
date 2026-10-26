@@ -1,4 +1,4 @@
-import { AlertTriangle, Brain, Flame, ShieldAlert, Skull } from 'lucide-react';
+import { AlertTriangle, Brain, Flame, Minus, Plus, ShieldAlert, Skull } from 'lucide-react';
 import { isTechAgent, karmaMaximum, karmaStage, type Character } from '@/lib/game';
 import { KarmaTest, type RollEntry } from './SheetExtras';
 import './karma-risk.css';
@@ -15,7 +15,7 @@ export function KarmaRiskPanel({ character, addRoll, update, compact = false }: 
 }) {
   if (isTechAgent(character.lineage)) return null;
   const max = karmaMaximum(character.mente, character.espirito);
-  const current = Math.max(0, character.karma);
+  const current = Math.max(0, Math.min(max, Math.round(character.karma || 0)));
   const percent = Math.min(100, Math.floor((100 * current) / max));
   const stage = karmaStage(current, max);
   const info = {
@@ -28,7 +28,13 @@ export function KarmaRiskPanel({ character, addRoll, update, compact = false }: 
   return <section className={`hkr-panel hkr-${stage}${compact ? ' hkr-compact' : ''}`} aria-label={`Karma: ${info.name}, ${percent}%`}>
     <div className="hkr-heading">
       <div className="hkr-heading-main"><span className="hkr-icon"><Icon size={19}/></span><div><small>{info.label}</small><strong>{info.name}</strong></div></div>
-      <div className="hkr-percentage"><strong>{percent}%</strong><small>{current}/{max} Karma</small></div>
+      <div className="hkr-quick-adjust">
+        {update && <div className="hkr-adjust-buttons" role="group" aria-label="Ajustar Karma diretamente">
+          <button type="button" disabled={current <= 0} onClick={() => update({ karma: Math.max(0, current - 1) })} aria-label="Diminuir Karma em 1 ponto" title="Diminuir Karma em 1 ponto"><Minus size={16}/></button>
+          <button type="button" disabled={current >= max} onClick={() => update({ karma: Math.min(max, current + 1) })} aria-label="Aumentar Karma em 1 ponto" title="Aumentar Karma em 1 ponto"><Plus size={16}/></button>
+        </div>}
+        <div className="hkr-percentage"><strong>{percent}%</strong><small>{current}/{max} Karma</small></div>
+      </div>
     </div>
     <div className="hkr-track" role="progressbar" aria-label="Karma acumulado" aria-valuenow={Math.min(max,current)} aria-valuemin={0} aria-valuemax={max}><div style={{width:`${percent}%`}}/></div>
     <p className="hkr-damage"><strong>{info.damage}</strong>{stage==='berserker' ? ' (substitui +3; não soma)' : ''}</p>

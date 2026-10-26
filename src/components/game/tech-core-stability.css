@@ -12,3 +12,14 @@
 .tc-actions{display:flex;flex-wrap:wrap;align-items:end;gap:12px}.tc-actions .stepper{min-width:190px;flex:1}.tc-actions button{min-height:43px;border-color:var(--tc-accent);color:#ededea}.tc-actions button:disabled{opacity:.5}.tc-force-hint{display:flex;gap:6px;align-items:flex-start;font-size:11px;line-height:1.5;color:#afbbc5;flex:1 1 100%}.tc-force-hint svg{flex-shrink:0;margin-top:1px;color:var(--tc-accent)}.tc-last{display:flex;align-items:start;gap:7px;background:#ffffff0c;padding:9px;border-radius:8px;font-size:11px;line-height:1.5}.tc-last svg{flex-shrink:0;color:var(--tc-accent)}.tc-small{font-size:11px;color:#b6c2c9;line-height:1.5}.tc-compact{padding:12px;gap:10px}.tc-compact .tc-heading strong{font-size:13px}.tc-compact .tc-description{font-size:11px}.tc-compact .tc-actions{gap:7px}
 @media(max-width:540px){.tc-stability{padding:12px}.tc-thresholds{grid-template-columns:1fr}.tc-thresholds>div{display:flex;align-items:center;gap:8px}.tc-thresholds>div small{margin-left:auto}.tc-heading{gap:8px}.tc-scale{font-size:9px}.tc-actions .stepper{min-width:130px}}
 @media(prefers-reduced-motion:reduce){.tc-meter>div{transition:none}}
+
+/* Botões de correção rápida diretamente no estado do Núcleo, compacto ou expandido. */
+.tc-quick-adjust{display:flex;align-items:center;gap:10px;margin-left:auto;flex:none}
+.tc-adjust-buttons{display:flex;align-items:center;gap:5px}
+.tc-adjust-buttons button{display:grid;place-items:center;min-width:38px;min-height:38px;padding:0;border:1px solid #c3e0e377;border-radius:10px;background:#ffffff13;color:#f0f7f9;cursor:pointer;transition:background .15s ease,border-color .15s ease}
+.tc-adjust-buttons button:hover:not(:disabled){background:#ffffff26;border-color:var(--tc-accent)}
+.tc-adjust-buttons button:focus-visible{outline:2px solid var(--tc-accent);outline-offset:2px}
+.tc-adjust-buttons button:disabled{opacity:.36;cursor:not-allowed}
+.tc-compact .tc-quick-adjust{gap:7px}
+.tc-percent small{white-space:nowrap}
+@media(max-width:480px){.tc-heading{flex-wrap:wrap}.tc-quick-adjust{width:100%;justify-content:space-between;margin-left:0}.tc-compact .tc-heading strong{font-size:13px}}
