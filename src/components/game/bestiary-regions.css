@@ -1,0 +1,103 @@
+.bestiary-atlas{--be-border:#45394c;--be-sub:#b4a8bb;--be-highlight:#c3a3e8;color:#ede6f0}
+.bestiary-heading{align-items:center}
+.bestiary-heading-actions{display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.bestiary-heading-actions img{object-fit:cover;border-radius:7px;box-shadow:0 6px 20px #0008}
+.bestiary-section{margin:22px 0 28px}
+.bestiary-section-heading{display:flex;align-items:end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+.bestiary-section-heading h2{font:500 21px Cinzel,serif;margin:5px 0;color:#f3e9fb}
+.bestiary-result-count{color:#ad96bd;font-size:11px}
+.bestiary-region-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.bestiary-region{--region:#9a79bb;display:flex;align-items:center;gap:11px;min-height:85px;padding:15px;text-align:left;border:1px solid var(--be-border);background:linear-gradient(135deg,#241e2b,#19161f);color:#f0e8f4;border-radius:12px;transition:border-color .16s,transform .16s,background .16s}
+.bestiary-region:hover,.bestiary-region:focus-visible{border-color:var(--region);transform:translateY(-1px)}
+.bestiary-region.selected{border-color:var(--region);background:linear-gradient(130deg,#392a46,#211b2b);box-shadow:inset 3px 0 var(--region)}
+.bestiary-region.region-karma{--region:#ab70d8}.bestiary-region.region-floresta{--region:#69ad83}.bestiary-region.region-deserto{--region:#e2ba72}.bestiary-region.region-consorcio{--region:#75b0d2}.bestiary-region.region-incognita{--region:#b5a6cd}
+.bestiary-region-icon{display:grid;place-items:center;flex:none;width:39px;height:39px;background:#302737;color:var(--region);border:1px solid #57435c;border-radius:9px}
+.bestiary-region-text{display:grid;gap:3px;min-width:0;flex:1}
+.bestiary-region-text strong{font-size:13px;line-height:1.3}
+.bestiary-region-text small{font-size:10px;line-height:1.35;color:#ad9fb2}
+.bestiary-region-count{color:var(--region);font-weight:700;font-size:12px}
+.bestiary-disclaimer{font-size:11px;color:#9991a1;margin:10px 0 0;line-height:1.55}
+.bestiary-filters{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.bestiary-search,.bestiary-category{display:flex;align-items:center;gap:9px;min-height:46px;padding:0 12px;border:1px solid var(--be-border);border-radius:10px;background:#18151e;color:#a98dbf}
+.bestiary-search{flex:1;min-width:210px}.bestiary-category{flex:0 1 265px;min-width:190px}
+.bestiary-search input,.bestiary-category select{flex:1;min-width:0;width:100%;background:transparent;border:0;outline:0;color:#ebe2f0;font-size:12px;padding:11px 0}
+.bestiary-category select{color-scheme:dark}.bestiary-search:focus-within,.bestiary-category:focus-within{border-color:#b58bda}
+.bestiary-search button{display:grid;place-items:center;padding:3px;color:#bdacc5}
+.bestiary-creatures{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:11px}
+.bestiary-creature{display:grid;gap:9px;align-content:start;text-align:left;padding:16px;min-height:189px;border:1px solid #413648;border-radius:12px;background:linear-gradient(155deg,#241d2b,#18161d);color:#f3edf4;transition:background .15s,border-color .15s,transform .15s}
+.bestiary-creature:hover,.bestiary-creature:focus-visible,.bestiary-creature.selected{background:#30243a;border-color:#ad8ace;transform:translateY(-1px)}
+.bestiary-creature-top{display:flex;justify-content:space-between;align-items:center}
+.bestiary-creature-symbol{color:#bb99dd}.bestiary-creature-tier{font-size:10px;border:1px solid #64536d;border-radius:30px;padding:3px 8px;color:#d7bfe6}
+.bestiary-creature>strong{font:500 15px Cinzel,serif;line-height:1.3}.bestiary-creature>small{color:#ae9db5;font-size:11px}
+.bestiary-creature-stats{display:flex;gap:10px;flex-wrap:wrap;font-size:10px;color:#aea2b2;border-top:1px solid #443549;padding-top:11px}.bestiary-creature-stats b{color:#f3e4fc}
+.bestiary-creature-cta{color:#d3b0ee;font-size:11px;font-weight:600;display:flex;justify-content:space-between;margin-top:1px}
+.bestiary-empty{border:1px dashed #5a475f;padding:36px;display:grid;place-items:center;gap:10px;text-align:center;color:#d6c2e2}.bestiary-empty p{font-size:12px;color:#a79aaf}
+.bestiary-profile{border:1px solid #826298;border-radius:16px;background:linear-gradient(145deg,#251d2c,#14141b 65%);padding:23px;margin:22px 0 32px;scroll-margin-top:90px}
+.bestiary-profile-head{display:flex;justify-content:space-between;gap:12px}.bestiary-profile-head h2{font:500 25px Cinzel,serif;margin:8px 0}.bestiary-profile-head p{font-size:12px;max-width:760px;color:#beb1c3;line-height:1.65;white-space:pre-wrap}
+.bestiary-profile-head>button{align-self:start;color:#c8b9cf;padding:8px}
+.bestiary-stat-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin:19px 0}
+.bestiary-stat-grid>div{display:grid;gap:7px;padding:12px 8px;background:#201a29;border:1px solid #44374c;border-radius:9px}
+.bestiary-stat-grid span{font-size:10px;color:#b4a3bc}.bestiary-stat-grid strong{font-size:13px;color:#f0dbfa}
+.bestiary-profile-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:15px}
+.bestiary-details-grid{display:grid;gap:8px}.bestiary-details-grid details{border:1px solid #51405a;border-radius:8px;background:#1c1924;overflow:hidden}
+.bestiary-details-grid summary{padding:14px;display:flex;justify-content:space-between;cursor:pointer;font-size:13px;font-weight:600}.bestiary-details-grid summary span{color:#b59ccd}
+.bestiary-details-grid details[open] summary span{transform:rotate(90deg)}
+.bestiary-details-grid pre{font-family:'DM Sans',sans-serif;font-size:12px;line-height:1.7;color:#ccc0d1;padding:15px;white-space:pre-wrap;overflow-wrap:anywhere;border-top:1px solid #493852;max-height:420px;overflow:auto}
+.bestiary-profile-note{font-size:11px;line-height:1.6;color:#afa0b5;margin-top:15px}
+.bestiary-book{border:1px solid #3e3447;background:#19151f;padding:19px;border-radius:12px;scroll-margin-top:90px}.bestiary-book .bestiary-section-heading{margin:0}.bestiary-book-pager{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin:15px 0;font-size:12px}.bestiary-book-pager label{display:flex;align-items:center;gap:10px}.bestiary-book-pager input{width:65px;border:1px solid #594864;background:#1d1926;border-radius:6px;padding:6px;color:#fff}.bestiary-book-pager a{display:flex;align-items:center;gap:5px;color:#d6b8ee}.bestiary-iframe{width:100%;height:min(70vh,760px);min-height:440px;border:0;border-radius:8px;background:#14121a}
+@media(max-width:950px){.bestiary-region-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.bestiary-stat-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:600px){.bestiary-heading{align-items:start}.bestiary-heading-actions img{display:none}.bestiary-region-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.bestiary-region{flex-direction:column;align-items:start;min-height:116px;padding:12px}.bestiary-region-count{position:absolute;right:9px;top:9px}.bestiary-region{position:relative}.bestiary-region-icon{width:32px;height:32px}.bestiary-creatures{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.bestiary-creature{padding:12px;min-height:180px}.bestiary-creature>strong{font-size:13px}.bestiary-creature-stats{gap:7px}.bestiary-category{flex:1}.bestiary-stat-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.bestiary-profile{padding:15px}.bestiary-profile-head h2{font-size:20px}.bestiary-iframe{min-height:390px}}
+@media(max-width:370px){.bestiary-creatures{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.bestiary-creature,.bestiary-region{transition:none}.bestiary-creature:hover,.bestiary-region:hover{transform:none}}
+
+/* Edição Atlas por regiões — 27/10/2026: grupos visíveis, sem ocultar criaturas em um filtro. */
+.bestiary-atlas .bestiary-section-intro{margin:6px 0 0;font-size:12px;line-height:1.55;color:#baadbd;max-width:700px}
+.bestiary-atlas .bestiary-region-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.bestiary-atlas .bestiary-region{position:relative;align-items:flex-start;min-height:125px;padding:16px;gap:12px;background:radial-gradient(ellipse at 0% 0%,color-mix(in srgb,var(--region) 12%,transparent),transparent 65%),linear-gradient(145deg,#241e2c,#15151c)}
+.bestiary-atlas .bestiary-region-text{padding-top:3px;padding-right:19px}
+.bestiary-atlas .bestiary-region-text strong{font-size:15px}
+.bestiary-atlas .bestiary-region-text small{font-size:11px}
+.bestiary-atlas .bestiary-region-count{position:absolute;right:14px;top:15px}
+.bestiary-atlas .bestiary-region-action{position:absolute;left:67px;bottom:13px;font-size:10px;font-weight:700;color:var(--region);display:inline-flex;gap:8px;align-items:center}
+.bestiary-atlas .bestiary-region.selected{background:radial-gradient(ellipse at 0% 0%,color-mix(in srgb,var(--region) 22%,transparent),transparent 75%),linear-gradient(145deg,#29202f,#19151f)}
+.bestiary-atlas .bestiary-region:focus-visible,.bestiary-atlas .bestiary-creature:focus-visible{outline:2px solid #e8cafa;outline-offset:3px}
+.bestiary-regional-catalog{display:grid;gap:22px}
+.bestiary-region-section{--region:#ad95bd;min-width:0;border:1px solid #4c4053;background:#1d1822;border-color:color-mix(in srgb,var(--region) 48%,#3b3443);background:linear-gradient(145deg,color-mix(in srgb,var(--region) 7%,#1d1822),#17151d 54%);border-radius:16px;padding:18px}
+.bestiary-region-section.region-karma,.bestiary-profile.region-karma,.bestiary-creature.region-karma{--region:#ab70d8}
+.bestiary-region-section.region-consorcio,.bestiary-profile.region-consorcio{--region:#75b0d2}
+.bestiary-region-section.region-floresta,.bestiary-profile.region-floresta{--region:#69ad83}
+.bestiary-region-section.region-deserto,.bestiary-profile.region-deserto{--region:#e2ba72}
+.bestiary-region-section.region-incognita,.bestiary-profile.region-incognita{--region:#b5a6cd}
+.bestiary-regional-heading{display:flex;align-items:center;gap:12px;margin:0 0 16px;padding-bottom:15px;border-bottom:1px solid color-mix(in srgb,var(--region) 24%,transparent)}
+.bestiary-regional-symbol{height:50px;width:50px;flex:none;display:grid;place-items:center;border-radius:12px;background:color-mix(in srgb,var(--region) 15%,#18141d);border:1px solid color-mix(in srgb,var(--region) 47%,#17151d);color:var(--region)}
+.bestiary-regional-heading>div{flex:1;min-width:0}
+.bestiary-regional-heading .field-kicker{font-size:9px;color:var(--region)}
+.bestiary-regional-heading h3{font:500 20px Cinzel,serif;margin:4px 0;color:#f1e8f3}
+.bestiary-regional-heading p{color:#b4a7b9;font-size:11px;line-height:1.5;margin:0}
+.bestiary-regional-total{font-size:10px;color:var(--region);white-space:nowrap;border:1px solid color-mix(in srgb,var(--region) 40%,#27222e);border-radius:50px;padding:6px 10px}
+.bestiary-atlas .bestiary-region-section .bestiary-creatures{grid-template-columns:repeat(auto-fill,minmax(210px,1fr))}
+.bestiary-atlas .bestiary-region-section .bestiary-creature{min-height:176px;border-color:color-mix(in srgb,var(--region) 27%,#3c3444);background:linear-gradient(155deg,#261f2c,#19161e)}
+.bestiary-atlas .bestiary-region-section .bestiary-creature-symbol,.bestiary-atlas .bestiary-region-section .bestiary-creature-cta{color:var(--region)}
+.bestiary-atlas .bestiary-region-section .bestiary-creature:hover,.bestiary-atlas .bestiary-region-section .bestiary-creature.selected{border-color:var(--region);background:color-mix(in srgb,var(--region) 13%,#19151f)}
+.bestiary-atlas .bestiary-region-section .bestiary-profile{margin:15px 0 0;border-color:var(--region);background:#19151e;scroll-margin-top:90px}
+.bestiary-region-section .bestiary-creature strong{font-size:15px}
+@media(max-width:950px){.bestiary-atlas .bestiary-region-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){
+  .bestiary-atlas .bestiary-region-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .bestiary-atlas .bestiary-region{min-height:132px;padding:12px;display:flex;flex-direction:column;gap:7px}
+  .bestiary-atlas .bestiary-region-text{padding:0}
+  .bestiary-atlas .bestiary-region-text strong{font-size:12px}
+  .bestiary-atlas .bestiary-region-text small{font-size:10px}
+  .bestiary-atlas .bestiary-region-action{left:12px;bottom:8px}
+  .bestiary-atlas .bestiary-region-count{top:12px;right:12px}
+  .bestiary-region-section{padding:12px;border-radius:12px}
+  .bestiary-regional-heading{gap:9px;flex-wrap:wrap}
+  .bestiary-regional-symbol{width:40px;height:40px}
+  .bestiary-regional-heading h3{font-size:17px}
+  .bestiary-regional-total{margin-left:49px}
+  .bestiary-atlas .bestiary-region-section .bestiary-creatures{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+  .bestiary-atlas .bestiary-region-section .bestiary-creature{min-height:186px;padding:12px}
+  .bestiary-region-section .bestiary-creature strong{font-size:12px}
+}
+@media(max-width:400px){.bestiary-atlas .bestiary-region-section .bestiary-creatures{grid-template-columns:1fr}.bestiary-atlas .bestiary-region-section .bestiary-creature{min-height:140px}}
+@media(prefers-reduced-motion:reduce){.bestiary-atlas .bestiary-region,.bestiary-atlas .bestiary-creature{transition:none}}
