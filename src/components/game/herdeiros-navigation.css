@@ -1,0 +1,43 @@
+/* Navegação enxuta e estável para PC, navegador mobile e APK. */
+.herdeiros-hub{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding:15px 18px;border:1px solid #584666;border-radius:14px;background:linear-gradient(110deg,#211b2d,#16141d 78%);margin-bottom:19px;box-shadow:0 8px 28px #0002}
+.herdeiros-hub-title{display:grid;gap:3px}
+.herdeiros-hub-title span{font:700 9px 'DM Sans',sans-serif;letter-spacing:.17em;color:#bca1d9}
+.herdeiros-hub-title strong{font:500 20px Cinzel,serif;color:#eee2fb}
+.herdeiros-hub-title small{font-size:11px;color:#afa1ba}
+.herdeiros-hub-actions{display:flex;gap:8px;flex-wrap:wrap}
+.herdeiros-hub-actions button{min-height:42px;white-space:normal;gap:8px;font-size:12px}
+.herdeiros-subnav{margin:5px 0 15px}
+@media(max-width:600px){.herdeiros-hub{align-items:stretch;padding:12px}.herdeiros-hub-actions{display:grid;grid-template-columns:1fr 1fr}.herdeiros-hub-actions button{padding:8px;line-height:1.25}.herdeiros-hub-title strong{font-size:18px}}
+
+/* Cinco áreas principais. Em telas menores, abrir o menu em grelha
+   antes que a quinta aba comprometa a largura da barra superior. */
+@media (min-width: 851px) and (max-width: 1240px) {
+  .app-shell .main-nav {
+    display: none;
+    position: absolute;
+    top: 71px;
+    left: 0;
+    right: 0;
+    height: auto;
+    padding: 10px 20px;
+    background: #17141e;
+    border-bottom: 1px solid #493c53;
+    box-shadow: 0 20px 40px #0008;
+  }
+  .app-shell .main-nav.nav-open {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 4px;
+  }
+  .app-shell .nav-item {
+    min-height: 44px;
+    height: auto !important;
+    justify-content: flex-start;
+  }
+  .app-shell .mobile-menu { display: flex; }
+  .app-shell .live-indicator { display: none; }
+}
+@media (max-width: 600px) {
+  .app-shell .main-nav.nav-open { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .app-shell .main-nav .nav-item { min-height: 44px; white-space: normal; }
+}
