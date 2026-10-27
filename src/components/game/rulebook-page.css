@@ -12,3 +12,117 @@
 .hrules-table-scroll{overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch;margin-top:14px}
 .hrules-table-scroll .hrules-attribute-table{margin-top:0;min-width:450px}
 @media(max-width:640px){.hrules-explanation{padding:12px;gap:8px}.hrules-topic-head{padding:11px 12px}.hrules-topic-head h4{font-size:14px}}
+
+/* Acabamento definitivo do Códice: legibilidade, identidade e interação. */
+.hrules-root { max-width: 1420px; }
+.hrules-hero {
+  min-height: 260px;
+  isolation: isolate;
+  background:
+    radial-gradient(circle at 78% 33%, #a885413e 0 1px, transparent 2px),
+    radial-gradient(circle at 83% 40%, #c9a36734 0 2px, transparent 3px),
+    radial-gradient(ellipse at 79% 15%, #e8c47527, transparent 36%),
+    radial-gradient(ellipse at 12% 98%, #6135574d, transparent 50%),
+    linear-gradient(120deg, #121015, #27202a 57%, #16131a);
+  border: 1px solid #866c48;
+  box-shadow: inset 0 1px #f1d9a43f, 0 15px 45px #05030744;
+}
+.hrules-hero:before {
+  content: '';
+  position: absolute;
+  inset: 8px;
+  pointer-events: none;
+  border: 1px solid #ccac7340;
+  border-radius: 12px;
+}
+.hrules-hero .hrules-hero-mark {
+  position: absolute;
+  right: 7%;
+  top: 18%;
+  width: 175px;
+  height: 175px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d9b97935;
+  border-radius: 50%;
+  color: #e1b96c50;
+  background: radial-gradient(circle, #d1a85b0e, transparent 68%);
+  box-shadow: inset 0 0 0 12px #d9b97908, inset 0 0 0 34px #d9b97906;
+  transform: rotate(-13deg);
+  pointer-events: none;
+}
+.hrules-hero h1,
+.hrules-hero p,
+.hrules-feature-row {max-width: 75%;z-index: 1;}
+.hrules-hero h1 { text-shadow: 0 2px 17px #000c; }
+.hrules-hero p {font-size: 15px; line-height: 1.8; color: #e2d9df;}
+.hrules-feature-row > span {font-size: 12px; padding: 10px 13px; background: #19151dcf;}
+.hrules-search { background: #1e1923; border-color: #806e78; }
+.hrules-search input { font-size: 15px; }
+.hrules-action { font-size: 14px; }
+.hrules-category { min-height: 90px; padding: 17px 15px; border-radius: 15px; background: linear-gradient(155deg, #29212d, #19151e); }
+.hrules-category > span {font-size: 14px;}
+.hrules-category small {font-size: 11px; color: #d0c4cf;}
+.hrules-category.is-current {background: linear-gradient(140deg, #42312e, #29202d); box-shadow: inset 0 1px #f3d3a040, 0 3px 19px #0004;}
+.hrules-category.is-current small {color: #e5d9cb;}
+.hrules-card {border-radius: 17px; background: linear-gradient(155deg, #29222e, #1a161e);}
+.hrules-card-trigger { padding: 19px 20px; min-height: 165px; gap: 11px; }
+.hrules-card-trigger > strong {font-size: 18px; color: #fff0db; line-height: 1.4;}
+.hrules-summary {font-size: 14px; line-height: 1.65; color: #d9cedc;}
+.hrules-source, .hrules-read {font-size: 11px; letter-spacing: .035em;}
+.hrules-card-detail {padding: 18px 20px 21px; background: #141018c4;}
+.hrules-card-detail li {font-size: 14px; line-height: 1.82; color: #f0e3ec; padding-left: 18px;}
+.hrules-card-detail li:before {color: #e3b97e;}
+.hrules-example strong, .hrules-example p {font-size: 13px;}
+.hrules-example p {line-height: 1.7;}
+.hrules-clarification {font-size: 13px;}
+.hrules-topic-head h4 {font-size: 18px;}
+.hrules-topic-head p {font-size: 13px;}
+.hrules-section-head h3 {font-size: 21px;}
+.hrules-explanation p {font-size: 14px; line-height: 1.75;}
+.hrules-attribute-table {font-size: 13px;}
+.hrules-attribute-table th, .hrules-attribute-table td {padding: 11px 9px;}
+.hrules-weapons strong {font-size: 13px;}
+.hrules-weapons span {font-size: 12px;}
+.hrules-footer strong {font-size: 17px;}
+.hrules-footer p {font-size: 13px;}
+.hrules-footer button {font-size: 14px;}
+.hrules-root button {touch-action: manipulation;}
+.hrules-card-trigger, .hrules-action {transition: background .2s ease, color .2s ease, border-color .2s ease;}
+.hrules-card-trigger:hover {background: #f4d19e09;}
+.hrules-category:focus-visible, .hrules-card-trigger:focus-visible, .hrules-action:focus-visible,
+.hrules-search input:focus-visible {outline: 3px solid #e4b56f; outline-offset: 2px;}
+.hrules-root .hrules-table-scroll {scrollbar-width: thin; scrollbar-color: #ae865e #241b27;}
+@media (max-width: 950px) {
+  .hrules-hero .hrules-hero-mark {width: 125px; height: 125px; right: 4%; top: 13%;}
+  .hrules-hero h1, .hrules-hero p, .hrules-feature-row {max-width: 85%;}
+}
+@media (max-width: 640px) {
+  .hrules-hero {min-height: 0; padding: 28px 18px 25px;}
+  .hrules-hero .hrules-hero-mark {right: -8%; top: 9%; width: 110px; height: 110px; opacity: .5;}
+  .hrules-hero h1, .hrules-hero p, .hrules-feature-row {max-width: 100%;}
+  .hrules-hero h1 {font-size: clamp(29px, 8vw, 40px);}
+  .hrules-hero p {font-size: 14px; line-height: 1.75;}
+  .hrules-category {min-height: 83px; padding: 13px 11px;}
+  .hrules-category > span {font-size: 13px;}
+  .hrules-category small {font-size: 11px;}
+  .hrules-grid {grid-template-columns: 1fr;}
+  .hrules-card-trigger {min-height: 0; padding: 17px 16px;}
+  .hrules-card-trigger > strong {font-size: 17px;}
+  .hrules-summary, .hrules-card-detail li {font-size: 14px;}
+  .hrules-card-detail {padding: 16px;}
+  .hrules-topic-head h4 {font-size: 17px;}
+  .hrules-attribute-table {font-size: 12px;}
+  .hrules-card.is-open {grid-row: auto;}
+  .hrules-explanation p {font-size: 13px;}
+}
+@media (max-width: 390px) {
+  .hrules-category {display: flex; gap: 9px; min-height: 53px; padding: 10px 11px;}
+  .hrules-category small {display: none;}
+  .hrules-category > span {font-size: 12px;}
+}
+@media (prefers-reduced-motion: reduce) {
+  .hrules-hero .hrules-hero-mark {transform: none;}
+}
+/* Ao abrir um cartão, manter a grade estável no desktop e no mobile. */
+.hrules-card.is-open { grid-row: auto; }
