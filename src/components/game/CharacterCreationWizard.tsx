@@ -19,10 +19,10 @@ const options: { key: Kind; title: string; sub: string; info: string; icon: type
 const attrText: Record<AttrKey, string> = { corpo:'CORPO', mente:'MENTE', espirito:'ESPÍRITO' };
 const attrExplanations: Record<AttrKey, string> = { corpo:'Força, movimento e resistência', mente:'Raciocínio, memória e estratégia', espirito:'Fluxo e poder espiritual' };
 
-export function CharacterCreationWizard({ onClose, onCreate }: {onClose: () => void; onCreate: (values: Partial<Character>) => Promise<boolean>}) {
+export function CharacterCreationWizard({ onClose, onCreate, initialLineage = 'Humano' }: {onClose: () => void; onCreate: (values: Partial<Character>) => Promise<boolean>; initialLineage?: Kind}) {
   const [step, setStep] = useState(0);
   const [name, setName] = useState('');
-  const [lineage, setLineage] = useState<Kind>('Humano');
+  const [lineage, setLineage] = useState<Kind>(initialLineage);
   const [attrs, setAttrs] = useState<Attributes>(INITIAL);
   const [concept, setConcept] = useState('');
   const [story, setStory] = useState('');

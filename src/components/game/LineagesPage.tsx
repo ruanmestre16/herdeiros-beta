@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Button } from '@/components/ui/button';
-import { SectionHeading } from './Controls';
+import { useRef, useState } from 'react';
+import { ArrowRight, BookOpen, Cpu, Crown, Flame, Headphones, Moon, Shield, Sparkles, Sun, Sword, WandSparkles, type LucideIcon } from 'lucide-react';
+import './lineages-page.css';
 
 type Block = { title: string; text: string[] };
 type Stage = { name: string; subtitle: string; text: string; passive?: string };
@@ -53,26 +53,93 @@ const LINEAGES: Lineage[] = [
   },
 ];
 
-export function LineagesPage() {
-  const [sel, setSel] = useState('arcadianos');
-  const l = LINEAGES.find(x => x.key === sel)!;
-  return <>
-    <div className="page-heading standalone"><div><span className="eyebrow subtle">CÓDICE / LINHAGENS</span><h1>As linhagens de <em>Arcádia.</em></h1><p className="muted-copy">Modos distintos de existir diante do Fluxo. Toque em uma linhagem para ler.</p></div></div>
-    <div className="rules-layout">
-      <aside className="rules-index"><span className="field-kicker">LINHAGENS</span>
-        {LINEAGES.map((x, i) => <Button key={x.key} variant={x.key === sel ? 'secondary' : 'ghost'} className="justify-start" onClick={() => setSel(x.key)}><span>{String(i + 1).padStart(2, '0')}</span>&nbsp;{x.name}</Button>)}
-      </aside>
-      <div className="rules-content">
-        <section className="rule-block"><SectionHeading number="✦" title={`${l.name}: ${l.epithet}`} /><p>{l.intro}</p></section>
-        {l.blocks.map((b, i) => <section key={b.title} className="rule-block"><SectionHeading number={String(i + 1).padStart(2, '0')} title={b.title} />{b.text.map((t, j) => <p key={j}>{t}</p>)}</section>)}
-        <section className="rule-block"><SectionHeading number="◆" title="Estágios de evolução e passivas" />
-          {l.stages.map((s, i) => <div key={s.name} style={{ marginBottom: '1.25rem' }}>
-            <p><strong>Nível {i + 1} — {s.name}</strong> <em>({s.subtitle})</em></p>
-            <p>{s.text}</p>
-            {s.passive && <p className="text-primary"><strong>Passiva:</strong> {s.passive}</p>}
-          </div>)}
-        </section>
+
+type LineageKey = 'arcadianos' | 'humanos' | 'gakis';
+type DetailTab = 'historia' | 'habilidades' | 'estagios';
+type CreationLineage = 'Arcadiano' | 'Humano' | 'Gaki' | 'Agente Tecnológico';
+type LineageTheme = {key: LineageKey; title: string; tagline:string; lead: string; tag:string; imageNote: string; traits: {title:string; icon:LucideIcon}[]};
+
+const THEMES: LineageTheme[] = [
+ {key:'arcadianos',title:'Arcadianos',tagline:'NASCIDOS NO FLUXO',tag:'HERANÇA DO FLUXO',lead:'O Fluxo está neles desde o nascimento. Uma conexão natural, poderosa e tão bela quanto perigosa.',imageNote:'Dois exemplos de Arcadianos',traits:[{title:'Nascidos do Fluxo',icon:Sun},{title:'Armas de Ego',icon:Crown},{title:'Afinidade espiritual',icon:Sparkles}]},
+ {key:'humanos',title:'Humanos',tagline:'INFINITAS POSSIBILIDADES',tag:'O DESPERTAR',lead:'Sob o Véu, o Fluxo ainda vive. A imaginação transforma objetos cotidianos em caminhos de poder.',imageNote:'Dois exemplos de Humanos',traits:[{title:'Versatilidade',icon:Sword},{title:'Imaginação',icon:Headphones},{title:'Armas de Vínculo',icon:WandSparkles}]},
+ {key:'gakis',title:'Gakis',tagline:'MARCADOS PELO KARMA',tag:'ENTRE A VIDA E O KARMA',lead:'A morte e a corrupção deixam marcas profundas. Alguns Gakis recuperam a razão — outros abraçam a fome.',imageNote:'Exemplo visual de um Dark, uma categoria de Gaki',traits:[{title:'Filhos do Karma',icon:Moon},{title:'Instinto',icon:Flame},{title:'Distorção',icon:Shield}]},
+];
+const CREATION: Record<LineageKey,CreationLineage> = {arcadianos:'Arcadiano',humanos:'Humano',gakis:'Gaki'};
+const DETAIL_TABS: {value:DetailTab; label:string}[] = [{value:'historia',label:'História e origem'},{value:'habilidades',label:'Habilidades e legado'},{value:'estagios',label:'Estágios e passivas'}];
+
+/** The art is deliberately separate from text and controls: all actions remain accessible in PC, browser and Android WebView. */
+export function LineagesPage({ onCreate }: {onCreate?: (lineage: CreationLineage) => void}) {
+ const [selected,setSelected] = useState<LineageKey>('arcadianos');
+ const [detail,setDetail] = useState<DetailTab>('historia');
+ const detailsRef = useRef<HTMLDivElement>(null);
+ const lineage = LINEAGES.find(l=>l.key===selected)!;
+ function showDetails(key:LineageKey,tab:DetailTab) {
+   setSelected(key);
+   setDetail(tab);
+   // The new content is inside the same screen, not a route reload.
+   if(typeof window !== 'undefined') window.requestAnimationFrame(()=>detailsRef.current?.scrollIntoView({behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'}));
+ }
+ return <section className="hl-page" aria-label="Linhagens de Arcádia">
+   <div className="hl-sky" aria-hidden="true"><span className="hl-sun"/><span className="hl-orbit hl-orbit-one"/><span className="hl-orbit hl-orbit-two"/></div>
+   <header className="hl-heading">
+     <div className="hl-kicker"><Sparkles size={13} aria-hidden="true"/> HERDEIROS · O DESPERTAR <Sparkles size={13} aria-hidden="true"/></div>
+     <h1>LINHAGENS</h1>
+     <p>Escolha sua origem e descubra seu caminho.</p>
+     <div className="hl-divider" aria-hidden="true">✦</div>
+   </header>
+
+   <div className="hl-mobile-pick" role="group" aria-label="Escolher linhagem">
+    {THEMES.map(t=><button key={t.key} type="button" className={`hl-mobile-choice hl-tone-${t.key} ${selected===t.key?'is-active':''}`} aria-pressed={selected===t.key} onClick={()=>setSelected(t.key)}>{t.title}</button>)}
+   </div>
+   <div className="hl-grid">
+   {THEMES.map(t=><article key={t.key} className={`hl-card hl-tone-${t.key} ${selected===t.key?'hl-selected':''}`} data-selected={selected===t.key} aria-label={`Linhagem ${t.title}`}>
+      <div className="hl-card-inner">
+       <button className="hl-art-trigger" type="button" aria-label={`Selecionar ${t.title}`} aria-pressed={selected===t.key} onClick={()=>setSelected(t.key)}>
+        <div className="hl-art" aria-hidden="true">
+         <span className="hl-art-halo"/>
+         {t.key==='arcadianos'&&<><img src="/linhagens/arcadiana.webp" className="hl-person hl-arcadiana" alt="" loading="lazy" decoding="async"/><img src="/linhagens/arcadiano.webp" className="hl-person hl-arcadiano" alt="" loading="lazy" decoding="async"/></>}
+         {t.key==='humanos'&&<><img src="/linhagens/humano-cartas.webp" className="hl-person hl-humano-cartas" alt="" loading="lazy" decoding="async"/><img src="/linhagens/humano-urbano.webp" className="hl-person hl-humano-urbano" alt="" loading="lazy" decoding="async"/></>}
+         {t.key==='gakis'&&<img src="/linhagens/gaki-dark.webp" className="hl-person hl-gaki" alt="" loading="lazy" decoding="async"/>}
+         <span className="hl-art-bottom"/>
+        </div>
+        <span className="hl-character-caption">{t.imageNote}</span>
+       </button>
+       <div className="hl-content">
+        <span className="hl-lineage-icon" aria-hidden="true">{t.key==='arcadianos'?<Sun/>:t.key==='humanos'?<WandSparkles/>:<Moon/>}</span>
+        <div className="hl-smalltag">{t.tag}</div>
+        <h2>{t.title}</h2>
+        <div className="hl-tagline">{t.tagline}</div>
+        <p className="hl-lead">{t.lead}</p>
+        <div className="hl-traits">{t.traits.map(({title,icon:Icon})=><div className="hl-trait" key={title}><Icon size={21} strokeWidth={1.6} aria-hidden="true"/><span>{title}</span></div>)}</div>
+        <div className="hl-card-actions">
+          <button type="button" className="hl-action hl-action-outline" onClick={()=>showDetails(t.key,'historia')}><BookOpen size={15} aria-hidden="true"/> História</button>
+          <button type="button" className="hl-action hl-action-outline" onClick={()=>showDetails(t.key,'habilidades')}><Sparkles size={15} aria-hidden="true"/> Habilidades</button>
+        </div>
+        <button type="button" className="hl-action hl-action-primary" onClick={()=>onCreate?.(CREATION[t.key])} disabled={!onCreate}>Criar personagem <ArrowRight size={17} aria-hidden="true"/></button>
+        {t.key==='humanos'&&<button type="button" className="hl-tech-link" onClick={()=>onCreate?.('Agente Tecnológico')} disabled={!onCreate}><Cpu size={14} aria-hidden="true"/> Ou criar Agente Tecnológico</button>}
+       </div>
       </div>
-    </div>
-  </>;
+     </article>)}
+   </div>
+
+   <div className={`hl-details hl-tone-${selected}`} ref={detailsRef} id="linhagem-detalhes">
+     <div className="hl-details-head">
+       <div><span className="hl-smalltag">CÓDICE · {lineage.epithet.toUpperCase()}</span><h2>{lineage.name}</h2><p>{lineage.intro}</p></div>
+       <button className="hl-action hl-action-primary hl-details-create" onClick={()=>onCreate?.(CREATION[selected])} disabled={!onCreate}>Criar {selected==='gakis'?'Gaki':selected==='humanos'?'Humano':'Arcadiano'} <ArrowRight size={15}/></button>
+     </div>
+     <div role="tablist" className="hl-details-tabs" aria-label="Informações da linhagem">
+       {DETAIL_TABS.map(x=><button key={x.value} role="tab" id={`hl-tab-${x.value}`} aria-controls="hl-detail-panel" aria-selected={detail===x.value} type="button" className={detail===x.value?'is-active':''} onClick={()=>setDetail(x.value)}>{x.label}</button>)}
+     </div>
+     <div className="hl-detail-panel" role="tabpanel" id="hl-detail-panel" aria-labelledby={`hl-tab-${detail}`}>
+      {detail==='historia'&&<div className="hl-story-grid">{lineage.blocks.map((block,i)=><section key={block.title} className="hl-info-card"><span className="hl-info-number">{String(i+1).padStart(2,'0')}</span><h3>{block.title}</h3>{block.text.map((p,j)=><p key={j}>{p}</p>)}</section>)}</div>}
+      {detail==='habilidades'&&<div className="hl-story-grid">
+         {lineage.stages.map((s,i)=><section key={s.name} className="hl-info-card"><span className="hl-info-number">ESTÁGIO {i+1}</span><h3>{s.name}</h3><p>{s.text}</p>{s.passive&&<p className="hl-passive"><strong>Passiva:</strong> {s.passive}</p>}</section>)}
+         <section className="hl-info-card hl-extra"><span className="hl-info-number">CONSULTA</span><h3>Habilidades e regras</h3><p>As habilidades, o GS, as armas e as passivas continuam disponíveis para uso e edição na ficha jogável. Aqui você consulta sua origem sem alterar as regras.</p></section>
+       </div>}
+      {detail==='estagios'&&<div className="hl-stages">{lineage.stages.map((s,i)=><section key={s.name} className="hl-stage"><span className="hl-stage-num">{String(i+1).padStart(2,'0')}</span><div><span className="hl-smalltag">{s.subtitle}</span><h3>{s.name}</h3><p>{s.text}</p>{s.passive&&<p className="hl-passive"><strong>Passiva:</strong> {s.passive}</p>}</div></section>)}</div>}
+     </div>
+     {selected==='humanos'&&<div className="hl-tech-note"><Cpu size={22} aria-hidden="true"/><div><strong>Uma possibilidade humana: Agente Tecnológico</strong><p>Humano que usa TECNOLOGIA e PN. Pode existir fora do Consórcio, com Arma de Núcleo, Olho Tecnológico e evolução própria.</p></div><button type="button" className="hl-action hl-action-outline" disabled={!onCreate} onClick={()=>onCreate?.('Agente Tecnológico')}>Criar Agente <ArrowRight size={15}/></button></div>}
+   </div>
+   <p className="hl-footnote">As ilustrações são exemplos de personagens, não modelos obrigatórios. Sua linhagem define a origem, não sua aparência.</p>
+ </section>;
 }
