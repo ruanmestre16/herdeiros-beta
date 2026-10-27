@@ -115,8 +115,10 @@ export function LineagesPage({ onCreate }: {onCreate?: (lineage: CreationLineage
           <button type="button" className="hl-action hl-action-outline" onClick={()=>showDetails(t.key,'historia')}><BookOpen size={15} aria-hidden="true"/> História</button>
           <button type="button" className="hl-action hl-action-outline" onClick={()=>showDetails(t.key,'habilidades')}><Sparkles size={15} aria-hidden="true"/> Habilidades</button>
         </div>
-        <button type="button" className="hl-action hl-action-primary" onClick={()=>onCreate?.(CREATION[t.key])} disabled={!onCreate}>Criar personagem <ArrowRight size={17} aria-hidden="true"/></button>
-        {t.key==='humanos'&&<button type="button" className="hl-tech-link" onClick={()=>onCreate?.('Agente Tecnológico')} disabled={!onCreate}><Cpu size={14} aria-hidden="true"/> Ou criar Agente Tecnológico</button>}
+        {t.key==='humanos' ? <div className="hl-human-create-actions">
+          <button type="button" className="hl-action hl-action-primary" onClick={()=>onCreate?.('Humano')} disabled={!onCreate}>Criar Humano <ArrowRight size={17} aria-hidden="true"/></button>
+          <button type="button" className="hl-action hl-action-tech" onClick={()=>onCreate?.('Agente Tecnológico')} disabled={!onCreate}><Cpu size={16} aria-hidden="true"/> Criar Agente Tecnológico</button>
+        </div> : <button type="button" className="hl-action hl-action-primary" onClick={()=>onCreate?.(CREATION[t.key])} disabled={!onCreate}>Criar personagem <ArrowRight size={17} aria-hidden="true"/></button>}
        </div>
       </div>
      </article>)}
