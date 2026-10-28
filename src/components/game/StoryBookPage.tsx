@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, BookOpen, ChevronLeft, ChevronRight, Compass, Feather, Home, List, ScrollText, Sword, Cpu, Flame, Leaf, Gem, Moon, Orbit, Building2, Eye, Sun, Scissors, Headphones, Map, Sparkles, Crown, Shield } from 'lucide-react';
+import { ArrowLeft, ArrowRight, BookOpen, ChevronLeft, ChevronRight, Compass, Feather, Home, List, ScrollText, Sword, Cpu, Flame, Leaf as LeafIcon, Gem, Moon, Orbit, Building2, Eye, Sun, Scissors, Headphones, Map, Sparkles, Crown, Shield } from 'lucide-react';
 import './storybook-page.css';
 
 type Passage = { heading: string; paragraphs: string[] };
@@ -251,9 +251,9 @@ const CHAPTER_ART = {
   espelho: { tone: 'duo', emblem: Orbit, detail: Eye, note: 'Dois mundos' },
   'arcadia-hoje': { tone: 'flux', emblem: Compass, detail: Sun, note: 'O continente desperto' },
   caixa: { tone: 'tech', emblem: Building2, detail: Cpu, note: 'A Caixa' },
-  floresta: { tone: 'nature', emblem: Leaf, detail: Sparkles, note: 'Memória da floresta' },
+  floresta: { tone: 'nature', emblem: LeafIcon, detail: Sparkles, note: 'Memória da floresta' },
   deserto: { tone: 'ember', emblem: Sun, detail: Map, note: 'Sob o sol' },
-  faccoes: { tone: 'duo', emblem: Shield, detail: Leaf, note: 'Controle e liberdade' },
+  faccoes: { tone: 'duo', emblem: Shield, detail: LeafIcon, note: 'Controle e liberdade' },
   humanos: { tone: 'human', emblem: Scissors, detail: Headphones, note: 'A imaginação humana' },
   agentes: { tone: 'tech', emblem: Cpu, detail: Orbit, note: 'O Núcleo' },
   arcadianos: { tone: 'flux', emblem: Sword, detail: Sparkles, note: 'A Arma de Ego' },
@@ -306,7 +306,7 @@ export function StoryBookPage({ onHome }: { onHome: () => void }) {
   const [indexOpen, setIndexOpen] = useState(false);
   const [continuous, setContinuous] = useState(false);
   const top = useRef<HTMLElement>(null);
-  const chapter = CHAPTERS[active];
+  const chapter = CHAPTERS[active] ?? CHAPTERS[0]!;
   const choose = (index: number) => {
     setActive(Math.min(Math.max(index, 0), CHAPTERS.length - 1));
     setIndexOpen(false);
