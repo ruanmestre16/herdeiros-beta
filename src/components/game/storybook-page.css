@@ -86,3 +86,176 @@
 @media(max-width:540px){.hs-story-page{padding:12px}.hs-story-head{padding:10px 0 17px}.hs-story-head p{font-size:13px}.hs-story-toolbar{gap:9px}.hs-view-switch{flex:1}.hs-view-switch button{flex:1;padding:9px 6px;font-size:11px}.hs-index-toggle{width:100%}.hs-chapter-marker{font-size:9px;letter-spacing:.04em}.hs-chapter-title{padding:12px 3px}.hs-leaf{padding:16px 22px}.hs-leaf-heading,.hs-leaf-foot{font-size:8px;letter-spacing:0}.hs-leaf-inner{padding:18px 0}.hs-leaf-inner h3{font-size:24px}.hs-leaf-inner p{font-size:15px}.hs-page-turn{gap:6px}.hs-page-turn button{padding:9px 8px;min-height:43px;font-size:11px;flex:1}.hs-page-turn>span{font-size:11px}.hs-page-turn>span svg{display:none}.hs-story-colophon{font-size:11px}.hs-story-colophon svg{display:none}}
 @media(prefers-reduced-motion:reduce){.hs-story-page *{scroll-behavior:auto!important;transition:none!important}}
 @media print{.hs-story-page{border:0;box-shadow:none;padding:0;background:white}.hs-story-head,.hs-story-toolbar,.hs-story-index,.hs-page-turn,.hs-story-colophon{display:none!important}.hs-story-layout{display:block}.hs-open-book{filter:none}.hs-leaf{box-shadow:none;break-inside:avoid;min-height:0}.hs-reading-area{color:#000}.hs-continuous-chapter{break-after:page}}
+
+/* ================================================================
+   HISTÓRIA V2 · Pergaminho botânico enviado pelo autor
+   Somente esta página; não altera Ficha, Mesa, Regras ou Bestiário.
+   ================================================================ */
+.hs-story-page {
+  --hs-gold: #dfb464;
+  --hs-violet: #873b8e;
+  --hs-ink: #302016;
+  background:
+    radial-gradient(ellipse at 7% 9%, rgba(213, 149, 55, .17), transparent 40%),
+    radial-gradient(ellipse at 94% 18%, rgba(102, 24, 113, .16), transparent 43%),
+    linear-gradient(153deg, #130d0e 0%, #22130f 48%, #0e0a0f 100%);
+}
+.hs-story-head h1 em {color:#f4c782}
+.hs-index-book>button.selected {
+  border-image: linear-gradient(to bottom, #dfac55, #8b458e) 1;
+  box-shadow: inset 0 0 25px rgba(184,130,59,.1);
+}
+.hs-open-book {min-height: 650px}
+.hs-leaf {
+  --hs-rune: #885b20;
+  min-height: 650px;
+  padding: 62px clamp(48px,5.4vw,80px) 55px;
+  background-color: #dfc398;
+  background-image:
+    linear-gradient(to bottom, rgba(58,37,15,.11) 0%,transparent 16%, transparent 83%,rgba(76,42,24,.10)),
+    url('/historia/pergaminho-antigo.webp');
+  background-position: center, center;
+  background-repeat: no-repeat;
+  background-size: cover, 100% 100%;
+  border-color: #725031;
+  box-shadow: inset 0 0 13px #2e150b5e, inset 0 0 60px #5e321626;
+}
+.hs-leaf-right {background-image:
+    linear-gradient(to bottom, rgba(58,37,15,.10) 0%,transparent 17%, transparent 81%,rgba(76,42,24,.09)),
+    url('/historia/pergaminho-antigo.webp');
+  background-size: cover,100% 100%;
+  background-position: center, center;
+}
+.hs-leaf::before {
+  content:"";
+  position:absolute;
+  pointer-events:none;
+  z-index:1;
+  inset:0;
+  background:radial-gradient(ellipse 19% 14% at 0% 0%,rgba(45,20,9,.54) 0%,rgba(101,43,12,.2) 52%,transparent 79%),
+    radial-gradient(ellipse 22% 12% at 98% 100%,rgba(47,21,11,.45),rgba(124,59,14,.12) 57%,transparent 80%);
+  mix-blend-mode:multiply;
+  opacity:.82;
+}
+.hs-leaf:after {
+  background: radial-gradient(ellipse at 4% 0%,rgba(48,20,12,.32),transparent 14%),
+    radial-gradient(ellipse at 95% 96%,rgba(40,17,9,.29),transparent 18%);
+  opacity:.74;
+}
+.hs-leaf-inner {
+  margin: 22px 0 18px;
+  padding: 18px 0 18px;
+  background:transparent;
+}
+.hs-leaf-inner h3 {font-size:clamp(18px,1.8vw,29px);color:#52341c;margin:12px 0 22px}
+.hs-leaf-inner p {
+  color:#302016;
+  text-shadow:0 .3px 0 rgba(255,241,204,.24);
+  font-size:clamp(15px,1.05vw,17px);
+  line-height:1.72;
+  text-align:left;
+  hyphens:auto;
+  margin:0 0 18px;
+}
+.hs-leaf-inner p:first-of-type:first-letter {font-size:2.25em;color:#693a19}
+.hs-leaf-heading,.hs-leaf-foot {color:#5b3a26;font-weight:700;letter-spacing:.065em}
+.hs-leaf-heading {padding-bottom:10px;border-color:#78512b82}
+.hs-leaf-foot {border-color:#78512b82;padding-top:10px}
+.hs-ornament {color:#885827;letter-spacing:.25em;margin-bottom:11px}
+.hs-ink-flux {color:#855006; font-weight:700; text-shadow:0 1px 0 #ffebc7a6}
+.hs-ink-karma {color:#522060;font-weight:700; text-shadow:0 1px 0 #fbe4ff73}
+.hs-theme-karma {--hs-rune:#62276a}
+.hs-theme-tech {--hs-rune:#376273}
+.hs-theme-human {--hs-rune:#654a37}
+.hs-theme-nature {--hs-rune:#456640}
+.hs-theme-ember {--hs-rune:#98612a}
+.hs-theme-duo {--hs-rune:#74507e}
+.hs-burn {position:absolute;z-index:1;pointer-events:none;width:70px;height:70px;border-radius:50%;filter:blur(7px);mix-blend-mode:multiply;opacity:.47}
+.hs-burn-gold {top:1%;right:0%;background:radial-gradient(closest-side,rgba(78,32,13,.61),rgba(182,83,11,.31) 61%,transparent 97%)}
+.hs-burn-karma {bottom:0%;left:0%;background:radial-gradient(closest-side,rgba(64,24,50,.72),rgba(96,37,114,.23) 62%,transparent 97%)}
+.hs-tone-karma ~ .hs-burn-gold {opacity:.27}
+.hs-marginalia {position:absolute;z-index:3;pointer-events:none;right:25px;top:105px;width:35px;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--hs-rune);opacity:.72;filter:drop-shadow(0 1px 0 #f7d9a4)}
+.hs-marginalia>svg:first-of-type{width:27px;height:27px}
+.hs-marginalia>svg:nth-of-type(2){width:20px;height:20px;opacity:.7;transform:rotate(-17deg)}
+.hs-marginalia-rune{font:23px/1 Georgia,serif}
+.hs-marginalia-line{width:1px;height:31px;background:linear-gradient(var(--hs-rune),transparent)}
+.hs-theme-tech .hs-marginalia{border:1px solid #53778887;border-radius:50% 50% 18px 18px;box-shadow:0 0 9px #3b8aa44d;color:#315b73;padding-top:8px}
+.hs-theme-karma .hs-marginalia{filter:drop-shadow(0 0 5px #71226755)}
+.hs-theme-flux .hs-marginalia{filter:drop-shadow(0 0 6px #e2ac495e)}
+.hs-leaf-right .hs-marginalia {left:22px;right:auto;top:auto;bottom:76px}
+.hs-leaf-inner,.hs-leaf-heading,.hs-leaf-foot {position:relative;z-index:4}
+.hs-continuous-reader {background:linear-gradient(160deg,#d0ae79,#f0dfb5 35%,#c9a373);border:1px solid #b68b58}
+.hs-continuous-chapter {
+  position:relative;
+  padding:clamp(66px,6vw,90px) clamp(60px,7vw,100px);
+  max-width:none;
+  background-image:linear-gradient(to bottom,rgba(76,40,13,.06),transparent 20%,transparent 85%,rgba(72,33,18,.08)),url('/historia/pergaminho-antigo.webp');
+  background-repeat:no-repeat;
+  background-size:100% 100%;
+  color:#39291b;
+}
+.hs-continuous-chapter> :not(.hs-marginalia){position:relative;z-index:2;max-width:720px;margin-left:auto;margin-right:auto}
+.hs-continuous-chapter h2{color:#50331a;font-size:clamp(28px,3vw,43px)}
+.hs-continuous-chapter h3{color:#5e391e}
+.hs-continuous-chapter p{color:#332218;font-size:clamp(16px,1.25vw,18px);line-height:1.85}
+.hs-continuous-chapter .hs-marginalia {top:90px;right:32px}
+.hs-story-colophon{font-style:italic}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+  .hs-theme-flux .hs-marginalia {animation:hs-margin-breathe 7s ease-in-out infinite}
+  .hs-theme-karma .hs-marginalia {animation:hs-margin-breathe 9s ease-in-out infinite}
+  .hs-theme-tech .hs-marginalia {animation:hs-margin-breathe 8s ease-in-out infinite}
+  @keyframes hs-margin-breathe {0%,100%{opacity:.58;transform:translateY(0)}50%{opacity:.84;transform:translateY(-3px)}}
+}
+@media(max-width:1300px){
+  .hs-story-layout{grid-template-columns:220px minmax(0,1fr)}
+  .hs-leaf{padding:52px 47px 45px}
+  .hs-marginalia{right:15px;top:80px;width:26px}
+  .hs-leaf-right .hs-marginalia{left:14px}
+}
+@media(max-width:1050px){
+  .hs-story-layout{grid-template-columns:1fr}
+  .hs-story-index{display:none;position:static;max-height:unset;overflow:visible}
+  .hs-story-index.is-open{display:block}
+  .hs-index-toggle{display:flex;border:1px solid #a97c4d}
+  .hs-story-toolbar{flex-wrap:wrap}
+  .hs-leaf{padding:52px clamp(49px,6vw,70px) 46px}
+  .hs-open-book{min-height:0}
+}
+@media(max-width:780px){
+  .hs-open-book{grid-template-columns:1fr}
+  .hs-open-book::before{display:none}
+  .hs-leaf{min-height:0;padding:48px clamp(37px,9vw,70px) 43px;border:1px solid #8a633c}
+  .hs-leaf-left{border-radius:13px 13px 0 0;border-bottom:0}
+  .hs-leaf-right{border-radius:0 0 13px 13px}
+  .hs-leaf-inner{margin:14px 0 16px}
+  .hs-leaf-inner p{font-size:16px;line-height:1.78}
+  .hs-marginalia{right:10px;top:66px;opacity:.45;transform:scale(.85)}
+  .hs-leaf-right .hs-marginalia{left:10px;bottom:55px}
+  .hs-continuous-chapter{padding:62px clamp(36px,8vw,70px)}
+}
+@media(max-width:480px){
+  .hs-leaf{padding:39px 34px 37px}
+  .hs-leaf-inner p{font-size:15.5px;line-height:1.7}
+  .hs-leaf-inner h3{font-size:22px}
+  .hs-leaf-heading,.hs-leaf-foot{font-size:8px}
+  .hs-marginalia{right:4px;top:50px;opacity:.36;transform:scale(.67)}
+  .hs-leaf-right .hs-marginalia{left:4px;bottom:34px}
+  .hs-continuous-chapter{padding:51px 33px}
+  .hs-continuous-chapter p{font-size:15.5px;line-height:1.75}
+}
+@media(prefers-reduced-motion:reduce){.hs-marginalia{animation:none!important}}
+@media print{.hs-leaf,.hs-continuous-chapter{box-shadow:none;filter:none;-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+/* Chamas pequenas nas bordas externas: decorativas, sem tocar no texto. */
+.hs-corner-flame{position:absolute;z-index:3;pointer-events:none;width:24px;height:43px;filter:drop-shadow(0 0 5px #e48a3580);opacity:.57;transform-origin:center bottom;
+  clip-path:polygon(44% 100%,11% 73%,24% 48%,36% 63%,47% 27%,60% 6%,71% 48%,87% 37%,94% 75%,70% 100%)}
+.hs-corner-flame-gold{right:1px;top:9%;background:radial-gradient(ellipse at 44% 82%,#fff5c4 0%,#efba42 30%,#ad5b1d 66%,#63300f 100%)}
+.hs-corner-flame-karma{left:1px;bottom:12%;background:radial-gradient(ellipse at 46% 84%,#e6b6ff 0%,#a34bb9 30%,#5c2473 66%,#2e1238 100%);filter:drop-shadow(0 0 5px #8c38998b)}
+.hs-theme-karma .hs-corner-flame-karma{opacity:.8}
+.hs-theme-tech .hs-corner-flame-karma{background:radial-gradient(ellipse at 45% 80%,#b6eaff,#4a9ab9 45%,#26485b 95%)}
+@media(hover:hover) and (prefers-reduced-motion:no-preference){
+  .hs-corner-flame{animation:hs-flame-waver 4.8s ease-in-out infinite alternate}
+  .hs-corner-flame-karma{animation-delay:-2s}
+  @keyframes hs-flame-waver{0%,100%{transform:scale(.9) rotate(-5deg);opacity:.45}50%{transform:scale(1.04) rotate(6deg);opacity:.72}}
+}
+@media(max-width:780px){.hs-corner-flame{height:29px;width:16px;opacity:.38}}
+@media(prefers-reduced-motion:reduce){.hs-corner-flame{animation:none!important}}
