@@ -11,7 +11,6 @@ type Props = {
   characterCount: number;
   campaignCount: number;
   profileName: string;
-  showHistory?: boolean;
 };
 
 type Hotspot = {
@@ -49,8 +48,8 @@ const HOTSPOTS: Hotspot[] = [
   { label: 'Abrir o atlas do Bestiário', x: 1414, y: 687, w: 200, h: 35, dest: 'bestiario' },
   { label: 'Ver todas as linhagens', x: 1402, y: 741, w: 200, h: 30, dest: 'linhagens' },
   { label: 'Arcadianos — nascidos no Fluxo', x: 49, y: 770, w: 508, h: 117, dest: 'linhagens' },
-  { label: 'Gakis — marcados pelo Karma', x: 559, y: 770, w: 514, h: 117, dest: 'linhagens' },
-  { label: 'Humanos — infinitas possibilidades', x: 1078, y: 770, w: 524, h: 117, dest: 'linhagens' },
+  { label: 'Humanos — infinitas possibilidades', x: 559, y: 770, w: 514, h: 117, dest: 'linhagens' },
+  { label: 'Gakis — marcados pelo Karma', x: 1078, y: 770, w: 524, h: 117, dest: 'linhagens' },
 ];
 
 const MOBILE_AREAS = [
@@ -73,13 +72,13 @@ function Portrait({ name, className }: { name: string; className?: string }) {
   return <img className={`hp-exact-portrait ${className ?? ''}`} alt="" loading="lazy" decoding="async" draggable={false} src={`/linhagens/${name}.webp`} />;
 }
 
-export function PortalHome({ onNavigate, onCreate, onLogin, signedIn, characterCount, campaignCount, profileName, showHistory = false }: Props) {
+export function PortalHome({ onNavigate, onCreate, onLogin, signedIn, characterCount, campaignCount, profileName }: Props) {
   // Classe auxiliar para Android WebViews mais antigos que não implementam :has().
   useEffect(() => {
     const shell = document.querySelector('.app-shell');
-    if (!showHistory) shell?.classList.add('hp-exact-shell');
+    shell?.classList.add('hp-exact-shell');
     return () => shell?.classList.remove('hp-exact-shell');
-  }, [showHistory]);
+  }, []);
   const [menuOpen, setMenuOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
@@ -94,14 +93,6 @@ export function PortalHome({ onNavigate, onCreate, onLogin, signedIn, characterC
     else if (spot.special === 'login') onLogin();
     else if (spot.dest) go(spot.dest);
   };
-
-  if (showHistory) return <section className="hp-exact-history">
-    <div className="hp-exact-story-scene" aria-hidden="true"><Portrait name="arcadiana"/><Portrait name="gaki-dark"/><Portrait name="humano-urbano"/></div>
-    <span className="hp-exact-eyebrow">HERDEIROS · CRÔNICAS DE ARCÁDIA</span>
-    <h1>Um mundo entre o <em>Fluxo</em> e o <i>Karma</i></h1>
-    <p>Arcadianos nascem do Fluxo; Gakis carregam o Karma; Humanos criam seus próprios caminhos. Suas histórias se encontram na mesa, onde cada escolha altera o destino da campanha.</p>
-    <div className="hp-exact-story-actions"><button onClick={() => go('linhagens')}>Conhecer linhagens <ArrowRight size={16}/></button><button onClick={() => go('regras')}>Consultar o Códice <ArrowRight size={16}/></button><button onClick={() => go('inicio')}>Voltar ao início <Home size={16}/></button></div>
-  </section>;
 
   return <div className="hp-exact-home" aria-label="Portal Herdeiros: O Despertar">
     <div className="hp-exact-desktop">
@@ -136,8 +127,8 @@ export function PortalHome({ onNavigate, onCreate, onLogin, signedIn, characterC
       </article>;})}</div>
       <section className="hp-mobile-lineages"><div className="hp-mobile-section-title"><span>TRÊS ORIGENS · UM DESTINO</span><h2>Linhagens</h2></div><div className="hp-mobile-lineage-grid">
         <button className="hp-mobile-lineage hp-arc" type="button" onClick={()=>go('linhagens')}><Portrait name="arcadiana"/><Portrait name="arcadiano"/><span><strong>ARCADIANOS</strong><small>NASCIDOS NO FLUXO</small></span><ArrowRight/></button>
-        <button className="hp-mobile-lineage hp-gaki" type="button" onClick={()=>go('linhagens')}><Portrait name="gaki-dark"/><span><strong>GAKIS</strong><small>MARCADOS PELO KARMA</small></span><ArrowRight/></button>
         <button className="hp-mobile-lineage hp-human" type="button" onClick={()=>go('linhagens')}><Portrait name="humano-urbano"/><Portrait name="humano-cartas"/><span><strong>HUMANOS</strong><small>INFINITAS POSSIBILIDADES</small></span><ArrowRight/></button>
+        <button className="hp-mobile-lineage hp-gaki" type="button" onClick={()=>go('linhagens')}><Portrait name="gaki-dark"/><span><strong>GAKIS</strong><small>MARCADOS PELO KARMA</small></span><ArrowRight/></button>
       </div></section>
       <footer className="hp-mobile-footer">✦ HERDEIROS · O DESPERTAR <span>Tudo flui. Tudo cobra.</span></footer>
     </div>
