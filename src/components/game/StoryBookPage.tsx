@@ -264,15 +264,6 @@ const CHAPTER_ART = {
   herdeiros: { tone: 'flux', emblem: Crown, detail: Shield, note: 'O legado' },
 } as const;
 
-function Marginalia({ chapter, compact = false }: { chapter: Chapter; compact?: boolean }) {
-  const art = CHAPTER_ART[chapter.id as keyof typeof CHAPTER_ART] ?? CHAPTER_ART.principio;
-  const Icon = art.emblem;
-  const Detail = art.detail;
-  return <div className={`hs-marginalia hs-tone-${art.tone} ${compact ? 'hs-marginalia-compact' : ''}`} aria-hidden="true">
-    <span className="hs-marginalia-rune">✧</span><Icon strokeWidth={1.15}/><Detail strokeWidth={1.1}/>
-    <span className="hs-marginalia-line"/>
-  </div>;
-}
 
 const BOOKS = Array.from(new Set(CHAPTERS.map(chapter => chapter.book)));
 
@@ -285,20 +276,43 @@ function Ink({ children }: { children: string }) {
   })}</>;
 }
 
-function Leaf({ passage, chapter, side, index }: { passage: Passage; chapter: Chapter; side: 'left' | 'right'; index: number }) {
-  const theme = CHAPTER_ART[chapter.id as keyof typeof CHAPTER_ART] ?? CHAPTER_ART.principio;
-  return <div className={`hs-leaf hs-leaf-${side} hs-theme-${theme.tone}`}>
-    <div className="hs-burn hs-burn-gold" aria-hidden="true"/><div className="hs-burn hs-burn-karma" aria-hidden="true"/>
-    <span className="hs-corner-flame hs-corner-flame-gold" aria-hidden="true"/><span className="hs-corner-flame hs-corner-flame-karma" aria-hidden="true"/>
-    <Marginalia chapter={chapter}/>
-    <div className="hs-leaf-heading"><span>HERDEIROS · O DESPERTAR</span><span>{chapter.book}</span></div>
-    <div className="hs-leaf-inner">
-      <span className="hs-ornament" aria-hidden="true">✧ ─── ✦ ─── ✧</span>
-      <h3>{passage.heading}</h3>
-      {passage.paragraphs.map((text, paragraph) => <p key={paragraph}><Ink>{text}</Ink></p>)}
+/** Páginas visuais: texto e arte em colunas independentes.
+ * Nenhuma textura, flor ou fumaça atravessa a área de leitura.
+ */
+function StorySpread({ chapter, index, continuous = false }: { chapter: Chapter; index: number; continuous?: boolean }) {
+  const art = CHAPTER_ART[chapter.id as keyof typeof CHAPTER_ART] ?? CHAPTER_ART.principio;
+  const Icon = art.emblem;
+  return <article className={`hs-story-spread hs-theme-${art.tone} ${continuous ? 'hs-story-spread-continuous' : ''}`}
+    id={`historia-${chapter.id}`} aria-label={`Capítulo ${index + 1}: ${chapter.title}`}>
+    <div className="hs-spread-burn hs-spread-burn-flux" aria-hidden="true" />
+    <div className="hs-spread-burn hs-spread-burn-karma" aria-hidden="true" />
+    <div className="hs-spread-inner">
+      <div className="hs-story-narrative">
+        <header className="hs-spread-title">
+          <span className="hs-chapter-number">CAPÍTULO {String(index + 1).padStart(2, '0')} · {chapter.book}</span>
+          <h2>{chapter.title}</h2>
+          <p className="hs-chapter-deck">{chapter.subtitle}</p>
+          <span className="hs-spread-rule" aria-hidden="true">✦ ───── ✧ ───── ✦</span>
+        </header>
+        <div className="hs-narrative-passages">
+          {[chapter.left, chapter.right].map((passage, part) =>
+            <section className="hs-story-passage" key={part}>
+              <h3>{passage.heading}</h3>
+              {passage.paragraphs.map((paragraph, paraIndex) => <p key={paraIndex}><Ink>{paragraph}</Ink></p>)}
+            </section>
+          )}
+        </div>
+        <footer className="hs-spread-source"><span>{chapter.source}</span><span>{index + 1} / {CHAPTERS.length}</span></footer>
+      </div>
+      <figure className="hs-story-illustration" aria-label={`Cena ilustrativa: ${art.note}`}>
+        <img src={`/historia/cenas/${chapter.id}.webp`}
+          alt={`Ilustração temática de ${art.note.toLowerCase()}, referente ao capítulo ${chapter.title}`}
+          loading={index === 0 && !continuous ? 'eager' : 'lazy'} decoding="async" width={780} height={1000} />
+        <div className="hs-art-vignette" aria-hidden="true"/>
+        <figcaption><Icon size={21} strokeWidth={1.3}/><span>{art.note}</span></figcaption>
+      </figure>
     </div>
-    <div className="hs-leaf-foot"><span>{chapter.source}</span><span>{index * 2 + (side === 'left' ? 1 : 2)}</span></div>
-  </div>;
+  </article>;
 }
 
 export function StoryBookPage({ onHome }: { onHome: () => void }) {
@@ -331,21 +345,14 @@ export function StoryBookPage({ onHome }: { onHome: () => void }) {
       </aside>
       <div className="hs-reading-area">
         {continuous ? <div className="hs-continuous-reader">
-          {CHAPTERS.map((item, index) => <article className={`hs-continuous-chapter hs-theme-${CHAPTER_ART[item.id as keyof typeof CHAPTER_ART]?.tone ?? 'flux'}`} key={item.id} id={`historia-${item.id}`}>
-            <Marginalia chapter={item} compact/>
-            <span className="hs-eyebrow">CRÔNICA {String(index + 1).padStart(2, '0')} · {item.book}</span>
-            <h2>{item.title}</h2><p className="hs-chapter-deck">{item.subtitle}</p>
-            {[item.left, item.right].map((passage, pidx) => <div key={pidx}><h3>{passage.heading}</h3>{passage.paragraphs.map((text, t) => <p key={t}><Ink>{text}</Ink></p>)}</div>)}
-            <small>{item.source}</small>
-          </article>)}
+          {CHAPTERS.map((item, index) => <StorySpread key={item.id} chapter={item} index={index} continuous />)}
         </div> : <>
-          <div className="hs-chapter-marker"><span>CAPÍTULO {String(active + 1).padStart(2, '0')} · {chapter.book}</span><span>{active + 1} / {CHAPTERS.length}</span></div>
-          <div className="hs-chapter-title"><span>✦</span><h2>{chapter.title}</h2><p>{chapter.subtitle}</p></div>
-          <article className="hs-open-book" aria-label={chapter.title}>
-            <Leaf passage={chapter.left} chapter={chapter} side="left" index={active}/>
-            <Leaf passage={chapter.right} chapter={chapter} side="right" index={active}/>
-          </article>
-          <nav className="hs-page-turn" aria-label="Virar páginas"><button type="button" onClick={() => choose(active - 1)} disabled={active === 0}><ChevronLeft size={20}/> Capítulo anterior</button><span><BookOpen size={18}/> {String(active + 1).padStart(2, '0')} de {CHAPTERS.length}</span><button type="button" onClick={() => choose(active + 1)} disabled={active === CHAPTERS.length - 1}>Próximo capítulo <ChevronRight size={20}/></button></nav>
+          <StorySpread chapter={chapter} index={active} />
+          <nav className="hs-page-turn" aria-label="Virar páginas">
+            <button type="button" onClick={() => choose(active - 1)} disabled={active === 0}><ChevronLeft size={20}/> Capítulo anterior</button>
+            <span><BookOpen size={18}/> {String(active + 1).padStart(2, '0')} de {CHAPTERS.length}</span>
+            <button type="button" onClick={() => choose(active + 1)} disabled={active === CHAPTERS.length - 1}>Próximo capítulo <ChevronRight size={20}/></button>
+          </nav>
         </>}
         <div className="hs-story-colophon"><ArrowLeft size={16}/><span>Crônicas de Arcádia · reconstruídas a partir do livro original (páginas 7 a 20). História do mundo, seus povos e segredos — sem regras de combate.</span><ArrowRight size={16}/></div>
       </div>
