@@ -1,81 +1,235 @@
-/* Herdeiros · O Despertar — Livro da História
-   Arte sempre à direita, narrativa sempre à esquerda.
-   Os ornamentos fazem parte da moldura, NUNCA da coluna de leitura.
-   Uma única fonte de estilos evita sobreposições da versão anterior. */
-.hs-story-page{--hs-paper:#eddbb5;--hs-ink:#271b12;--hs-gold:#d9ac65;--hs-violet:#81348a;max-width:1850px;margin:0 auto 40px;padding:clamp(12px,1.75vw,29px);color:#f0e1c2;font-family:Georgia,'Times New Roman',serif;min-width:0}
-.hs-story-page *{box-sizing:border-box}
-.hs-story-head{display:flex;gap:19px;align-items:center;padding:14px 4px 27px}
-.hs-head-crest{flex:none;width:62px;height:62px;display:grid;place-items:center;border-radius:50%;border:1px solid #cfa65c;color:#e6b964;box-shadow:0 0 20px #bd874b33;background:#24181b}
-.hs-story-head>div:nth-child(2){flex:1;min-width:0}
-.hs-eyebrow{color:#d9ad6d;font:700 10px/1.4 system-ui,sans-serif;letter-spacing:.17em}
-.hs-story-head h1{margin:5px 0 5px;font:400 clamp(31px,3.3vw,53px)/1.1 Georgia,serif;color:#eed8a8}
-.hs-story-head h1 em{font-style:normal;color:#f0b75e}
-.hs-story-head p{margin:0;max-width:75ch;color:#c9b8a9;font:14px/1.6 system-ui,sans-serif}
-.hs-back-home,.hs-index-toggle,.hs-view-switch button,.hs-page-turn button{border:1px solid #a47b4988;color:#f4dcac;background:linear-gradient(135deg,#34251d,#21191e);border-radius:10px;display:inline-flex;gap:9px;align-items:center;justify-content:center;padding:11px 15px;font:600 12px/1.35 system-ui,sans-serif;cursor:pointer;min-height:44px}
-.hs-back-home:hover,.hs-index-toggle:hover,.hs-view-switch button:hover,.hs-page-turn button:hover:not(:disabled){border-color:#f4c775;box-shadow:0 0 17px #cb9a4b28}
-.hs-story-page button:focus-visible{outline:3px solid #f3c37b;outline-offset:3px}
-.hs-story-toolbar{display:flex;align-items:center;gap:11px;justify-content:flex-end;padding:0 0 15px;flex-wrap:wrap}
-.hs-index-toggle{display:none}
-.hs-view-switch{display:flex;gap:7px}
-.hs-view-switch button{border-radius:9px}
-.hs-view-switch button.active{background:linear-gradient(120deg,#6b492f,#332116);border-color:#efbd71;color:#fff0d1}
-.hs-story-layout{display:grid;grid-template-columns:minmax(220px,256px) minmax(0,1fr);align-items:start;gap:clamp(14px,2vw,30px);min-width:0}
-.hs-story-index{position:sticky;top:20px;max-height:calc(100dvh - 50px);overflow:auto;scrollbar-color:#957045 #21161a;scrollbar-width:thin;border:1px solid #98704478;border-radius:15px;background:linear-gradient(150deg,#211719,#100d14);padding:20px 14px;box-shadow:0 15px 35px #0006}
-.hs-index-intro{padding:3px 6px 17px;border-bottom:1px solid #99713e69;margin-bottom:15px}
-.hs-index-intro svg{color:#d7ad65;vertical-align:middle;margin-right:8px}
-.hs-index-intro strong{color:#f0d5a1;font:400 19px Georgia,serif}
-.hs-index-intro p{color:#a99a91;font:12px/1.5 system-ui,sans-serif;margin:8px 0 0}
-.hs-index-book{margin-bottom:17px;display:grid;gap:4px}
-.hs-index-book>span{color:#cfaa75;font:700 9px/1.45 system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;padding:4px 7px 8px}
-.hs-index-book>button{width:100%;border:1px solid transparent;border-radius:8px;background:transparent;display:flex;gap:10px;align-items:center;text-align:left;padding:10px 8px;color:#ded1bb;font:12px/1.35 Georgia,serif;cursor:pointer;min-height:42px}
-.hs-index-book>button span{color:#bd945c;font:700 11px system-ui,sans-serif;flex:none}
-.hs-index-book>button:hover{background:#6a492b55}
-.hs-index-book>button.selected{background:linear-gradient(90deg,#71502f88,#251919);border-color:#dea750bb;color:#ffe8b5;box-shadow:inset 3px 0 #e8c17c,0 0 18px #aa723534}
-.hs-reading-area{min-width:0}
-.hs-story-spread{--hs-accent:#c6984b;position:relative;isolation:isolate;overflow:hidden;border:1px solid #ae804a;border-radius:17px;box-shadow:0 20px 40px #09050abf, inset 0 0 35px #55301058;background:#c59a61 url('/historia/pergaminho-antigo.webp') center/100% 100% no-repeat;padding:clamp(12px,1.55vw,25px)}
-.hs-story-spread.hs-theme-karma{--hs-accent:#9f57ad}
-.hs-story-spread.hs-theme-tech{--hs-accent:#6bb4db}
-.hs-story-spread.hs-theme-human{--hs-accent:#b39060}
-.hs-story-spread.hs-theme-nature{--hs-accent:#82ae6e}
-.hs-story-spread.hs-theme-duo{--hs-accent:#a47fba}
-.hs-story-spread.hs-theme-ember{--hs-accent:#cf873a}
-/* Safe typographic area: parchment flowers are OUTSIDE its almost opaque inset */
-.hs-spread-inner{position:relative;z-index:1;display:grid;grid-template-columns:minmax(0,1.01fr) minmax(0,.99fr);align-items:stretch;min-height:730px;box-shadow:0 4px 22px #44281722}
-.hs-story-narrative{min-width:0;padding:clamp(25px,3vw,50px) clamp(19px,2.45vw,43px);background:linear-gradient(95deg,rgba(245,227,193,.973),rgba(244,226,191,.966));border:1px solid #9f774565;border-right:0;color:var(--hs-ink);position:relative;z-index:2}
-.hs-story-narrative::before{content:'';position:absolute;inset:13px;pointer-events:none;border:1px solid #b9946252}
-.hs-spread-title{position:relative;z-index:1;text-align:center;margin:0 0 26px;padding:6px 4px 19px;border-bottom:1px solid #a57b46aa}
-.hs-chapter-number{font:700 10px/1.5 system-ui,sans-serif;color:#74502b;letter-spacing:.16em;text-transform:uppercase}
-.hs-spread-title h2{font:400 clamp(28px,2.45vw,42px)/1.15 Georgia,serif;letter-spacing:-.018em;color:#332017;margin:11px 0 7px;text-wrap:balance}
-.hs-chapter-deck{font:italic 600 clamp(14px,1.05vw,17px)/1.5 Georgia,serif;color:#694322;margin:0}
-.hs-spread-rule{color:#a87533;display:block;margin-top:14px;font-size:14px;letter-spacing:.13em}
-.hs-narrative-passages{position:relative;z-index:1;max-width:690px;margin:auto}
-.hs-story-passage{margin-bottom:28px}
-.hs-story-passage h3{font:600 clamp(19px,1.23vw,22px)/1.3 Georgia,serif;color:#5b341c;margin:0 0 14px}
-.hs-story-passage p{font:500 clamp(16px,1.04vw,18px)/1.76 Georgia,'Times New Roman',serif;color:#23170e;margin:0 0 15px;overflow-wrap:break-word;hyphens:auto;text-wrap:pretty}
-.hs-story-passage:first-child p:first-of-type::first-letter{font-size:1.8em;color:#6e451e}
-.hs-ink-flux{color:#815000;font-weight:800}
-.hs-ink-karma{color:#5c1c6e;font-weight:800}
-.hs-spread-source{position:relative;z-index:1;display:flex;justify-content:space-between;gap:12px;padding-top:14px;margin-top:12px;border-top:1px solid #9873448c;color:#624627;font:600 10px/1.4 system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase}
-.hs-story-illustration{position:relative;overflow:hidden;min-width:0;min-height:680px;margin:0;background:linear-gradient(120deg,#1b151c,#573923);border:1px solid #986942;border-left:0;isolation:isolate}
-.hs-story-illustration img{display:block;width:100%;height:100%;position:absolute;inset:0;object-fit:cover;object-position:center center;filter:saturate(1.09) contrast(1.05)}
-.hs-art-vignette{position:absolute;inset:0;pointer-events:none;z-index:1;background:linear-gradient(90deg,rgba(238,214,172,.45) 0%,transparent 18%),linear-gradient(0deg,#0d0a14d8,transparent 23%,transparent 81%,#28111d36)}
-.hs-story-illustration figcaption{position:absolute;z-index:2;display:flex;align-items:center;gap:12px;bottom:28px;left:30px;right:20px;color:#f9dfaa;font:600 clamp(13px,1.12vw,17px)/1.4 Georgia,serif;text-shadow:0 2px 6px black,0 3px 16px black;letter-spacing:.07em}
-.hs-story-illustration figcaption svg{color:var(--hs-accent);flex:none}
-.hs-story-illustration::after{content:'';position:absolute;z-index:2;inset:12px;border:1px solid #ecca8349;border-radius:6px;pointer-events:none}
-.hs-spread-burn{position:absolute;z-index:3;pointer-events:none;border-radius:50%;width:95px;height:87px;opacity:.5;filter:blur(8px)}
-.hs-spread-burn-flux{top:-25px;left:-25px;background:radial-gradient(circle,#d594356b,transparent 68%)}
-.hs-spread-burn-karma{bottom:-25px;right:-25px;background:radial-gradient(circle,#952eb36b,transparent 68%)}
-.hs-page-turn{padding:19px 0;display:flex;align-items:center;justify-content:space-between;gap:12px}
-.hs-page-turn>span{display:inline-flex;align-items:center;gap:8px;color:#dbc49e;font:12px system-ui,sans-serif}
-.hs-page-turn button:disabled{opacity:.4;cursor:default}
-.hs-continuous-reader{display:grid;gap:24px;padding:0;background:none}
-.hs-story-spread-continuous{margin:0}
-.hs-story-colophon{display:flex;align-items:center;justify-content:center;gap:12px;border-top:1px solid #c9a16c52;padding:18px 8px;margin-top:8px;text-align:center;color:#c6ac8a;font:12px/1.6 system-ui,sans-serif}
-.hs-story-colophon svg{color:#c7a46c;flex:none}
-@media(min-width:1300px){.hs-story-spread{padding:clamp(17px,1.7vw,28px)}.hs-spread-inner{min-height:790px}}
-@media(max-width:1320px){.hs-story-layout{grid-template-columns:207px minmax(0,1fr)}.hs-story-index{padding:15px 10px}.hs-story-narrative{padding:25px clamp(21px,2vw,33px)}.hs-story-passage p{font-size:16px;line-height:1.7}.hs-spread-title h2{font-size:clamp(25px,2.6vw,34px)}}
-@media(max-width:1100px){.hs-story-layout{grid-template-columns:minmax(0,1fr)}.hs-story-index{display:none;position:static;max-height:none}.hs-story-index.is-open{display:block}.hs-index-toggle{display:inline-flex}.hs-spread-inner{grid-template-columns:minmax(0,1.03fr) minmax(0,.97fr)}.hs-story-narrative{padding:32px clamp(23px,3.5vw,50px)}}
-@media(max-width:740px){.hs-story-page{padding:10px}.hs-story-head{flex-wrap:wrap}.hs-head-crest{width:48px;height:48px}.hs-back-home{margin-left:auto}.hs-story-toolbar{justify-content:flex-start}.hs-spread-inner{grid-template-columns:1fr;min-height:0}.hs-story-spread{background-size:cover;padding:14px}.hs-story-narrative{padding:35px clamp(23px,5vw,42px);border:1px solid #99724b70}.hs-spread-title h2{font-size:clamp(28px,6vw,39px)}.hs-story-passage p{font-size:17px;line-height:1.75}.hs-story-illustration{border:1px solid #a77d49;border-top:0;min-height:0;aspect-ratio:4/3}.hs-story-illustration figcaption{bottom:17px;left:21px}.hs-page-turn{gap:6px}.hs-page-turn button{padding:10px 8px}.hs-continuous-reader{gap:15px}}
-@media(max-width:440px){.hs-story-page{padding:7px}.hs-story-head h1{font-size:30px}.hs-story-head p{font-size:13px}.hs-view-switch{width:100%}.hs-view-switch button{flex:1;font-size:11px;padding:9px 7px}.hs-index-toggle{width:100%}.hs-story-spread{padding:10px}.hs-story-narrative{padding:31px 19px}.hs-story-passage p{font-size:16px;line-height:1.72}.hs-story-illustration{aspect-ratio:1/1}.hs-page-turn>span{font-size:11px}.hs-page-turn button{font-size:11px;padding:9px 5px}.hs-story-colophon svg{display:none}}
-@media(prefers-reduced-motion:reduce){.hs-story-page *, .hs-story-page *::before,.hs-story-page *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
-@media print{.hs-story-head,.hs-story-toolbar,.hs-story-index,.hs-page-turn,.hs-story-colophon{display:none!important}.hs-story-layout{display:block}.hs-story-page{max-width:none}.hs-story-spread{break-inside:avoid;box-shadow:none}.hs-spread-inner{min-height:0}.hs-story-illustration{min-height:400px}}
+/* HERDEIROS · A História de Arcádia
+   Livro antigo, arte incorporada ao pergaminho, narrativa preservada.
+   Os 17 capítulos são controlados por StoryBookPage.tsx.
+   Nunca aplicar filtros na coluna do texto. */
+.hs-story-page {
+  --hs-ink: #25160d;
+  --hs-paper: #e7c795;
+  --hs-gold: #dcb26e;
+  --hs-violet: #77328d;
+  font-family: Georgia, 'Times New Roman', serif;
+  color: #f6dfb1;
+  width: 100%;
+  max-width: 1920px;
+  margin: 0 auto 45px;
+  padding: clamp(5px, .8vw, 16px);
+  min-width: 0;
+}
+.hs-story-page *, .hs-story-page *::before, .hs-story-page *::after { box-sizing: border-box; }
+.hs-story-page button { cursor:pointer; font: inherit; }
+.hs-story-page button:focus-visible { outline: 3px solid #f4d18a; outline-offset: 3px; }
+
+/* The global site header remains unchanged; compact controls do not recreate it. */
+.hs-story-toolbar {display:flex; justify-content:flex-end; align-items:center; padding:0 8px 10px; gap:10px;}
+.hs-view-switch {display:flex; gap:7px;}
+.hs-view-switch button,.hs-index-toggle,.hs-back-home,.hs-page-turn button {
+  display:inline-flex; justify-content:center; align-items:center; gap:8px;
+  border:1px solid #8b683f; border-radius:5px;
+  background:linear-gradient(160deg,#251b19,#120d13);
+  color:#e8d0a2; min-height:40px; padding:9px 13px;
+  font-family: Georgia, 'Times New Roman', serif; font-size:12px; letter-spacing:.025em;
+  transition:border-color .17s ease, box-shadow .17s ease, background .17s ease;
+}
+.hs-view-switch button.active,.hs-view-switch button:hover,.hs-index-toggle:hover,.hs-back-home:hover,
+.hs-page-turn button:hover:not(:disabled) {border-color:#e8b65c; color:#ffdf9e; box-shadow:0 0 16px #e8b35d35;}
+.hs-view-switch button.active {background:linear-gradient(160deg,#5a3c24,#24181c);}
+.hs-index-toggle {display:none;}
+
+.hs-story-layout {
+  display:grid; grid-template-columns: minmax(245px, 290px) minmax(0,1fr);
+  gap: clamp(8px,1.05vw,18px); align-items:start; min-width:0;
+}
+.hs-story-index {
+  position: sticky; top:14px;
+  max-height: calc(100dvh - 32px); overflow-y:auto; overflow-x:hidden;
+  padding:17px 12px 14px;
+  border:1px solid #9d7545;
+  background:linear-gradient(145deg,#1b1414fa,#08080de8),
+    radial-gradient(circle at 50% 0,#5a382d,#110d11);
+  box-shadow: inset 0 0 0 3px #0e0a0a, inset 0 0 0 4px #6e4d3294, 0 15px 38px #000a;
+  scrollbar-color:#a47c43 #160f13; scrollbar-width:thin;
+  isolation:isolate;
+}
+.hs-story-index::before,.hs-story-index::after {
+  position:absolute; content:'✧ ─────── ✦ ─────── ✧';
+  left:14px; right:14px; color:#987346; font-size:11px; letter-spacing:1px;
+  text-align:center; pointer-events:none;
+}
+.hs-story-index::before{top:2px}.hs-story-index::after{bottom:2px}
+.hs-index-intro{padding:18px 7px 16px; margin-bottom:6px; text-align:center; border-bottom:1px solid #87613788;}
+.hs-index-crest{font-size:31px;color:#e0ad5e; text-shadow:0 0 15px #f1b04a77;}
+.hs-index-intro h1{margin:4px 0 3px; font:400 clamp(18px,1.3vw,21px)/1.2 Georgia,serif; letter-spacing:.09em; color:#eed9ad;}
+.hs-index-intro p{font:11px/1.4 Georgia,serif; color:#b79b76; margin:6px 0 0;}
+.hs-index-chapters{display:grid;gap:1px;padding:4px 0 12px;}
+.hs-index-row {
+  position:relative; isolation:isolate; display:flex; align-items:center; gap:9px;
+  padding:9px 8px; min-height:39px; border:1px solid transparent; border-radius:3px;
+  color:#e2ccac; background:transparent; width:100%; text-align:left;
+}
+.hs-index-row:hover {background:#a7802e1b; border-color:#8a693e65;}
+.hs-index-row.selected {
+  color:#ffdfaa; background:linear-gradient(90deg,#604121ca,#35231888,#18111a95);
+  border-color:#e6b765; box-shadow:0 0 17px #e6a4544a, inset 0 0 12px #d9a75821;
+}
+.hs-index-row::before{content:'';position:absolute;inset:auto 0 0 39px;height:1px;background:linear-gradient(90deg,#a7824d44,transparent);}
+.hs-index-row>span:nth-child(2){min-width:0;flex:1;display:grid;gap:2px;}
+.hs-index-row strong {display:block;font:400 11.4px/1.25 Georgia,serif;letter-spacing:.025em;white-space:normal;}
+.hs-index-row small {font:10px/1.3 Georgia,serif;color:#ad9273;display:none;}
+.hs-index-row.selected small {display:block;color:#e6c398;}
+.hs-index-symbol {flex:0 0 26px; display:grid;place-items:center; height:26px;border:1px solid #88653690;
+  transform:rotate(45deg);color:#cda05c;}
+.hs-index-symbol svg {transform:rotate(-45deg);}
+.hs-index-chevron{flex:none;opacity:0;color:#f2bd64;}
+.hs-index-row.selected .hs-index-chevron{opacity:1;}
+.hs-back-home {width:100%;margin:7px auto 9px;}
+.hs-reading-area {position:relative;min-width:0;}
+
+/* The paper is one complete sheet, not two floating rectangles. */
+.hs-story-spread{
+  --hs-accent:#d4a356;
+  position:relative; isolation:isolate; overflow:hidden;
+  background:#b7834b url('/historia/pergaminho-antigo.webp') center/100% 100% no-repeat;
+  box-shadow:0 23px 43px #000b,0 0 0 1px #cc905a,
+     0 0 25px #ca713c50, inset 0 0 30px #34160d8a;
+  border:1px solid #bd8b4c;
+  padding:clamp(13px,1.45vw,25px);
+  clip-path:polygon(0 1.1%,1.7% .3%,4.4% .65%,7.2% 0,11% .8%,16% .15%,22% .7%,28% .22%,34% .85%,40% .35%,46% .8%,52% .14%,59% .55%,65% 0,72% .7%,79% .14%,86% .7%,94% .1%,98.7% .9%,100% 2%,99.6% 11%,100% 22%,99.5% 36%,100% 46%,99.5% 57%,100% 70%,99.6% 83%,100% 98.8%,97.7% 99.5%,91% 98.9%,85% 99.8%,77% 99%,70% 99.6%,62% 99%,55% 99.8%,46% 99.2%,37% 99.8%,29% 99%,20% 99.6%,14% 99.2%,8% 99.9%,1% 99%,0 96%,.4% 84%,0 70%,.5% 57%,0 44%,.35% 30%,0 16%);
+}
+.hs-story-spread.hs-theme-karma {--hs-accent:#b272c0;}
+.hs-story-spread.hs-theme-tech {--hs-accent:#7bbbd5;}
+.hs-story-spread.hs-theme-human {--hs-accent:#c99a5f;}
+.hs-story-spread.hs-theme-nature {--hs-accent:#91b179;}
+.hs-story-spread.hs-theme-duo {--hs-accent:#bf8eaf;}
+.hs-story-spread.hs-theme-ember {--hs-accent:#d38a42;}
+.hs-story-spread::before{content:'';position:absolute;inset:0;z-index:3;pointer-events:none;
+  background:
+    radial-gradient(ellipse 7% 17% at 0% 40%,#1f100be3,transparent),
+    radial-gradient(ellipse 17% 9% at 100% 1%,#1a0e13d6,transparent),
+    radial-gradient(ellipse 11% 10% at 0% 100%,#1d1009d0,transparent),
+    radial-gradient(ellipse 13% 8% at 100% 100%,#1c0e11d9,transparent),
+    linear-gradient(to bottom,#311907c4,transparent 4%,transparent 96%,#321707ba),
+    linear-gradient(to right,#281408aa,transparent 4%,transparent 96%,#23100587);
+  mix-blend-mode:multiply;
+}
+.hs-story-spread::after{content:'';position:absolute;inset:4px;z-index:4;pointer-events:none;
+  border:1px solid #42230a80;
+  box-shadow:inset 0 0 15px #82430d55,inset 0 0 28px #38170639;
+}
+.hs-spread-inner{
+  position:relative; display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.07fr);
+  min-height:clamp(660px,56vw,860px); height:clamp(660px,56vw,860px);
+  isolation:isolate;overflow:hidden;
+  background:#ebcc95;
+  border:1px solid #a66b3c78;
+}
+.hs-story-narrative{
+  position:relative; z-index:2; min-width:0; min-height:0;
+  height:100%; overflow-y:auto; overscroll-behavior:contain;
+  color:var(--hs-ink);
+  background:linear-gradient(90deg,#e9d2a9 0%,#f0d9b0 45%,#f0d8ae 81%,#e7c393 100%);
+  padding:clamp(30px,3.1vw,57px) clamp(24px,3.1vw,50px) clamp(40px,3.1vw,55px);
+  scrollbar-width:thin;scrollbar-color:#9e6b41 #e9cc9d;
+}
+.hs-story-narrative::before{content:'';position:absolute;z-index:0;inset:0;pointer-events:none;
+ background: url('/historia/pergaminho-antigo.webp') center/100% 100% no-repeat;
+ opacity:.12; mix-blend-mode:multiply;}
+.hs-story-narrative::after{content:'';position:sticky;z-index:2;bottom:-55px;display:block;height:5px;
+ background:linear-gradient(90deg,transparent,#94704440,transparent);margin:15px 0 0;}
+.hs-spread-title,.hs-narrative-passages,.hs-spread-source{position:relative;z-index:1;}
+.hs-spread-title{position:relative;text-align:center; margin:0 0 22px;padding:7px 0 18px;border-bottom:1px solid #815c3584;}
+.hs-chapter-number{display:block;color:#66441f;font:600 11px/1.4 Georgia,serif;letter-spacing:.17em;}
+.hs-spread-title h2{font:400 clamp(29px,2.9vw,48px)/1.1 Georgia,serif;letter-spacing:.01em;text-transform:uppercase;
+ margin:13px 0 8px;color:#21130a;text-wrap:balance;}
+.hs-chapter-deck{color:#583819;font:600 clamp(12px,1.12vw,16px)/1.45 Georgia,serif;
+ letter-spacing:.10em;text-transform:uppercase;margin:0;}
+.hs-spread-rule{display:block;margin:15px 0 0;color:#946a39;letter-spacing:.1em;font-size:13px;}
+.hs-narrative-passages{max-width:590px;margin:auto;}
+.hs-story-passage{margin:0 0 23px;}
+.hs-story-passage h3{font:600 clamp(16px,1.4vw,20px)/1.35 Georgia,serif;color:#593417;
+ margin:0 0 12px;padding-left:10px;border-left:3px solid #ae813e;}
+.hs-story-passage p{font:500 clamp(16px,1.1vw,18px)/1.72 Georgia,'Times New Roman',serif;
+ color:#211308;margin:0 0 14px;text-align:left;overflow-wrap:break-word;hyphens:auto;}
+.hs-story-passage:first-child p:first-of-type::first-letter {font-size:1.95em;color:#754409;}
+.hs-ink-flux{color:#93560a;font-weight:800;text-shadow:0 0 1px #d3a34d44;}
+.hs-ink-karma{color:#612078;font-weight:800;}
+.hs-spread-source{display:flex;justify-content:space-between;gap:8px;padding-top:12px;margin-top:16px;
+ border-top:1px solid #936c4188;color:#664120;font:600 10px/1.35 Georgia,serif;}
+/* Image blends into the same sheet of parchment: no separate art border or card. */
+.hs-story-illustration{position:relative;margin:0;min-width:0;height:100%;overflow:hidden;
+ background:linear-gradient(120deg,#a66e37,#1b1322);isolation:isolate;}
+.hs-story-illustration>img{display:block;width:100%;height:100%;object-fit:cover;object-position:center;
+ filter:saturate(1.03) contrast(1.06);}
+.hs-story-illustration::before{content:'';position:absolute;z-index:1;inset:0;pointer-events:none;
+ background:
+ linear-gradient(90deg,#e7c393 0%,#ebcb9c97 8%,transparent 23%),
+ linear-gradient(0deg,#2d190f8c,transparent 24%,transparent 84%,#3a1b0f30),
+ linear-gradient(270deg,#3c1a1494,transparent 9%);}
+.hs-story-illustration figcaption{z-index:2;position:absolute;bottom:33px;right:28px;left:24px;
+ display:inline-flex;align-items:center;justify-content:flex-end;gap:9px;
+ text-align:right;color:#ffe6b4;text-shadow:0 1px 5px #080509,0 1px 16px #080509;
+ font:500 12px/1.4 Georgia,serif;letter-spacing:.07em;}
+.hs-story-illustration figcaption svg{color:var(--hs-accent);flex:none;}
+.hs-edge{position:absolute;z-index:5;pointer-events:none;}
+.hs-edge-top,.hs-edge-bottom{left:0;right:0;height:22px;
+ background:repeating-linear-gradient(90deg,transparent 0 37px,#2b170d73 38px 41px,transparent 44px 70px),linear-gradient(#35170899,transparent);
+ opacity:.73;}
+.hs-edge-top{top:0;}.hs-edge-bottom{bottom:0;transform:rotate(180deg);}
+.hs-edge-left,.hs-edge-right{top:0;bottom:0;width:20px;background:linear-gradient(90deg,#30160b95,transparent);opacity:.75;}
+.hs-edge-left{left:0;}.hs-edge-right{right:0;transform:rotate(180deg);}
+.hs-spread-glyph{position:absolute;left:20px;top:18px;z-index:5;color:#b98536;text-shadow:0 0 10px #dba958;
+ font-size:38px;pointer-events:none;line-height:1;}
+.hs-spread-seal{position:absolute;left:11px;bottom:9px;z-index:6;pointer-events:none;
+ display:grid;place-items:center;width:61px;height:61px;border-radius:50%;
+ border:4px double #d5a65e;background:radial-gradient(circle,#681929,#2a0a13);
+ color:#e6bf79;font-size:26px;box-shadow:0 3px 8px #000c,0 0 20px #f2a45088;}
+.hs-page-turn{z-index:5;position:relative;display:flex;align-items:center;justify-content:center;gap:14px;
+ margin:-62px auto 28px;width:max-content;max-width:100%;background:linear-gradient(90deg,#271815,#3d2418,#271815);
+ border:1px solid #bb8755;box-shadow:0 5px 18px #06030780;padding:7px 12px;border-radius:30px;}
+.hs-page-turn>span{display:inline-flex;align-items:center;gap:8px;color:#edcc96;font:500 13px Georgia,serif;white-space:nowrap;}
+.hs-page-turn>span svg{color:#e2ad58;}
+.hs-page-turn button{min-height:34px;padding:5px 9px;border:none;background:none;box-shadow:none!important;}
+.hs-page-turn button:disabled{opacity:.32;cursor:default;}
+.hs-story-colophon{text-align:center;font:11px/1.5 Georgia,serif;letter-spacing:.06em;color:#c4a779;padding:12px 16px;}
+.hs-continuous-reader{display:grid;gap:26px;}
+.hs-story-spread-continuous .hs-story-narrative{overflow:visible;height:auto;}
+.hs-story-spread-continuous .hs-spread-inner{height:auto;min-height:760px;}
+.hs-story-spread-continuous .hs-story-illustration>img{position:absolute;inset:0;}
+.hs-story-spread-continuous .hs-story-illustration{min-height:760px;}
+/* Laptop and tablet: the sidebar collapses before text becomes too narrow. */
+@media(max-width:1260px){.hs-story-layout{grid-template-columns:minmax(0,1fr)}
+ .hs-story-index{display:none;position:relative;top:auto;max-height:none;overflow:visible;margin-bottom:9px;}
+ .hs-story-index.is-open{display:block}.hs-index-toggle{display:inline-flex;}
+ .hs-spread-inner{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+ .hs-story-narrative{padding:34px clamp(24px,3.5vw,50px) 50px;}
+}
+@media(max-width:820px){.hs-spread-inner{height:auto;min-height:0;display:flex;flex-direction:column;}
+ .hs-story-narrative{height:auto;max-height:none;overflow:visible;padding:34px clamp(23px,5vw,45px) 45px;}
+ .hs-story-illustration{height:auto;min-height:0;aspect-ratio:1.15/1;}
+ .hs-story-illustration img{width:100%;height:100%;position:absolute;inset:0;object-fit:cover;}
+ .hs-story-illustration::before{background:linear-gradient(to bottom,#ebd0a6 0%,#ead2ac4d 9%,transparent 25%),linear-gradient(0deg,#1a1018ab,transparent 40%);}
+ .hs-page-turn{margin:-22px auto 28px;}
+ .hs-story-spread-continuous .hs-story-illustration{min-height:0;aspect-ratio:1.1/1;}
+ .hs-story-spread-continuous .hs-spread-inner{min-height:0;}
+}
+@media(max-width:500px){.hs-story-page{padding:5px 5px 30px;}
+ .hs-story-toolbar{padding:3px 0 11px;justify-content:flex-start;gap:5px;flex-wrap:wrap;}
+ .hs-index-toggle{flex:1;}.hs-view-switch{flex:1;}
+ .hs-view-switch button{font-size:11px;padding:7px 8px;}
+ .hs-story-spread{padding:9px;clip-path:none;border-radius:9px;}
+ .hs-story-narrative{padding:34px 18px 31px;}
+ .hs-spread-title h2{font-size:clamp(27px,8vw,37px)}
+ .hs-story-passage p{font-size:16.5px;line-height:1.74;}
+ .hs-story-illustration{aspect-ratio:1/1;}
+ .hs-story-illustration figcaption{right:14px;bottom:18px;}
+ .hs-spread-glyph{top:9px;left:10px;font-size:24px;}
+ .hs-spread-seal{width:39px;height:39px;font-size:16px;left:3px;bottom:3px;}
+ .hs-page-turn{gap:5px;padding:4px 5px;}
+ .hs-page-turn>span{font-size:12px;gap:3px;}
+ .hs-page-turn button{font-size:11px;min-height:35px;padding:4px 3px;}
+}
+@media(prefers-reduced-motion:reduce){.hs-story-page *, .hs-story-page *::before,.hs-story-page *::after{
+ animation:none!important;transition:none!important;scroll-behavior:auto!important;}}
+@media print {.hs-story-toolbar,.hs-story-index,.hs-page-turn,.hs-story-colophon{display:none!important;}
+ .hs-story-layout{display:block}.hs-story-spread{break-inside:avoid;box-shadow:none;clip-path:none;}
+ .hs-spread-inner{height:auto;min-height:0}.hs-story-narrative{overflow:visible;height:auto;}
+ .hs-story-illustration{min-height:600px}}

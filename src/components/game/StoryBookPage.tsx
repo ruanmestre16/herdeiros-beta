@@ -243,31 +243,31 @@ const CHAPTERS: Chapter[] = [
   }
 ];
 
-/** Ornamentos ficam sempre fora da coluna do texto. O capítulo determina o tema visual. */
+
+/** Ilustração temática por capítulo. Os textos em CHAPTERS acima permanecem intocados. */
 const CHAPTER_ART = {
-  principio: { tone: 'flux', emblem: Sparkles, detail: Sun, note: 'A origem das duas forças' },
-  'primeiro-gaki': { tone: 'karma', emblem: Flame, detail: Moon, note: 'A primeira corrupção' },
-  guerra: { tone: 'duo', emblem: Sword, detail: Shield, note: 'A Grande Guerra' },
-  espelho: { tone: 'duo', emblem: Orbit, detail: Eye, note: 'Dois mundos' },
-  'arcadia-hoje': { tone: 'flux', emblem: Compass, detail: Sun, note: 'O continente desperto' },
-  caixa: { tone: 'tech', emblem: Building2, detail: Cpu, note: 'A Caixa' },
-  floresta: { tone: 'nature', emblem: LeafIcon, detail: Sparkles, note: 'Memória da floresta' },
-  deserto: { tone: 'ember', emblem: Sun, detail: Map, note: 'Sob o sol' },
-  faccoes: { tone: 'duo', emblem: Shield, detail: LeafIcon, note: 'Controle e liberdade' },
-  humanos: { tone: 'human', emblem: Scissors, detail: Headphones, note: 'A imaginação humana' },
-  agentes: { tone: 'tech', emblem: Cpu, detail: Orbit, note: 'O Núcleo' },
-  arcadianos: { tone: 'flux', emblem: Sword, detail: Sparkles, note: 'A Arma de Ego' },
-  gakis: { tone: 'karma', emblem: Flame, detail: Moon, note: 'Corpo moldado pelo Karma' },
-  minerio: { tone: 'flux', emblem: Gem, detail: Sparkles, note: 'Pedra de Fluxo' },
-  lingua: { tone: 'duo', emblem: Feather, detail: Eye, note: 'A Língua Mãe' },
-  portais: { tone: 'duo', emblem: Orbit, detail: Compass, note: 'As travessias' },
-  herdeiros: { tone: 'flux', emblem: Crown, detail: Shield, note: 'O legado' },
+  principio: { tone: 'duo', emblem: Sparkles, note: 'O encontro entre Fluxo e Karma' },
+  'primeiro-gaki': { tone: 'karma', emblem: Flame, note: 'A primeira corrupção' },
+  guerra: { tone: 'duo', emblem: Sword, note: 'A Grande Guerra' },
+  espelho: { tone: 'duo', emblem: Orbit, note: 'A separação dos mundos' },
+  'arcadia-hoje': { tone: 'flux', emblem: Compass, note: 'Arcádia desperta' },
+  caixa: { tone: 'tech', emblem: Building2, note: 'As ruínas e torres da Caixa' },
+  floresta: { tone: 'nature', emblem: LeafIcon, note: 'A Grande Floresta' },
+  deserto: { tone: 'ember', emblem: Sun, note: 'A imensidão do Deserto' },
+  faccoes: { tone: 'duo', emblem: Shield, note: 'Consórcio e Berços' },
+  humanos: { tone: 'human', emblem: Scissors, note: 'O despertar da humanidade' },
+  agentes: { tone: 'tech', emblem: Cpu, note: 'O coração do Núcleo tecnológico' },
+  arcadianos: { tone: 'flux', emblem: Sword, note: 'Os Arcadianos e o Fluxo' },
+  gakis: { tone: 'karma', emblem: Flame, note: 'A transformação karmática' },
+  minerio: { tone: 'flux', emblem: Gem, note: 'O Minério de Fluxo' },
+  lingua: { tone: 'tech', emblem: Feather, note: 'A Língua Mãe' },
+  portais: { tone: 'duo', emblem: Orbit, note: 'Os caminhos entre mundos' },
+  herdeiros: { tone: 'flux', emblem: Crown, note: 'O legado dos Herdeiros' },
 } as const;
 
+const ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII'];
 
-const BOOKS = Array.from(new Set(CHAPTERS.map(chapter => chapter.book)));
-
-/** Destaque contextual automático, apenas dentro da narrativa (não muda nomes próprios). */
+/** Salienta Fluxo e Karma sem alterar uma única palavra do texto da História. */
 function Ink({ children }: { children: string }) {
   return <>{children.split(/(Fluxo|Karma)/gi).map((part, index) => {
     if (/^fluxo$/i.test(part)) return <strong className="hs-ink-flux" key={index}>{part}</strong>;
@@ -276,41 +276,44 @@ function Ink({ children }: { children: string }) {
   })}</>;
 }
 
-/** Páginas visuais: texto e arte em colunas independentes.
- * Nenhuma textura, flor ou fumaça atravessa a área de leitura.
+/** Um único pergaminho: história legível à esquerda e imagem à direita.
+ *  O texto completo é mantido em uma coluna com rolagem independente no PC,
+ *  para que a área ilustrada não precise invadir o texto. No celular, rola tudo.
  */
-function StorySpread({ chapter, index, continuous = false }: { chapter: Chapter; index: number; continuous?: boolean }) {
+function StorySpread({chapter, index, continuous = false}: {chapter: Chapter; index: number; continuous?: boolean}) {
   const art = CHAPTER_ART[chapter.id as keyof typeof CHAPTER_ART] ?? CHAPTER_ART.principio;
   const Icon = art.emblem;
+  const ordinal = ROMAN[index] ?? String(index + 1);
   return <article className={`hs-story-spread hs-theme-${art.tone} ${continuous ? 'hs-story-spread-continuous' : ''}`}
     id={`historia-${chapter.id}`} aria-label={`Capítulo ${index + 1}: ${chapter.title}`}>
-    <div className="hs-spread-burn hs-spread-burn-flux" aria-hidden="true" />
-    <div className="hs-spread-burn hs-spread-burn-karma" aria-hidden="true" />
     <div className="hs-spread-inner">
       <div className="hs-story-narrative">
         <header className="hs-spread-title">
-          <span className="hs-chapter-number">CAPÍTULO {String(index + 1).padStart(2, '0')} · {chapter.book}</span>
+          <span className="hs-chapter-number">✦ &nbsp; CAPÍTULO {ordinal} &nbsp; ✦</span>
           <h2>{chapter.title}</h2>
-          <p className="hs-chapter-deck">{chapter.subtitle}</p>
-          <span className="hs-spread-rule" aria-hidden="true">✦ ───── ✧ ───── ✦</span>
+          <p className="hs-chapter-deck"><Ink>{chapter.subtitle}</Ink></p>
+          <span className="hs-spread-rule" aria-hidden="true">✧ ─────── ✦ ─────── ✧</span>
         </header>
         <div className="hs-narrative-passages">
-          {[chapter.left, chapter.right].map((passage, part) =>
-            <section className="hs-story-passage" key={part}>
-              <h3>{passage.heading}</h3>
-              {passage.paragraphs.map((paragraph, paraIndex) => <p key={paraIndex}><Ink>{paragraph}</Ink></p>)}
-            </section>
-          )}
+          {[chapter.left,chapter.right].map((passage, part) => <section key={part} className="hs-story-passage">
+            <h3>{passage.heading}</h3>
+            {passage.paragraphs.map((paragraph, paraIndex) => <p key={paraIndex}><Ink>{paragraph}</Ink></p>)}
+          </section>)}
         </div>
         <footer className="hs-spread-source"><span>{chapter.source}</span><span>{index + 1} / {CHAPTERS.length}</span></footer>
       </div>
-      <figure className="hs-story-illustration" aria-label={`Cena ilustrativa: ${art.note}`}>
+      <figure className="hs-story-illustration" aria-label={`Ilustração: ${art.note}`}>
         <img src={`/historia/cenas/${chapter.id}.webp`}
-          alt={`Ilustração temática de ${art.note.toLowerCase()}, referente ao capítulo ${chapter.title}`}
-          loading={index === 0 && !continuous ? 'eager' : 'lazy'} decoding="async" width={780} height={1000} />
-        <div className="hs-art-vignette" aria-hidden="true"/>
-        <figcaption><Icon size={21} strokeWidth={1.3}/><span>{art.note}</span></figcaption>
+          alt={`${art.note}. Ilustração narrativa referente a ${chapter.title}.`}
+          loading={index === 0 && !continuous ? 'eager' : 'lazy'} decoding="async" width={760} height={990}/>
+        <figcaption><Icon size={17} aria-hidden="true"/><span>{art.note}</span></figcaption>
       </figure>
+      <span className="hs-edge hs-edge-left" aria-hidden="true"/>
+      <span className="hs-edge hs-edge-right" aria-hidden="true"/>
+      <span className="hs-edge hs-edge-top" aria-hidden="true"/>
+      <span className="hs-edge hs-edge-bottom" aria-hidden="true"/>
+      <span className="hs-spread-glyph" aria-hidden="true">✶</span>
+      <span className="hs-spread-seal" aria-hidden="true">✦</span>
     </div>
   </article>;
 }
@@ -324,37 +327,55 @@ export function StoryBookPage({ onHome }: { onHome: () => void }) {
   const choose = (index: number) => {
     setActive(Math.min(Math.max(index, 0), CHAPTERS.length - 1));
     setIndexOpen(false);
-    if (typeof window !== 'undefined' && window.matchMedia('(max-width: 900px)').matches) {
-      requestAnimationFrame(() => top.current?.scrollIntoView({block: 'start', behavior: 'smooth'}));
+    if (typeof window !== 'undefined') {
+      requestAnimationFrame(() => top.current?.scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'}));
     }
   };
-  return <section className="hs-story-page" aria-label="Livro da História de Arcádia" ref={top}>
-    <header className="hs-story-head">
-      <div className="hs-head-crest" aria-hidden="true"><Compass size={31}/></div>
-      <div><span className="hs-eyebrow">HERDEIROS · O DESPERTAR · CRÔNICAS DE ARCÁDIA</span><h1>O Livro da <em>História</em></h1><p>Das primeiras forças à divisão dos mundos. Uma leitura das origens, lugares e povos de Arcádia, contada a partir das páginas originais do livro.</p></div>
-      <button type="button" className="hs-back-home" onClick={onHome}><Home size={17}/> Voltar ao portal</button>
-    </header>
+  return <section className="hs-story-page" aria-label="A História de Arcádia" ref={top}>
     <div className="hs-story-toolbar">
-      <button type="button" className="hs-index-toggle" aria-expanded={indexOpen} onClick={() => setIndexOpen(v => !v)}><List size={18}/> Índice de capítulos</button>
-      <div className="hs-view-switch" role="group" aria-label="Modo de leitura"><button type="button" className={!continuous ? 'active' : ''} aria-pressed={!continuous} onClick={() => setContinuous(false)}><BookOpen size={16}/> Livro aberto</button><button type="button" className={continuous ? 'active' : ''} aria-pressed={continuous} onClick={() => setContinuous(true)}><ScrollText size={16}/> Leitura contínua</button></div>
+      <button type="button" className="hs-index-toggle" aria-expanded={indexOpen} onClick={() => setIndexOpen(v => !v)}>
+        <List size={18}/> Capítulos
+      </button>
+      <div className="hs-view-switch" role="group" aria-label="Modo de leitura">
+        <button type="button" className={!continuous?'active':''} aria-pressed={!continuous} onClick={() => setContinuous(false)}><BookOpen size={16}/> Livro aberto</button>
+        <button type="button" className={continuous?'active':''} aria-pressed={continuous} onClick={() => setContinuous(true)}><ScrollText size={16}/> Leitura contínua</button>
+      </div>
     </div>
     <div className="hs-story-layout">
-      <aside className={`hs-story-index ${indexOpen ? 'is-open' : ''}`} aria-label="Capítulos do livro">
-        <div className="hs-index-intro"><Feather size={18}/><strong>Índice das crônicas</strong><p>Uma viagem pelas eras e segredos do mundo.</p></div>
-        {BOOKS.map(book => <div className="hs-index-book" key={book}><span>{book}</span>{CHAPTERS.map((item, index) => item.book === book ? <button type="button" key={item.id} className={active === index && !continuous ? 'selected' : ''} onClick={() => { setContinuous(false); choose(index); }} aria-current={active === index && !continuous ? 'page' : undefined}><span>{String(index + 1).padStart(2, '0')}</span>{item.title}</button> : null)}</div>)}
+      <aside className={`hs-story-index ${indexOpen ? 'is-open' : ''}`} aria-label="Índice dos capítulos">
+        <div className="hs-index-intro">
+          <span className="hs-index-crest" aria-hidden="true">✥</span>
+          <h1>A HISTÓRIA DE ARCÁDIA</h1>
+          <p>Dezessete capítulos · as crônicas do mundo</p>
+        </div>
+        <nav className="hs-index-chapters" aria-label="Escolher capítulo">
+          {CHAPTERS.map((item,index) => {
+            const art = CHAPTER_ART[item.id as keyof typeof CHAPTER_ART] ?? CHAPTER_ART.principio;
+            const Glyph = art.emblem;
+            return <button type="button" key={item.id}
+              className={`hs-index-row ${active === index && !continuous ? 'selected' : ''}`}
+              onClick={() => {setContinuous(false);choose(index);}}
+              aria-current={active === index && !continuous ? 'page' : undefined}>
+                <span className="hs-index-symbol" aria-hidden="true"><Glyph size={14}/></span>
+                <span><strong>{ROMAN[index]}. {item.title}</strong><small>{index === active && !continuous ? item.subtitle : item.book}</small></span>
+                <ChevronRight size={14} className="hs-index-chevron" aria-hidden="true"/>
+              </button>;
+          })}
+        </nav>
+        <button type="button" className="hs-back-home" onClick={onHome}><Home size={16}/> Voltar ao portal</button>
       </aside>
       <div className="hs-reading-area">
         {continuous ? <div className="hs-continuous-reader">
-          {CHAPTERS.map((item, index) => <StorySpread key={item.id} chapter={item} index={index} continuous />)}
+          {CHAPTERS.map((item,index) => <StorySpread chapter={item} index={index} continuous key={item.id}/>) }
         </div> : <>
-          <StorySpread chapter={chapter} index={active} />
-          <nav className="hs-page-turn" aria-label="Virar páginas">
-            <button type="button" onClick={() => choose(active - 1)} disabled={active === 0}><ChevronLeft size={20}/> Capítulo anterior</button>
-            <span><BookOpen size={18}/> {String(active + 1).padStart(2, '0')} de {CHAPTERS.length}</span>
-            <button type="button" onClick={() => choose(active + 1)} disabled={active === CHAPTERS.length - 1}>Próximo capítulo <ChevronRight size={20}/></button>
+          <StorySpread chapter={chapter} index={active}/>
+          <nav className="hs-page-turn" aria-label="Virar capítulos">
+            <button type="button" onClick={() => choose(active - 1)} disabled={active === 0} aria-label="Capítulo anterior"><ChevronLeft size={19}/> Anterior</button>
+            <span><Compass size={21}/> {active + 1} / {CHAPTERS.length}</span>
+            <button type="button" onClick={() => choose(active + 1)} disabled={active === CHAPTERS.length - 1} aria-label="Próximo capítulo">Próximo <ChevronRight size={19}/></button>
           </nav>
         </>}
-        <div className="hs-story-colophon"><ArrowLeft size={16}/><span>Crônicas de Arcádia · reconstruídas a partir do livro original (páginas 7 a 20). História do mundo, seus povos e segredos — sem regras de combate.</span><ArrowRight size={16}/></div>
+        <div className="hs-story-colophon">História de Arcádia · narrativa do mundo preservada · Fonte: livro original</div>
       </div>
     </div>
   </section>;
