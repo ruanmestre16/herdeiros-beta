@@ -135,7 +135,7 @@ export function LineagesPage({ onCreate }: {onCreate?: (lineage: CreationLineage
          <span className="hl-art-halo"/>
          {t.key==='arcadianos'&&<><img src="/linhagens/arcadiana.webp" className="hl-person hl-arcadiana" alt="" loading="lazy" decoding="async"/><img src="/linhagens/arcadiano.webp" className="hl-person hl-arcadiano" alt="" loading="lazy" decoding="async"/></>}
          {t.key==='humanos'&&!techCard&&<><img src="/linhagens/humano-cartas.webp" className="hl-person hl-humano-cartas" alt="" loading="lazy" decoding="async"/><img src="/linhagens/humano-urbano.webp" className="hl-person hl-humano-urbano" alt="" loading="lazy" decoding="async"/></>}
-         {techCard&&<img src="/linhagens/consorcio-760.webp" srcSet="/linhagens/consorcio-760.webp 760w, /linhagens/consorcio-1520.webp 1520w" sizes="(max-width: 720px) 95vw, (max-width: 1100px) 33vw, 450px" className="hl-tech-visual" alt="" loading="lazy" decoding="async"/>}
+         {techCard&&<img src="/linhagens/agentes-760.webp" srcSet="/linhagens/agentes-760.webp 760w, /linhagens/agentes-1520.webp 1520w" sizes="(max-width: 720px) 95vw, (max-width: 1100px) 33vw, 450px" className="hl-tech-visual" alt="" loading="lazy" decoding="async"/>}
          {t.key==='gakis'&&<img src="/linhagens/gaki-dark.webp" className="hl-person hl-gaki" alt="" loading="lazy" decoding="async"/>}
          <span className="hl-art-bottom"/>
         </div>
