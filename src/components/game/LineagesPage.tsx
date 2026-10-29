@@ -1,10 +1,10 @@
 import { useRef, useState } from 'react';
-import { ArrowRight, BookOpen, Cpu, Crown, Flame, Headphones, Moon, Shield, Sparkles, Sun, Sword, WandSparkles, type LucideIcon } from 'lucide-react';
+import { ArrowRight, BookOpen, ChevronLeft, ChevronRight, Cpu, Crown, Flame, Headphones, Moon, Shield, Sparkles, Sun, Sword, WandSparkles, type LucideIcon } from 'lucide-react';
 import './lineages-page.css';
 
 type Block = { title: string; text: string[] };
 type Stage = { name: string; subtitle: string; text: string; passive?: string };
-type Lineage = { key: string; name: string; epithet: string; intro: string; blocks: Block[]; stages: Stage[] };
+type Lineage = { key: string; name: string; epithet: string; intro: string; blocks: Block[]; stages: Stage[]; abilities?: Block[] };
 
 const LINEAGES: Lineage[] = [
   {
@@ -54,6 +54,32 @@ const LINEAGES: Lineage[] = [
 ];
 
 
+/** O Agente Tecnológico é uma subclasse dos Humanos, conforme o Códice Supremo (pp. 10–15). */
+const TECH_LINEAGE: Lineage = {
+  key: 'humanos',
+  name: 'Agentes Tecnológicos',
+  epithet: 'O Despertar Induzido · Subclasse Humana',
+  intro: 'Humanos que seguem o caminho tecnológico do Consórcio. Continuam nascidos sob o Véu da Ignorância, mas, em vez de despertar naturalmente para o Fluxo, recebem um Núcleo implantado. O Agente não comunga com o Fluxo: aprende a medi-lo, conduzi-lo e operá-lo por meio da tecnologia.',
+  blocks: [
+    { title: 'Uma vertente da linhagem humana', text: ['O Consórcio escolheu compreender o Fluxo pela análise e pelo controle. Seus Agentes Tecnológicos são humanos transformados por um despertar forçado, não uma nova raça nem Arcadianos.', 'O Núcleo implantado substitui a ligação espiritual direta por uma interface tecnológica. O Agente mantém CORPO e MENTE, mas trabalha com TECNOLOGIA no lugar de ESPÍRITO.'] },
+    { title: 'O Despertar Forçado', text: ['O despertar não começa no Ritual da Navalha. Começa com uma cirurgia: um Núcleo é ligado ao corpo, e o portador aprende a suportar a energia que passa por ele.', 'O primeiro contato provoca a Pane inicial, versão tecnológica da Agonia: dores intensas e risco à estabilidade do agente.'] },
+    { title: 'A Arma de Núcleo', text: ['Ao contrário de uma Arma de Vínculo ou de Ego, a Arma de Núcleo é fabricada. Pistolas, lâminas, lanças e manoplas são construídas e alimentadas pelo Núcleo de seu portador.', 'Seu poder não nasce da imaginação moldando a matéria: nasce de projeto, calibração e engenharia.'] },
+    { title: 'A tecnologia como legado', text: ['Os agentes utilizam PN (Poder do Núcleo), no lugar de PF, e desenvolvem Habilidades de Núcleo em vez de Nomenclaturas.', 'Podem aprimorar armas, implantes de Corpo Modular ou seus próprios protocolos; entre os combatentes do Consórcio, os estágios também são associados à Série MK.'] },
+  ],
+  abilities: [
+    { title: 'Olho Tecnológico', text: ['A passiva acompanha o agente em todos os estágios. Ao avistar uma habilidade, seus sensores a registram durante a cena. Se ela for usada novamente contra ele, o registro permite proteção adicional e calibragem de ataques contra quem a utilizou.', 'A Varredura evolui para Predição e, por fim, Anulação. A primeira observação apenas registra a habilidade.'] },
+    { title: 'Arma de Núcleo', text: ['Uma arma real, construída e alimentada pelo Núcleo. Os ataques com ela e com Habilidades de Núcleo usam TECNOLOGIA; armas comuns, sem Núcleo, continuam usando CORPO.'] },
+    { title: 'Poder do Núcleo (PN)', text: ['O agente armazena energia em PN, com valores atual e máximo próprios. O Núcleo pode ser carregado, calibrado, descarregado ou forçado, mas o excesso e a sobrecarga podem gerar riscos e Karma.'] },
+    { title: 'Habilidades de Núcleo', text: ['Os protocolos substituem as Nomenclaturas: Ativação Rápida (comando curto), Calibrada (protocolo) e Plena (autorização total). Cada habilidade nasce da história do agente e de um acordo com o Mestre.'] },
+  ],
+  stages: [
+    { name: 'Libertado Forçado', subtitle: 'O Despertar Induzido', text: 'O foco inicial é TECNOLOGIA. O Núcleo é implantado e a Arma de Núcleo entra em uso, enquanto o agente enfrenta a Pane inicial.', passive: 'Olho Tecnológico — Varredura: registra habilidades avistadas; na próxima utilização contra o agente, +3 de Bloqueio, crescendo +1 por repetição (até +6). Calibragem: +2 de dano contra quem usou a habilidade registrada.' },
+    { name: 'Moldador de Energia', subtitle: 'A Energia Dobrada', text: 'O foco se expande para TECNOLOGIA e CORPO. O agente lê padrões, antecipa trajetórias de energia e prepara o Núcleo para cargas maiores.', passive: 'Olho Tecnológico — Predição: +4 de Bloqueio ao enfrentar uma habilidade registrada, +2 a cada repetição (até +10). Calibragem: +3 de dano contra o usuário registrado.' },
+    { name: 'Tecnologia Mestra', subtitle: 'As Leis Medidas', text: 'O foco passa a TECNOLOGIA e MENTE. Núcleo e portador funcionam como uma só máquina, capazes de desmontar o que os ataca.', passive: 'Olho Tecnológico — Anulação: +6 de Bloqueio contra uma habilidade registrada; pode gastar 3 PN e usar a Reação para tentar anulá-la com TECNOLOGIA quando for repetida. Calibragem: +4 de dano contra quem a usou.' },
+  ],
+};
+
+
 type LineageKey = 'arcadianos' | 'humanos' | 'gakis';
 type DetailTab = 'historia' | 'habilidades' | 'estagios';
 type CreationLineage = 'Arcadiano' | 'Humano' | 'Gaki' | 'Agente Tecnológico';
@@ -64,6 +90,13 @@ const THEMES: LineageTheme[] = [
  {key:'humanos',title:'Humanos',tagline:'INFINITAS POSSIBILIDADES',tag:'O DESPERTAR',lead:'Sob o Véu, o Fluxo ainda vive. A imaginação transforma objetos cotidianos em caminhos de poder.',imageNote:'Dois exemplos de Humanos',traits:[{title:'Versatilidade',icon:Sword},{title:'Imaginação',icon:Headphones},{title:'Armas de Vínculo',icon:WandSparkles}]},
  {key:'gakis',title:'Gakis',tagline:'MARCADOS PELO KARMA',tag:'ENTRE A VIDA E O KARMA',lead:'A morte e a corrupção deixam marcas profundas. Alguns Gakis recuperam a razão — outros abraçam a fome.',imageNote:'Exemplo visual de um Dark, uma categoria de Gaki',traits:[{title:'Filhos do Karma',icon:Moon},{title:'Instinto',icon:Flame},{title:'Distorção',icon:Shield}]},
 ];
+const TECH_THEME: LineageTheme = {
+ key: 'humanos', title: 'Agente Tecnológico', tagline: 'O DESPERTAR INDUZIDO',
+ tag: 'SUBCLASSE HUMANA · CONSÓRCIO',
+ lead: 'Um Núcleo implantado transforma o Fluxo em energia operada pela tecnologia. Sem despertar espiritual, com precisão e poder de engenharia.',
+ imageNote: 'O Consórcio · arte oficial da História',
+ traits: [{title:'Núcleo implantado',icon:Cpu},{title:'Arma de Núcleo',icon:Sword},{title:'Olho Tecnológico',icon:Shield}],
+};
 const CREATION: Record<LineageKey,CreationLineage> = {arcadianos:'Arcadiano',humanos:'Humano',gakis:'Gaki'};
 const DETAIL_TABS: {value:DetailTab; label:string}[] = [{value:'historia',label:'História e origem'},{value:'habilidades',label:'Habilidades e legado'},{value:'estagios',label:'Estágios e passivas'}];
 
@@ -71,8 +104,11 @@ const DETAIL_TABS: {value:DetailTab; label:string}[] = [{value:'historia',label:
 export function LineagesPage({ onCreate }: {onCreate?: (lineage: CreationLineage) => void}) {
  const [selected,setSelected] = useState<LineageKey>('arcadianos');
  const [detail,setDetail] = useState<DetailTab>('historia');
+ const [humanVariant,setHumanVariant] = useState<'humano'|'tecnologico'>('humano');
  const detailsRef = useRef<HTMLDivElement>(null);
- const lineage = LINEAGES.find(l=>l.key===selected)!;
+ const isTech = selected==='humanos' && humanVariant==='tecnologico';
+ const lineage = isTech ? TECH_LINEAGE : LINEAGES.find(l=>l.key===selected)!;
+ const selectedCreation: CreationLineage = isTech ? 'Agente Tecnológico' : CREATION[selected];
  function showDetails(key:LineageKey,tab:DetailTab) {
    setSelected(key);
    setDetail(tab);
@@ -92,42 +128,45 @@ export function LineagesPage({ onCreate }: {onCreate?: (lineage: CreationLineage
     {THEMES.map(t=><button key={t.key} type="button" className={`hl-mobile-choice hl-tone-${t.key} ${selected===t.key?'is-active':''}`} aria-pressed={selected===t.key} onClick={()=>setSelected(t.key)}>{t.title}</button>)}
    </div>
    <div className="hl-grid">
-   {THEMES.map(t=><article key={t.key} className={`hl-card hl-tone-${t.key} ${selected===t.key?'hl-selected':''}`} data-selected={selected===t.key} aria-label={`Linhagem ${t.title}`}>
+   {THEMES.map(t=>{ const techCard=t.key==='humanos' && humanVariant==='tecnologico'; const shown=techCard ? TECH_THEME : t; return <article key={t.key} className={`hl-card hl-tone-${t.key} ${techCard?'hl-tech-mode':''} ${selected===t.key?'hl-selected':''}`} data-selected={selected===t.key} aria-label={`Linhagem ${shown.title}`}>
       <div className="hl-card-inner">
-       <button className="hl-art-trigger" type="button" aria-label={`Selecionar ${t.title}`} aria-pressed={selected===t.key} onClick={()=>setSelected(t.key)}>
+       <button className="hl-art-trigger" type="button" aria-label={`Selecionar ${shown.title}`} aria-pressed={selected===t.key} onClick={()=>setSelected(t.key)}>
         <div className="hl-art" aria-hidden="true">
          <span className="hl-art-halo"/>
          {t.key==='arcadianos'&&<><img src="/linhagens/arcadiana.webp" className="hl-person hl-arcadiana" alt="" loading="lazy" decoding="async"/><img src="/linhagens/arcadiano.webp" className="hl-person hl-arcadiano" alt="" loading="lazy" decoding="async"/></>}
-         {t.key==='humanos'&&<><img src="/linhagens/humano-cartas.webp" className="hl-person hl-humano-cartas" alt="" loading="lazy" decoding="async"/><img src="/linhagens/humano-urbano.webp" className="hl-person hl-humano-urbano" alt="" loading="lazy" decoding="async"/></>}
+         {t.key==='humanos'&&!techCard&&<><img src="/linhagens/humano-cartas.webp" className="hl-person hl-humano-cartas" alt="" loading="lazy" decoding="async"/><img src="/linhagens/humano-urbano.webp" className="hl-person hl-humano-urbano" alt="" loading="lazy" decoding="async"/></>}
+         {techCard&&<img src="/linhagens/consorcio-760.webp" srcSet="/linhagens/consorcio-760.webp 760w, /linhagens/consorcio-1520.webp 1520w" sizes="(max-width: 720px) 95vw, (max-width: 1100px) 33vw, 450px" className="hl-tech-visual" alt="" loading="lazy" decoding="async"/>}
          {t.key==='gakis'&&<img src="/linhagens/gaki-dark.webp" className="hl-person hl-gaki" alt="" loading="lazy" decoding="async"/>}
          <span className="hl-art-bottom"/>
         </div>
-        <span className="hl-character-caption">{t.imageNote}</span>
+        <span className="hl-character-caption">{shown.imageNote}</span>
        </button>
+       {t.key==='humanos'&&<div className="hl-human-switch" role="group" aria-label="Alternar vertente da linhagem humana">
+         <button type="button" className="hl-switch-arrow" aria-label={techCard?'Mostrar Humano comum':'Mostrar Agente Tecnológico'} onClick={()=>{setHumanVariant(techCard?'humano':'tecnologico');setSelected('humanos');}}><ChevronLeft size={20} aria-hidden="true"/></button>
+         <span className="hl-switch-label" aria-live="polite">{techCard?'02 / 02 · Agente Tecnológico':'01 / 02 · Humano comum'}</span>
+         <button type="button" className="hl-switch-arrow" aria-label={techCard?'Mostrar Humano comum':'Mostrar Agente Tecnológico'} onClick={()=>{setHumanVariant(techCard?'humano':'tecnologico');setSelected('humanos');}}><ChevronRight size={20} aria-hidden="true"/></button>
+       </div>}
        <div className="hl-content">
-        <span className="hl-lineage-icon" aria-hidden="true">{t.key==='arcadianos'?<Sun/>:t.key==='humanos'?<WandSparkles/>:<Moon/>}</span>
-        <div className="hl-smalltag">{t.tag}</div>
-        <h2>{t.title}</h2>
-        <div className="hl-tagline">{t.tagline}</div>
-        <p className="hl-lead">{t.lead}</p>
-        <div className="hl-traits">{t.traits.map(({title,icon:Icon})=><div className="hl-trait" key={title}><Icon size={21} strokeWidth={1.6} aria-hidden="true"/><span>{title}</span></div>)}</div>
+        <span className="hl-lineage-icon" aria-hidden="true">{t.key==='arcadianos'?<Sun/>:t.key==='humanos'?(techCard?<Cpu/>:<WandSparkles/>):<Moon/>}</span>
+        <div className="hl-smalltag">{shown.tag}</div>
+        <h2>{shown.title}</h2>
+        <div className="hl-tagline">{shown.tagline}</div>
+        <p className="hl-lead">{shown.lead}</p>
+        <div className="hl-traits">{shown.traits.map(({title,icon:Icon})=><div className="hl-trait" key={title}><Icon size={21} strokeWidth={1.6} aria-hidden="true"/><span>{title}</span></div>)}</div>
         <div className="hl-card-actions">
           <button type="button" className="hl-action hl-action-outline" onClick={()=>showDetails(t.key,'historia')}><BookOpen size={15} aria-hidden="true"/> História</button>
           <button type="button" className="hl-action hl-action-outline" onClick={()=>showDetails(t.key,'habilidades')}><Sparkles size={15} aria-hidden="true"/> Habilidades</button>
         </div>
-        {t.key==='humanos' ? <div className="hl-human-create-actions">
-          <button type="button" className="hl-action hl-action-primary" onClick={()=>onCreate?.('Humano')} disabled={!onCreate}>Criar Humano <ArrowRight size={17} aria-hidden="true"/></button>
-          <button type="button" className="hl-action hl-action-tech" onClick={()=>onCreate?.('Agente Tecnológico')} disabled={!onCreate}><Cpu size={16} aria-hidden="true"/> Criar Agente Tecnológico</button>
-        </div> : <button type="button" className="hl-action hl-action-primary" onClick={()=>onCreate?.(CREATION[t.key])} disabled={!onCreate}>Criar personagem <ArrowRight size={17} aria-hidden="true"/></button>}
+        <button type="button" className="hl-action hl-action-primary" onClick={()=>onCreate?.(t.key==='humanos'?(techCard?'Agente Tecnológico':'Humano'):CREATION[t.key])} disabled={!onCreate}>Criar {t.key==='humanos'?(techCard?'Agente Tecnológico':'Humano'):'personagem'} <ArrowRight size={17} aria-hidden="true"/></button>
        </div>
       </div>
-     </article>)}
+     </article>;})}
    </div>
 
-   <div className={`hl-details hl-tone-${selected}`} ref={detailsRef} id="linhagem-detalhes">
+   <div className={`hl-details hl-tone-${selected} ${isTech?'hl-tech-mode':''}`} ref={detailsRef} id="linhagem-detalhes">
      <div className="hl-details-head">
        <div><span className="hl-smalltag">CÓDICE · {lineage.epithet.toUpperCase()}</span><h2>{lineage.name}</h2><p>{lineage.intro}</p></div>
-       <button className="hl-action hl-action-primary hl-details-create" onClick={()=>onCreate?.(CREATION[selected])} disabled={!onCreate}>Criar {selected==='gakis'?'Gaki':selected==='humanos'?'Humano':'Arcadiano'} <ArrowRight size={15}/></button>
+       <button className="hl-action hl-action-primary hl-details-create" onClick={()=>onCreate?.(selectedCreation)} disabled={!onCreate}>Criar {selected==='gakis'?'Gaki':selected==='humanos'?(isTech?'Agente Tecnológico':'Humano'):'Arcadiano'} <ArrowRight size={15}/></button>
      </div>
      <div role="tablist" className="hl-details-tabs" aria-label="Informações da linhagem">
        {DETAIL_TABS.map(x=><button key={x.value} role="tab" id={`hl-tab-${x.value}`} aria-controls="hl-detail-panel" aria-selected={detail===x.value} type="button" className={detail===x.value?'is-active':''} onClick={()=>setDetail(x.value)}>{x.label}</button>)}
@@ -135,12 +174,12 @@ export function LineagesPage({ onCreate }: {onCreate?: (lineage: CreationLineage
      <div className="hl-detail-panel" role="tabpanel" id="hl-detail-panel" aria-labelledby={`hl-tab-${detail}`}>
       {detail==='historia'&&<div className="hl-story-grid">{lineage.blocks.map((block,i)=><section key={block.title} className="hl-info-card"><span className="hl-info-number">{String(i+1).padStart(2,'0')}</span><h3>{block.title}</h3>{block.text.map((p,j)=><p key={j}>{p}</p>)}</section>)}</div>}
       {detail==='habilidades'&&<div className="hl-story-grid">
-         {lineage.stages.map((s,i)=><section key={s.name} className="hl-info-card"><span className="hl-info-number">ESTÁGIO {i+1}</span><h3>{s.name}</h3><p>{s.text}</p>{s.passive&&<p className="hl-passive"><strong>Passiva:</strong> {s.passive}</p>}</section>)}
+         {lineage.abilities ? lineage.abilities.map((ability,i)=><section key={ability.title} className="hl-info-card"><span className="hl-info-number">LEGADO {i+1}</span><h3>{ability.title}</h3>{ability.text.map((text,j)=><p key={j}>{text}</p>)}</section>) : lineage.stages.map((s,i)=><section key={s.name} className="hl-info-card"><span className="hl-info-number">ESTÁGIO {i+1}</span><h3>{s.name}</h3><p>{s.text}</p>{s.passive&&<p className="hl-passive"><strong>Passiva:</strong> {s.passive}</p>}</section>)}
          <section className="hl-info-card hl-extra"><span className="hl-info-number">CONSULTA</span><h3>Habilidades e regras</h3><p>As habilidades, o GS, as armas e as passivas continuam disponíveis para uso e edição na ficha jogável. Aqui você consulta sua origem sem alterar as regras.</p></section>
        </div>}
       {detail==='estagios'&&<div className="hl-stages">{lineage.stages.map((s,i)=><section key={s.name} className="hl-stage"><span className="hl-stage-num">{String(i+1).padStart(2,'0')}</span><div><span className="hl-smalltag">{s.subtitle}</span><h3>{s.name}</h3><p>{s.text}</p>{s.passive&&<p className="hl-passive"><strong>Passiva:</strong> {s.passive}</p>}</div></section>)}</div>}
      </div>
-     {selected==='humanos'&&<div className="hl-tech-note"><Cpu size={22} aria-hidden="true"/><div><strong>Uma possibilidade humana: Agente Tecnológico</strong><p>Humano que usa TECNOLOGIA e PN. Pode existir fora do Consórcio, com Arma de Núcleo, Olho Tecnológico e evolução própria.</p></div><button type="button" className="hl-action hl-action-outline" disabled={!onCreate} onClick={()=>onCreate?.('Agente Tecnológico')}>Criar Agente <ArrowRight size={15}/></button></div>}
+     {isTech&&<div className="hl-tech-note"><Cpu size={22} aria-hidden="true"/><div><strong>Agente Tecnológico = subclasse humana</strong><p>Mesmo pertencendo à linhagem humana, este caminho utiliza TECNOLOGIA e PN, Arma de Núcleo e Olho Tecnológico em vez das habilidades do humano despertado. Use as setas no cartão dos Humanos para voltar à forma comum.</p></div></div>}
    </div>
    <p className="hl-footnote">As ilustrações são exemplos de personagens, não modelos obrigatórios. Sua linhagem define a origem, não sua aparência.</p>
  </section>;
