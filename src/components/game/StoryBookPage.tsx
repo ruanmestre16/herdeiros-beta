@@ -3,15 +3,15 @@ import { ArrowLeft, ArrowRight, BookOpen, ChevronLeft, ChevronRight, Compass, Fe
 import './storybook-page.css';
 
 type Passage = { heading: string; paragraphs: string[] };
-type Chapter = { id: string; book: string; title: string; subtitle: string; source: string; left: Passage; right: Passage };
+type Chapter = { id: string; book: string; title: string; subtitle: string; source: string; left: Passage; right: Passage; extra?: Passage[] };
 
 /** História do mundo em linguagem editorial. Base: livro original, Parte I, pp. 7–20.
  * Os acontecimentos e nomes vêm do livro; aqui não há tabelas nem regras de combate.
  */
-/** Sequência exata da referência enviada: 17 pergaminhos.
- * A ordem do ÍNDICE é editorial: o Primeiro Gaki surgiu ANTES da Grande Separação.
- * Cosmicárquicos: somente o título consta da referência visual; o Códice enviado
- * não apresenta descrição canônica. Nenhuma lore inédita foi atribuída ao grupo.
+/** Ordem cronológica corrigida para a narrativa inicial: o Primeiro Gaki surge antes
+ * da Grande Guerra e da Grande Estrofe, que por sua vez precede a Marcha dos Mundos.
+ * A guerra é narrada dentro de "O Primeiro Gaki" e "A Grande Separação", mantendo 16 capítulos.
+ * A partir de "Os Arcadianos", os capítulos são temáticos e não afirmam datas de surgimento.
  */
 const CHAPTERS: Chapter[] = [
   {
@@ -23,15 +23,15 @@ const CHAPTERS: Chapter[] = [
     "left": {
       "heading": "Quando tudo começou",
       "paragraphs": [
-        "Antes de haver um mundo, quando nem o nada possuía um nome, surgiu o Fluxo. Ele deu sentido à existência, primeiro à vida e depois a tudo o que passou a existir.",
-        "Junto ao Fluxo veio o Karma: uma energia igual e oposta, necessária ao equilíbrio da criação. As duas forças são anteriores aos povos, às guerras e aos nomes que mais tarde dividiriam a realidade."
+        "Antes de existir um mundo, nem mesmo o nada possuía um nome. Quando o próprio conceito de existir nasceu, o Fluxo nasceu com ele e deu sentido àquilo que podia ser, viver e um dia receber um nome.",
+        "Em contrapartida, quando a existência tomou forma, também a inexistência tomou vida: o Karma. Iguais em origem e opostos em essência, Fluxo e Karma são duas medidas de uma mesma realidade. Não são, por natureza, o bem e o mal."
       ]
     },
     "right": {
       "heading": "A primeira centelha",
       "paragraphs": [
-        "Do mundo moldado por essas forças nasceriam seres, terras e histórias. A origem de Arcádia remonta a esse princípio, muito antes de existir a separação entre o mundo humano e o mundo arcadiano.",
-        "A partir desse ponto, o Códice narra como uma antiga convivência deu lugar à cobiça, à guerra e, por fim, a dois mundos que jamais esqueceriam completamente a mesma origem."
+        "Ainda não havia cidades, seres ou terras. Apenas duas forças primordiais, a existência e a inexistência, acompanhando a possibilidade de tudo o que viria a existir.",
+        "Daquilo que o Fluxo passou a nomear, o mundo seria moldado e a vida despertaria. Seu primeiro movimento viria muito antes da cobiça, dos Gakis e da divisão que marcou a história de Arcádia."
       ]
     }
   },
@@ -40,82 +40,98 @@ const CHAPTERS: Chapter[] = [
     "book": "I · As origens",
     "title": "O Nascimento",
     "subtitle": "Os primeiros povos de uma terra sem nome",
-    "source": "Livro de regras · p. 7",
+    "source": "Códice Supremo · pp. 7, 9 e 16",
     "left": {
-      "heading": "A terra unificada",
+      "heading": "A terra anterior aos dois mundos",
       "paragraphs": [
-        "Depois que a realidade foi moldada e os seres vivos despertaram, nasceram os primeiros humanos e arcadianos. O nome da grande terra que habitavam juntos perdeu-se ao longo das eras.",
-        "Durante milhares de anos, esses dois povos viveram como iguais. Não havia ainda Mundo Espelho, Véu da Ignorância ou a divisão que mais tarde transformaria a sua história."
+        "Depois que o Fluxo deu sentido às coisas e o mundo foi moldado, a vida despertou. Os primeiros humanos e arcadianos nasceram numa grande terra unificada, cujo nome se perdeu ao longo das eras.",
+        "Durante milhares de anos, os dois povos viveram como iguais. Não existiam ainda Arcádia e Mundo Espelho como realidades separadas: a Grande Estrofe só seria entoada após o surgimento dos Gakis e a Grande Guerra."
       ]
     },
     "right": {
-      "heading": "Duas maneiras de despertar",
+      "heading": "As raízes de duas linhagens",
       "paragraphs": [
-        "Os arcadianos nasceriam com a visão natural do Fluxo; para os humanos, a conexão com essa energia permaneceria latente sob o Véu. Essa diferença é descrita pelo Códice ao apresentar as linhagens, mas não apaga a origem compartilhada de ambos.",
-        "A união antiga dos povos é a lembrança do que existiu antes de a cobiça alimentar o Karma e desencadear a queda."
-      ]
-    }
-  },
-  {
-    "id": "separacao",
-    "book": "I · As origens",
-    "title": "A Grande Separação",
-    "subtitle": "A Nomenclatura que dividiu a realidade",
-    "source": "Livro de regras · pp. 7–8",
-    "left": {
-      "heading": "Uma decisão no fim da guerra",
-      "paragraphs": [
-        "Depois da expansão dos Gakis, uma Grande Guerra reuniu a maior parte dos humanos e arcadianos contra a corrupção. Houve traições, mas também Gakis antigos que escolheram lutar ao lado dos arcadianos por acreditarem na coexistência.",
-        "Como última saída, os aliados entoaram juntos uma Nomenclatura de alcance incomparável: uma estrofe do mundo inteiro, capaz de dividir a própria realidade."
-      ]
-    },
-    "right": {
-      "heading": "Arcádia e o Mundo Espelho",
-      "paragraphs": [
-        "Da divisão nasceram dois destinos. Arcádia guardaria o campo da guerra final; o outro mundo continuaria como mundo humano, com os rastros do Fluxo apagados da percepção comum.",
-        "Os responsáveis pela separação pensaram ter deixado a humanidade em segurança, sem conhecer a energia primordial. O Códice encerra essa passagem com uma dúvida: “Pelo menos, foi isso que eles pensaram.”"
-      ]
-    }
-  },
-  {
-    "id": "marcha",
-    "book": "I · As origens",
-    "title": "A Marcha dos Mundos",
-    "subtitle": "A guerra e os caminhos da realidade",
-    "source": "Livro de regras · pp. 7–8",
-    "left": {
-      "heading": "O caminho até a cisão",
-      "paragraphs": [
-        "A Grande Guerra não separou simplesmente povos bons de povos maus. Humanos e arcadianos combateram os Gakis, mas alguns se aliaram à horda em busca de poder. Da mesma forma, Gakis antigos reconheceram que a coexistência ainda era possível.",
-        "A separação dos mundos aconteceu depois desse conflito. A Nomenclatura coletiva abriu uma ruptura entre o passado compartilhado e os destinos que seguiriam caminhos diferentes."
-      ]
-    },
-    "right": {
-      "heading": "Dois mundos, uma história",
-      "paragraphs": [
-        "O mundo humano permaneceu sob o esquecimento do Fluxo. Arcádia guardou a memória da guerra e passou a existir sob outras condições, posteriormente marcada pela Cúpula de Som e pelas forças que a disputam.",
-        "A marcha deste capítulo é a passagem de uma história única para duas realidades. Ela não altera a ordem dos acontecimentos: a queda do Primeiro Gaki e a Grande Guerra vieram antes da separação."
+        "Humanos e arcadianos partilham a mesma origem no mundo antigo, mas desenvolvem maneiras diferentes de se relacionar com o Fluxo. Os arcadianos possuem uma percepção natural dessa força; os humanos carregam o Fluxo em sua própria constituição.",
+        "A condição humana sob o Véu da Ignorância pertence à história do mundo após a separação. Não se deve projetar esse Véu sobre os milênios de convivência anteriores à Grande Estrofe."
       ]
     }
   },
   {
     "id": "primeiro-gaki",
-    "book": "I · As origens",
+    "book": "I · A queda e a guerra",
     "title": "O Primeiro Gaki",
     "subtitle": "A fome que nasceu da cobiça",
-    "source": "Livro de regras · p. 7; Bestiário · pp. 6–17",
+    "source": "Códice Supremo · pp. 7 e 17; Bestiário · pp. 4–17",
     "left": {
-      "heading": "Uma queda anterior à separação",
+      "heading": "A queda da primeira paz",
       "paragraphs": [
-        "Antes da Grande Guerra e da divisão dos mundos, o Karma cresceu alimentado pela cobiça de humanos e arcadianos. Dessa corrupção nasceu o primeiro Gaki, marcado pela inveja, pela malícia e pelo pior que existia em ambos os povos.",
-        "Ele corrompia, matava e consumia Fluxo. Sua fome alcançava seres vivos, plantas e tudo o que pudesse tocar. Dele surgiram outros Gakis e a ameaça deixou de ser apenas um único ser."
+        "Na terra onde humanos e arcadianos haviam vivido lado a lado por milênios, a cobiça, a inveja e a malícia de ambos os povos alimentaram o Karma. A força primordial cresceu até gerar o Primeiro Gaki.",
+        "Aquela criatura já possuía inteligência e um poder esmagador. Corrompia e matava, alimentava-se de Fluxo e estendia sua fome aos seres vivos, às plantas e a tudo o que encontrava. Sua existência marcou a ruptura da antiga paz."
       ]
     },
     "right": {
-      "heading": "As muitas faces da corrupção",
+      "heading": "Uma nova maneira de existir",
       "paragraphs": [
-        "Entre seus descendentes havia os bestiais, movidos por instinto; os sencientes, capazes de pensamento rudimentar; os inteligentes, que armavam ciladas; e os Velhos, possuidores de grande consciência e poder.",
-        "O Bestiário amplia essas diferenças em suas fichas. O capítulo ocupa aqui a quinta posição, conforme o índice ilustrado, mas seu acontecimento pertence ao passado anterior à Grande Separação."
+        "Dos efeitos da corrupção vieram outros Gakis. Quando o Fluxo de uma vida é consumido ou distorcido pelo Karma, o resultado não é somente o fim: pode surgir uma identidade alterada pela persistência e pela fome.",
+        "O Gaki é também uma das linhagens de Herdeiros. Sua origem carrega o risco da corrupção, mas nem toda trajetória termina na mesma escolha. O próprio Códice conta que alguns Gakis antigos rejeitaram a destruição e buscaram coexistir com os demais povos."
+      ]
+    },
+    "extra": [
+      {
+        "heading": "Do instinto à consciência",
+        "paragraphs": [
+          "Os Irracionais são massas de fumaça negra sem forma estável: agem pelo instinto de consumir. Os Sencientes recuperam a fala e um princípio de lógica; seus corpos ainda oscilam entre matéria e sombra.",
+          "Os Inteligentes recuperam plenamente a razão, elaboram estratégias e conseguem conduzir Gakis inferiores. Acima deles estão os Velhos: seres de imensa antiguidade, capazes de remodelar o próprio corpo, assumir outras aparências e recuperar lembranças de vidas passadas."
+        ]
+      },
+      {
+        "heading": "Predadores, Herbívoros e Darks",
+        "paragraphs": [
+          "Há Gakis Predadores, que se alimentam de carne e energia vital e espalham corrupção. Mas também existem os raros Herbívoros ou Equilibrados: seres que procuram redenção, podem viver da energia da natureza ou de alimento preparado e proteger territórios.",
+          "O Códice ainda menciona os Darks, que transcendem as classes comuns e usam a distorção do Fluxo para corromper a realidade e outros despertos. Nenhuma dessas distinções apaga a história singular de cada Gaki."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "separacao",
+    "book": "I · A queda e a guerra",
+    "title": "A Grande Separação",
+    "subtitle": "A Grande Estrofe que dividiu a realidade",
+    "source": "Códice Supremo · pp. 7–8; direção autoral do RPG para a passagem do Karma",
+    "left": {
+      "heading": "Depois da Grande Guerra",
+      "paragraphs": [
+        "O Primeiro Gaki havia surgido antes da guerra. Sua descendência se multiplicou, e o conflito envolveu humanos, arcadianos e Gakis — inclusive aqueles que escolheram combater ao lado dos antigos povos.",
+        "Como última válvula de escape, os aliados entoaram juntos uma Grande Nomenclatura: uma estrofe do mundo inteiro, poderosa o suficiente para dividir a própria realidade em duas."
+      ]
+    },
+    "right": {
+      "heading": "A Grande Estrofe do Mundo",
+      "paragraphs": [
+        "Da divisão nasceram Arcádia, onde se travaria a guerra final, e o Mundo Espelho, que continuaria como mundo humano, mas com os rastros do Fluxo apagados.",
+        "Na imagem dessa ruptura, a maior parte do Karma atravessa a Grande Estrofe rumo a Arcádia. No Mundo Espelho ficam apenas vestígios dessa força, enquanto a humanidade segue sem enxergar o Fluxo que antes conhecera."
+      ]
+    }
+  },
+  {
+    "id": "marcha",
+    "book": "I · A queda e a guerra",
+    "title": "A Marcha dos Mundos",
+    "subtitle": "Dois mundos idênticos, destinos diferentes",
+    "source": "Códice Supremo · pp. 7–8; arte aprovada dos mundos espelhados",
+    "left": {
+      "heading": "O afastamento dos mundos",
+      "paragraphs": [
+        "Depois de entoada a Grande Estrofe, a realidade dividida passou a seguir dois caminhos. Os mundos compartilham a mesma origem, mas não a mesma relação perceptível com o Fluxo.",
+        "Arcádia ficou destinada ao desfecho da guerra. Do outro lado, a humanidade prosseguiu sem reconhecer os rastros da força que havia moldado a existência."
+      ]
+    },
+    "right": {
+      "heading": "A memória de uma origem comum",
+      "paragraphs": [
+        "Dois mundos de forma esférica e geografia espelhada se afastam na imensidão. Arcádia segue envolta pela luz dourada do Fluxo e pelas correntes roxas do Karma; o Mundo Espelho conserva seus mares, terras e nuvens sem mostrar essas energias.",
+        "A memória da origem comum ainda existe, mesmo quando o destino de cada mundo se distancia do outro. O que foi uma única realidade agora prossegue por dois caminhos."
       ]
     }
   },
@@ -124,19 +140,19 @@ const CHAPTERS: Chapter[] = [
     "book": "II · Arcádia",
     "title": "A Era das Ruínas",
     "subtitle": "O que restou do Velho Mundo",
-    "source": "Livro de regras · pp. 8–9",
+    "source": "Livro de regras · pp. 8–9 · detalhes definidos pelo autor",
     "left": {
       "heading": "Depois do colapso",
       "paragraphs": [
-        "O mundo antigo, governado por leis lógicas e tecnologia cega, sucumbiu sob o peso de sua própria arrogância. Arcádia é o que restou: um continente pulsante, cercado e protegido por uma colossal Cúpula de Som.",
-        "Dentro da redoma, o silêncio adquiriu um valor extraordinário e o Fluxo atravessa as veias da realidade. A memória do passado persiste no terreno, nas construções e nas forças que ainda disputam o continente."
+        "Depois da Grande Guerra, quase todo o planeta de Arcádia tornou-se uma vastidão árida e arenosa. O Velho Mundo deixou suas marcas entre ruínas, pedras e terras ressequidas, em contraste com a vida protegida em uma parte do mundo.",
+        "Um continente inteiro foi resguardado pela colossal Cúpula de Som: uma redoma fechada acima e abaixo da terra, sem muralhas que a substituam. Sob essa proteção permanecem a Grande Floresta, a Caixa e parte do Grande Deserto."
       ]
     },
     "right": {
       "heading": "Vestígios de outras eras",
       "paragraphs": [
-        "A Caixa se ergue entre metal, néon, refinarias e centros de pesquisa. O Grande Deserto conserva ruínas do Velho Mundo, máquinas soterradas e pilares consumidos pela erosão.",
-        "A Grande Floresta, por outro lado, guarda marcas de batalhas e nomes perdidos entre raízes colossais. Cada território conserva uma forma diferente de memória."
+        "No interior da Cúpula, o Fluxo pulsa e a paisagem revela três naturezas distintas: a floresta viva de árvores colossais, o centro metropolitano de tecnologia e formação, e o deserto cujo ciclo entre calor e gelo desafia seus habitantes.",
+        "Fora dela, a vastidão seca guarda o peso das eras. A areia que recobriu o planeta não deve ser confundida com o Grande Deserto, que já fazia parte do ecossistema do continente muito antes do colapso."
       ]
     }
   },
@@ -144,83 +160,101 @@ const CHAPTERS: Chapter[] = [
     "id": "arcadianos",
     "book": "III · Os povos",
     "title": "Os Arcadianos",
-    "subtitle": "Herdeiros do Fluxo",
-    "source": "Livro de regras · p. 16",
+    "subtitle": "Os puros: herdeiros da visão do Fluxo",
+    "source": "Códice Supremo · pp. 7 e 16",
     "left": {
-      "heading": "Nascidos com a visão",
+      "heading": "Quem são os Arcadianos",
       "paragraphs": [
-        "Os Arcadianos nascem com a percepção natural do Fluxo. Para eles, sentir a energia primordial é tão comum quanto respirar; essa proximidade, porém, não elimina os riscos de excesso de confiança, corrupção do Ego e falta de disciplina.",
-        "Sua vontade se manifesta por meio da Arma de Ego, que pode ganhar identidade e desejos próprios conforme o Arcadiano amadurece."
+        "Os Arcadianos nasceram na mesma terra antiga que os humanos e viveram com eles durante milhares de anos. O que distingue esse povo é a visão natural do Fluxo: para um arcadiano, perceber a força que atravessa o mundo é tão espontâneo quanto respirar.",
+        "Essa intimidade não os torna imunes à corrupção. O excesso de confiança, a falta de disciplina e os conflitos do Ego podem ameaçar a alma de alguém que nasceu tão próximo da energia primordial."
       ]
     },
     "right": {
-      "heading": "Completos e Fragmentos",
+      "heading": "Uma herança que assume muitas formas",
       "paragraphs": [
-        "Os Arcadianos Completos controlam um aspecto elemental inteiro, como o ciclo da água. Os Fragmentos dominam uma parte específica desse aspecto, como o gelo, com maior potência e precisão.",
-        "Nos estágios avançados, a arma pode revelar personalidade e objetivos. Na integração final, a Arma Verdadeira alcança forma física autônoma. O Fluxo, para um Arcadiano, é poder e também responsabilidade."
+        "A relação dos Arcadianos com os elementos não é igual em todos os indivíduos. O Códice os distingue entre Completos e Fragmentos, duas formas diferentes de manifestar um aspecto do Fluxo.",
+        "Essas diferenças não nasceram de povos separados, mas de modos distintos de compreender e expressar uma mesma força. A versatilidade de um Completo e a especialização de um Fragmento têm identidades próprias."
       ]
-    }
+    },
+    "extra": [
+      {
+        "heading": "Os Completos — o elemento em sua totalidade",
+        "paragraphs": [
+          "Um Arcadiano Completo manifesta um aspecto elemental inteiro. Quem possui o aspecto da água, por exemplo, alcança o ciclo que reúne líquido, vapor e gelo, em vez de se prender a uma única expressão.",
+          "Essa amplitude oferece muitas possibilidades, mas exige um caminho mais demorado até alcançar pleno domínio de cada estado particular. Ser Completo não significa ser melhor que um Fragmento: sua força está na totalidade do aspecto."
+        ]
+      },
+      {
+        "heading": "Os Fragmentos — a essência de um único aspecto",
+        "paragraphs": [
+          "Um Arcadiano Fragmento aprofunda apenas parte de um elemento. Aquele que manifesta o gelo, por exemplo, concentra nesse estado a força que um Completo distribui por todo o ciclo da água.",
+          "Seu horizonte é mais estreito, mas seu controle e sua potência naquele fragmento podem superar os de um Completo. O livro registra que o Consórcio emprega Fragmentos como ponta de lança em suas operações, aproveitando essa especialização."
+        ]
+      },
+      {
+        "heading": "A Arma de Ego — a vontade que ganha presença",
+        "paragraphs": [
+          "Os Arcadianos conseguem projetar armas a partir da própria vontade e criatividade. Correntes, foices, arcos e outras formas refletem não apenas a imaginação de quem as manifesta, mas também a essência elemental que carregam.",
+          "Com o amadurecimento, a Arma de Ego pode revelar uma personalidade e desejos próprios, até ganhar presença física independente como Arma Verdadeira. A proximidade entre portador e arma é uma relação de identidade, harmonia e, por vezes, conflito."
+        ]
+      }
+    ]
   },
   {
     "id": "humanos",
     "book": "III · Os povos",
     "title": "Os Humanos",
-    "subtitle": "Os libertados sob o Véu da Ignorância",
-    "source": "Livro de regras · pp. 9–10",
+    "subtitle": "Os libertados: aqueles que carregam o Fluxo sem vê-lo",
+    "source": "Códice Supremo · pp. 7–10",
     "left": {
-      "heading": "O poder que não sabiam carregar",
+      "heading": "Quem são os Humanos",
       "paragraphs": [
-        "Humanos nascem sob o Véu da Ignorância. Sua ligação com o Fluxo é latente, mas está presente no próprio corpo: são feitos dessa energia mesmo quando não sabem de sua existência.",
-        "O despertar rompe o Véu. A imaginação e a trajetória pessoal podem moldar uma Arma de Vínculo, expressão singular da relação de cada humano com a energia que sempre carregou."
+        "Os Humanos compartilham com os Arcadianos o nascimento na antiga terra unificada. Após a Grande Estrofe, o mundo humano seguiu separado de Arcádia, e a humanidade comum ficou sob o Véu da Ignorância, sem reconhecer o Fluxo que a constitui.",
+        "O poder não está ausente de seus corpos. Ele permanece latente, invisível a quem ainda não despertou. Essa distância entre a energia que possuem e aquilo que conseguem perceber marca a história humana no Mundo Espelho."
       ]
     },
     "right": {
-      "heading": "A dor do despertar",
+      "heading": "Quando o Véu se rompe",
       "paragraphs": [
-        "O Códice descreve o Ritual da Navalha, em que o confronto extremo pode despertar o Fluxo no limiar da morte, mas também resultar em tragédia. O processo é brutal, não uma simples prova de coragem.",
-        "Também existem as Crianças-Farol, nascidas com excesso de Fluxo e capazes de atrair a atenção de predadores e do Consórcio antes de entender o próprio poder."
+        "O despertar pode revelar ao humano a energia que sempre esteve presente. Sua imaginação molda então uma Arma de Vínculo, cuja forma expressa a história de quem a carrega; nem duas trajetórias precisam produzir a mesma arma.",
+        "A descoberta, porém, não é tranquila. O Códice descreve dor extrema e a possibilidade de perder a própria vida ao tentar romper o Véu. A liberdade de perceber o Fluxo também pode chegar acompanhada de sofrimento."
       ]
-    }
+    },
+    "extra": [
+      {
+        "heading": "O Ritual da Navalha",
+        "paragraphs": [
+          "O livro descreve um ritual cruel em que crianças de seis anos, depois de treinamento exaustivo, são lançadas diante de Gakis Irracionais. No limite da sobrevivência, o instinto pode romper o Véu e libertar o Fluxo.",
+          "Nem todas sobrevivem. Algumas morrem; outras podem tornar-se Gakis. O Ritual da Navalha é apresentado no Códice como uma violência institucionalizada, e não como uma simples prova heroica de coragem."
+        ]
+      },
+      {
+        "heading": "As Crianças-Farol",
+        "paragraphs": [
+          "Alguns humanos nascem com uma presença de Fluxo extraordinariamente intensa. São as Crianças-Farol, capazes de alterar ambientes ou atrair atenções perigosas mesmo antes de compreender o que carregam.",
+          "Seu brilho chama predadores espirituais e o interesse do Consórcio, que o livro associa a experimentos brutais. A história dessas crianças mostra que carregar poder não significa ter escolhido o destino que outros tentam lhes impor."
+        ]
+      }
+    ]
   },
   {
     "id": "agentes",
     "book": "III · Os povos",
     "title": "Os Agentes Tecnológicos",
     "subtitle": "O despertar forçado pelo Núcleo",
-    "source": "Livro de regras · pp. 10–15",
+    "source": "Códice Supremo · pp. 10–11; contexto do Consórcio · pp. 8–9",
     "left": {
-      "heading": "O Fluxo operado pela tecnologia",
+      "heading": "Humanos transformados pelo Consórcio",
       "paragraphs": [
-        "O Agente Tecnológico continua sendo humano, mas seu despertar ocorre por implantação de um Núcleo. Em vez de comungar com o Fluxo, aprende a lê-lo, calibrá-lo e conduzi-lo por meios artificiais.",
-        "Esse caminho é desenvolvido pelo Consórcio. O procedimento não concede a visão natural de um Arcadiano e pode provocar a Pane inicial, marcada por dor intensa."
+        "Os Agentes Tecnológicos não são uma quarta linhagem nascida ao lado de humanos, arcadianos e Gakis. São humanos do Consórcio que seguem outro caminho para despertar: um Núcleo é implantado no corpo e a energia passa a ser conduzida artificialmente.",
+        "O Consórcio busca medir, compreender e dominar o Fluxo. Desse desejo nasceu a figura do Agente, alguém que não comunga naturalmente com a força primordial como um Arcadiano, mas aprende a operá-la por instrumentos e disciplina."
       ]
     },
     "right": {
-      "heading": "Armas criadas, não evocadas",
+      "heading": "O preço de conduzir o poder",
       "paragraphs": [
-        "A Arma de Núcleo não nasce diretamente da imaginação: é fabricada e alimentada pela tecnologia do portador. Lâminas, pistolas, lanças ou manoplas podem receber essa função.",
-        "Os poderes desse caminho são chamados Habilidades de Núcleo. O Agente representa a tentativa de controlar uma força primordial por medição, engenharia e disciplina."
-      ]
-    }
-  },
-  {
-    "id": "cosmicarquicos",
-    "book": "III · Os povos",
-    "title": "Os Cosmicárquicos",
-    "subtitle": "Um capítulo aguardando sua história oficial",
-    "source": "Índice visual enviado · capítulo X; sem entrada específica no Códice",
-    "left": {
-      "heading": "Um nome no índice de Arcádia",
-      "paragraphs": [
-        "O título “Os Cosmicárquicos” está presente na referência visual desta História. No entanto, a edição do Códice Supremo fornecida com o projeto não contém uma descrição específica dessa linhagem ou grupo.",
-        "Para respeitar a história oficial, este pergaminho não atribui aos Cosmicárquicos uma origem, aparência, hierarquia, habilidades ou vínculos que o livro não estabeleceu."
-      ]
-    },
-    "right": {
-      "heading": "À espera do texto canônico",
-      "paragraphs": [
-        "O Códice confirma que Fluxo e Karma são forças primordiais e que a realidade foi dividida em Arcádia e Mundo Espelho. Esses acontecimentos não bastam, por si só, para definir quem são os Cosmicárquicos.",
-        "Esta entrada permanece reservada à narrativa oficial do criador. Sua ilustração é apenas simbólica dos mundos descritos pelo livro, sem representar um Cosmicárquico."
+        "O Núcleo pode provocar uma dolorosa Pane inicial. O equipamento que o Agente utiliza não é uma Arma de Ego espontânea: trata-se de tecnologia e armamento fabricado, com metal, mecanismos, implantes e energia canalizada.",
+        "Ainda que compartilhem uma estética de metal escuro e dispositivos luminosos, os Agentes possuem identidades próprias e cores que distinguem seus papéis. Por trás do braço mecânico e da armadura continua existindo uma pessoa humana."
       ]
     }
   },
@@ -241,7 +275,7 @@ const CHAPTERS: Chapter[] = [
       "heading": "O Grande Deserto",
       "paragraphs": [
         "Além dessas regiões estende-se o Grande Deserto: vastidão de areia prateada, ruínas antigas e fragmentos de máquinas e civilizações esquecidas.",
-        "O sol do deserto erode o Véu da Ignorância. Quem permanece muito tempo sob sua luz pode se aproximar do despertar ou da loucura. As terras de Arcádia não são apenas cenários; moldam os riscos de cada jornada."
+        "O sol do deserto erode o Véu da Ignorância. Quem permanece muito tempo sob sua luz pode se aproximar do despertar ou da loucura. As terras de Arcádia não são apenas cenários moldam os riscos de cada jornada."
       ]
     }
   },
@@ -250,19 +284,19 @@ const CHAPTERS: Chapter[] = [
     "book": "IV · As forças",
     "title": "O Consórcio",
     "subtitle": "Ordem, pesquisa e controle",
-    "source": "Livro de regras · pp. 8–10 e 20; Bestiário · pp. 18–30",
+    "source": "Livro de regras · pp. 8–10 e 20 Bestiário · pp. 18–30 · detalhes definidos pelo autor",
     "left": {
       "heading": "A disciplina da Caixa",
       "paragraphs": [
-        "O Consórcio reúne políticos, cientistas e engenheiros que temem o caos do Fluxo. Seu objetivo é conter essa energia e manter o Véu sobre a humanidade comum, defendendo a estabilidade por meio do controle.",
-        "Na Caixa, isso se transforma em pesquisa, vigilância e catalogação. O Fluxo é medido e dirigido por tecnologias que colocam a ordem acima da comunhão espiritual."
+        "O Consórcio reúne políticos, pesquisadores e engenheiros que buscam medir e submeter o Fluxo a uma ordem rígida. Suas operações combinam vigilância, ciência, armamentos e Núcleos tecnológicos para transformar a energia primordial em instrumento.",
+        "Além de sua influência na Caixa, a organização mantém uma sede colossal e parcialmente escondida no deserto: metal escuro, estruturas de comando, instalações militares e tecnologia capaz de mobilizar inúmeros agentes."
       ]
     },
     "right": {
       "heading": "Os experimentos e as Obras-Primas",
       "paragraphs": [
-        "O Códice descreve Agentes Tecnológicos criados pelo despertar forçado e Escultores a serviço do Consórcio. Estes gravam Conceitos em armas e portadores das Obras-Primas.",
-        "O Bestiário registra mutagênicos produzidos a partir de Gakis e a série de agentes MK1, MK2 e MK3. São diferentes expressões da tentativa do Consórcio de transformar poder em instrumento."
+        "Entre seus integrantes há pessoas com braços, pernas e olhos mecânicos, assim como armaduras escuras e detalhes de cor que distinguem patentes e funções. O poder da instituição se revela tanto nas máquinas quanto nas pessoas transformadas por elas.",
+        "O Códice também apresenta Escultores a serviço do Consórcio, mutagênicos e Obras-Primas marcadas por Conceitos. São expressões diferentes de um mesmo esforço: dar forma calculável àquilo que nasceu muito antes de qualquer máquina."
       ]
     }
   },
@@ -271,19 +305,19 @@ const CHAPTERS: Chapter[] = [
     "book": "IV · As forças",
     "title": "Os Berços",
     "subtitle": "Guardiões das Fontes de Fluxo",
-    "source": "Livro de regras · pp. 8–9",
+    "source": "Livro de regras · pp. 8–9 · detalhes definidos pelo autor",
     "left": {
       "heading": "O santuário vivo",
       "paragraphs": [
-        "Os Berços reúnem sábios e guerreiros que acreditam na comunhão com a energia primordial. Protegem as Fontes e ensinam que o Fluxo precisa correr livremente.",
-        "Na Grande Floresta, essa convicção encontra um santuário. Árvores e raízes guardam lembranças; a própria natureza reage à presença e aos sentimentos dos Herdeiros."
+        "Os Berços reúnem sábios, protetores, guerreiros e educadores que defendem a liberdade das Fontes de Fluxo. Seu santuário amplo é marcado por construções de mármore branco, detalhes dourados e uma gigantesca árvore de tronco branco, veios dourados e folhas brancas bordadas de ouro.",
+        "Entre escolas, áreas médicas e jardins, crianças vestidas de branco crescem sob cuidado e formação. Uma arena de treinamento, deslocada para uma região junto à água, integra esse complexo de aprendizado e proteção."
       ]
     },
     "right": {
       "heading": "Controle e liberdade",
       "paragraphs": [
-        "Para os Berços, a estagnação do Fluxo abre caminho para a corrupção. Para o Consórcio, permitir que a energia siga sem contenção ameaça a ordem.",
-        "Entre essas visões, os Herdeiros caminham como pontes vivas. O Códice não apresenta essa tensão como uma disputa resolvida, e as escolhas de cada personagem podem atravessá-la."
+        "A maioria de seus agentes veste ternos sociais pretos, variando as camisas e cores internas. Alguns dos mais experientes podem escolher roupas inteiramente próprias, desde tecidos leves de seda até trajes singulares que expressam sua história.",
+        "Para os Berços, o Fluxo precisa continuar correndo, e não ser reduzido apenas a um recurso catalogado. Sua visão contrasta com o controle defendido pelo Consórcio, sem que isso apague a humanidade e as escolhas individuais dos que vivem em cada organização."
       ]
     }
   },
@@ -334,19 +368,19 @@ const CHAPTERS: Chapter[] = [
     "book": "V · Os segredos",
     "title": "Os Escultores",
     "subtitle": "A obra exige um sacrifício",
-    "source": "Livro de regras · pp. 19–20",
+    "source": "Livro de regras · pp. 19–20 · detalhes definidos pelo autor",
     "left": {
       "heading": "Os que leem o impossível",
       "paragraphs": [
-        "Os Escultores são os poucos capazes de ler e empregar a Língua Mãe do Fluxo. O Códice atribui essa capacidade à força de vontade e, talvez, a um dom de tradução que não é inteiramente compreendido.",
-        "Eles esculpem Minério de Fluxo e pessoas. Cada obra cobra um preço único: uma lembrança, um sentido, anos de vida, o nome verdadeiro ou o reconhecimento de alguém amado."
+        "Os Escultores são os raros capazes de ler e utilizar a Língua Mãe do Fluxo. Alguns exibem marcas e desenhos pelo corpo como tatuadores; outros se parecem com artesãos comuns, vendedores, estudiosos ou agentes de organizações poderosas.",
+        "Não existe uniforme que os defina. Um usa canivete e instrumento de gravação; outro trabalha com agulhas; alguém pode apenas carregar uma caneta. Todos procuram impor palavras à matéria — e cada obra exige sacrifício pessoal."
       ]
     },
     "right": {
       "heading": "Os portais e o risco do vazio",
       "paragraphs": [
-        "Entre as obras dos Escultores estão os portais, criados ao gravar uma palavra em pedra. A travessia pode ligar locais de Arcádia ou atravessar a distância entre Arcádia e o Mundo Espelho.",
-        "Para funcionar, a viagem exige destino conhecido, Fluxo suficiente e coordenadas corretas. Quem erra pode perder-se no vácuo do mundo. O Consórcio também mantém Escultores que gravam Conceitos nas Obras-Primas."
+        "Eles gravam a Língua Mãe em Minério de Fluxo e também podem esculpir pessoas. O preço pode ser uma lembrança, um sentido, anos de vida, o próprio nome ou a memória que alguém querido possui deles.",
+        "Entre suas obras estão os portais, feitos ao inscrever uma palavra numa pedra. Destino conhecido, Fluxo suficiente e coordenadas corretas são indispensáveis; um erro pode fazer alguém perder-se no vácuo do mundo."
       ]
     }
   },
@@ -355,54 +389,150 @@ const CHAPTERS: Chapter[] = [
     "book": "V · Os segredos",
     "title": "O Legado dos Herdeiros",
     "subtitle": "Sua história é o seu poder",
-    "source": "Livro de regras · p. 18; epígrafe · p. 2",
+    "source": "Livro de regras · p. 18 epígrafe · p. 2 · detalhes definidos pelo autor",
     "left": {
       "heading": "Linhagem e história",
       "paragraphs": [
-        "Em Herdeiros, a linhagem e a trajetória do personagem se encontram para formar a sua subclasse. Ser Humano, Arcadiano ou Gaki revela uma relação com o Fluxo, mas não determina sozinho o que alguém se tornará.",
-        "O que o Herdeiro viveu, perdeu, protegeu e escolheu altera o sentido de seus dons. Seu poder nasce dessa união entre origem e história, construída junto ao Mestre."
+        "Herdeiro é aquele que conhece e consegue utilizar o Fluxo. Arcadianos, Humanos despertos, Gakis conscientes e até Agentes Tecnológicos do Consórcio podem carregar esse nome, embora suas origens e formas de poder sejam distintas.",
+        "Nenhuma linhagem, sozinha, determina o destino de alguém. A história de cada Herdeiro é feita das escolhas, perdas, compromissos e relações que dão significado ao modo como usa aquilo que recebeu."
       ]
     },
     "right": {
       "heading": "A próxima página",
       "paragraphs": [
-        "Arcádia ainda é atravessada pelo legado da Guerra, pela divisão da realidade e pela tensão entre o Consórcio e os Berços. As ruínas, as Fontes, os Gakis e os portais são partes de uma história inacabada.",
-        "O futuro cabe aos que despertam. Como ensina a epígrafe do Códice: “Sua história é o seu poder.”"
+        "Arcádia e o Mundo Espelho permanecem ligados por sua origem, ainda que vivam realidades diferentes. O futuro repousa diante de indivíduos de povos e caminhos diversos, capazes de cooperar, confrontar-se ou mudar o rumo do que lhes foi legado.",
+        "O Gaki envolto em Karma, o Arcadiano que percebe o Fluxo, o Humano que atravessou o Véu e o Agente que o canaliza por tecnologia partilham uma verdade: o próximo capítulo ainda não foi escrito. Sua história é seu poder."
       ]
     }
   }
 ];
 
-/** Ilustrações reaproveitadas exclusivamente do ZIP enviado, sem imagens externas.
- * `scene` desacopla o capítulo da arte para permitir reordenação sem duplicar arquivos.
- */
-const CHAPTER_ART = {
-  "principio": { tone: 'duo', scene: 'principio', emblem: Sparkles, note: "O encontro entre Fluxo e Karma" },
-  "nascimento": { tone: 'flux', scene: 'arcadia-hoje', emblem: Compass, note: "A terra ancestral e os povos do Fluxo" },
-  "separacao": { tone: 'duo', scene: 'espelho', emblem: Orbit, note: "A divisão entre Arcádia e o Mundo Espelho" },
-  "marcha": { tone: 'duo', scene: 'guerra', emblem: Sword, note: "A guerra que antecedeu a divisão dos mundos" },
-  "primeiro-gaki": { tone: 'karma', scene: 'primeiro-gaki', emblem: Flame, note: "O surgimento do primeiro Gaki" },
-  "ruinas": { tone: 'tech', scene: 'caixa', emblem: Building2, note: "As construções e as ruínas de Arcádia" },
-  "arcadianos": { tone: 'flux', scene: 'arcadianos', emblem: Sword, note: "Os Arcadianos e suas Armas de Ego" },
-  "humanos": { tone: 'human', scene: 'humanos', emblem: Scissors, note: "Os Humanos diante do despertar" },
-  "agentes": { tone: 'tech', scene: 'agentes', emblem: Cpu, note: "A tecnologia e o Núcleo dos agentes" },
-  "cosmicarquicos": { tone: 'duo', scene: 'espelho', emblem: Orbit, note: "Visão simbólica dos mundos — não retrata um Cosmicárquico" },
-  "terras": { tone: 'ember', scene: 'deserto', emblem: Map, note: "Paisagens de Arcádia: floresta, deserto e ruínas" },
-  "consorcio": { tone: 'tech', scene: 'faccoes', emblem: Shield, note: "Pesquisas e rituais sob o controle do Consórcio" },
-  "bercos": { tone: 'nature', scene: 'floresta', emblem: LeafIcon, note: "A floresta viva, santuário dos Berços" },
-  "minerio": { tone: 'flux', scene: 'minerio', emblem: Gem, note: "O Minério de Fluxo dourado" },
-  "lingua": { tone: 'flux', scene: 'lingua', emblem: Feather, note: "Os sinais e os ecos da Língua Mãe" },
-  "escultores": { tone: 'duo', scene: 'portais', emblem: Feather, note: "Os Escultores e suas passagens entre mundos" },
-  "herdeiros": { tone: 'flux', scene: 'herdeiros', emblem: Crown, note: "Os Herdeiros diante de Arcádia" },
-} as const;
+const GREAT_WAR: Chapter = {
+  "id": "guerra",
+  "book": "I · A queda e a guerra",
+  "title": "A Grande Guerra e a Traição",
+  "subtitle": "A batalha que antecedeu a Estrofe",
+  "source": "Códice Supremo · p. 7; aparência dos Gakis da era definida pelo autor",
+  "left": {
+    "heading": "A aliança ameaçada",
+    "paragraphs": [
+      "O Primeiro Gaki não permaneceu sozinho. A corrupção se espalhou, e das novas formas de Karma surgiram hordas que ameaçavam a existência de todos os povos. Humanos e Arcadianos uniram suas forças para impedir que a terra fosse consumida.",
+      "Nessa era, muitos Gakis eram essencialmente fumaça negra e Karma roxo, sem rostos fixos. Irracionais avançavam como feras guiadas pela fome; Sencientes apresentavam maior coesão e sinais de pensamento, ainda longe da forma humana definida."
+    ]
+  },
+  "right": {
+    "heading": "A traição e a escolha",
+    "paragraphs": [
+      "A guerra também trouxe traições. Alguns humanos e Arcadianos se voltaram contra seus próprios aliados, procurando poder naquilo que deveria ter sido combatido.",
+      "Mas houve uma escolha inesperada: Gakis antigos rejeitaram a destruição e se aliaram aos Arcadianos, acreditando na possibilidade de coexistência. O conflito precedeu a Grande Estrofe do Mundo — a recitação que dividiria a realidade."
+    ]
+  }
+};
 
-const ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII'];
+const LANDS: Record<"floresta" | "caixa" | "deserto", Omit<Chapter,"id" | "book">> = {
+  "floresta": {
+    "title": "A Grande Floresta",
+    "subtitle": "A natureza que respira Fluxo",
+    "source": "Códice Supremo · pp. 8–9; Bestiário · seção Grande Floresta; detalhes definidos pelo autor",
+    "left": {
+      "heading": "Um ecossistema vivo",
+      "paragraphs": [
+        "A Grande Floresta se estende sob copas colossais, raízes tão antigas quanto os nomes esquecidos e caminhos em que o tempo pode perder sua linearidade. O Fluxo atravessa árvores, animais e cada raiz, fazendo da floresta muito mais que uma paisagem.",
+        "Ali, a natureza tem memória e consciência. Folhas, troncos e solo podem reagir aos sentimentos e ações dos Herdeiros. É também o território que acolhe os santuários dos Berços."
+      ]
+    },
+    "right": {
+      "heading": "A beleza também ameaça",
+      "paragraphs": [
+        "A floresta é extraordinariamente perigosa. Plantas carnívoras podem atacar sem aviso, e animais repletos de Fluxo adquirem formas e comportamentos capazes de surpreender até viajantes experientes.",
+        "Não se trata de maldade indistinta: as Bestas de Fluxo pertencem ao equilíbrio local. A mesma energia que faz a floresta florescer pode torná-la mortal para quem não respeita seus limites."
+      ]
+    }
+  },
+  "caixa": {
+    "title": "A Caixa",
+    "subtitle": "A metrópole sob a Torre do Tempo",
+    "source": "Códice Supremo · pp. 8–9; aparência, Torre do Tempo e instituições definidas pelo autor",
+    "left": {
+      "heading": "O coração urbano do continente",
+      "paragraphs": [
+        "A Caixa é o grande centro metropolitano de Arcádia. Em uma planície de ruas amplas, jardins, escolas e instituições de formação, habitantes e Arcadianos aprendem a conviver com os recursos de um mundo atravessado pelo Fluxo.",
+        "Sua beleza mistura vegetação, bronze, metal e tonalidades azuis. Prédios altos, centros de pesquisa e grandes edifícios de ensino fazem da cidade um encontro entre natureza e tecnologia."
+      ]
+    },
+    "right": {
+      "heading": "A Torre do Tempo",
+      "paragraphs": [
+        "Acima de toda a paisagem sobe a Torre do Tempo. Erguida no coração da Caixa, ela atravessa a linha do horizonte e parece não ter fim, tão alta que o olhar a perde no céu.",
+        "O Consórcio exerce influência e controle na cidade, como narra o Códice. A vida cotidiana, porém, também compreende estudo, convivência e desenvolvimento: a aparência luminosa da metrópole não elimina a tensão entre liberdade e disciplina."
+      ]
+    }
+  },
+  "deserto": {
+    "title": "O Grande Deserto",
+    "subtitle": "A terra do calor e do gelo",
+    "source": "Códice Supremo · p. 9; Bestiário · criaturas do Grande Deserto; ciclos e vestimentas definidos pelo autor",
+    "left": {
+      "heading": "Um deserto anterior às ruínas",
+      "paragraphs": [
+        "O Grande Deserto não nasceu com a devastação do planeta após a Grande Guerra. É parte antiga do ecossistema do continente, com areias, minérios de Arcádia e formas de vida adaptadas a uma intensidade de Fluxo quase insuportável.",
+        "Durante o dia, um calor escaldante obriga seus moradores a criar vestimentas especiais de proteção. A areia e o Fluxo podem tomar formas vivas: criaturas que surgem de dunas, rochas e correntes de energia."
+      ]
+    },
+    "right": {
+      "heading": "Quando a noite transforma a areia",
+      "paragraphs": [
+        "Ao anoitecer, o calor dá lugar a um frio assustador. O mesmo deserto parece converter-se em um palácio gélido, e muitas das criaturas mudam com ele: formas de areia e Fluxo durante o dia, formas de gelo e Fluxo durante a noite.",
+        "Essa dualidade faz do lugar uma região extrema e perigosa. Nenhum viajante pode julgá-lo apenas pela aparência das dunas sob o sol, pois sua outra face aguarda a chegada da lua."
+      ]
+    }
+  }
+};
 
-/** Os títulos e subtítulos são os da nova sequência; sem substituições invisíveis. */
-const titleOf = (chapter: Chapter) => chapter.title;
-const subtitleOf = (chapter: Chapter) => chapter.subtitle;
 
-/** Realce textual sem modificar nenhum parágrafo. */
+// A numeração dos 16 capítulos é preservada. A Grande Guerra é um interlúdio,
+// e "As Terras" contém três pergaminhos, cada um com sua própria arte aprovada.
+// Os textos são adaptações de leitura do Códice e das definições autorais,
+// não novas regras ou reproduções de números de ficha.
+const ART: Record<string, {tone:string; scene:string; emblem:typeof Sparkles; note:string; imageWidth:number; imageHeight:number}> = {
+  principio:{tone:'duo',scene:'principio',emblem:Sparkles,note:'Fluxo e Karma primordiais',imageWidth:1672,imageHeight:941},
+  nascimento:{tone:'flux',scene:'nascimento',emblem:Compass,note:'Nascimento de um mundo ainda unificado',imageWidth:1672,imageHeight:941},
+  'primeiro-gaki':{tone:'karma',scene:'primeiro-gaki',emblem:Flame,note:'O primeiro Gaki consumindo o Fluxo',imageWidth:1672,imageHeight:941},
+  guerra:{tone:'karma',scene:'guerra',emblem:Sword,note:'A Grande Guerra e a Traição',imageWidth:1672,imageHeight:941},
+  separacao:{tone:'duo',scene:'separacao',emblem:Orbit,note:'A Grande Estrofe do Mundo',imageWidth:1672,imageHeight:941},
+  marcha:{tone:'duo',scene:'marcha',emblem:Compass,note:'Arcádia e o Mundo Espelho',imageWidth:1536,imageHeight:1024},
+  ruinas:{tone:'ember',scene:'ruinas',emblem:Building2,note:'A Cúpula de Som sobre o continente preservado',imageWidth:1672,imageHeight:941},
+  arcadianos:{tone:'flux',scene:'arcadianos',emblem:Sun,note:'Os Arcadianos — arte aprovada pelo autor',imageWidth:1672,imageHeight:941},
+  humanos:{tone:'human',scene:'humanos',emblem:Eye,note:'Um humano despertando em meio aos que vivem sob o Véu',imageWidth:1672,imageHeight:941},
+  agentes:{tone:'tech',scene:'agentes',emblem:Cpu,note:'Os Agentes Tecnológicos do Consórcio',imageWidth:1619,imageHeight:971},
+  floresta:{tone:'nature',scene:'floresta',emblem:LeafIcon,note:'A Grande Floresta, exuberante e perigosa',imageWidth:1672,imageHeight:941},
+  caixa:{tone:'tech',scene:'caixa',emblem:Building2,note:'A Caixa e sua Torre do Tempo',imageWidth:1672,imageHeight:941},
+  deserto:{tone:'ember',scene:'deserto',emblem:Moon,note:'O Grande Deserto entre o dia e a noite',imageWidth:1672,imageHeight:941},
+  consorcio:{tone:'tech',scene:'consorcio',emblem:Shield,note:'A sede oculta e o poder do Consórcio',imageWidth:1672,imageHeight:941},
+  bercos:{tone:'flux',scene:'bercos',emblem:LeafIcon,note:'Os Berços e a grande árvore branca',imageWidth:1672,imageHeight:941},
+  minerio:{tone:'flux',scene:'minerio',emblem:Gem,note:'A jazida de Minério de Fluxo',imageWidth:1672,imageHeight:941},
+  lingua:{tone:'flux',scene:'lingua',emblem:Feather,note:'Os glifos da Língua Mãe',imageWidth:1672,imageHeight:941},
+  escultores:{tone:'duo',scene:'escultores',emblem:Feather,note:'Escultores de diferentes estilos gravando a Língua Mãe',imageWidth:1672,imageHeight:941},
+  herdeiros:{tone:'duo',scene:'herdeiros',emblem:Crown,note:'Os diferentes Herdeiros diante do futuro de ambos os mundos',imageWidth:1672,imageHeight:941}
+};
+const ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI'];
+type StoryPage = Chapter & { chapterId:string; scene:string; tone:string; note:string; emblem:typeof Sparkles; imageWidth:number; imageHeight:number; partLabel?:string };
+function pageFor(ch:Chapter, artId = ch.id, opts:Partial<StoryPage> = {}):StoryPage {
+  return {...ch,chapterId:ch.id, ...ART[artId]!, ...opts};
+}
+const READING_PAGES: StoryPage[] = CHAPTERS.flatMap(chapter => {
+  if (chapter.id === 'primeiro-gaki') return [
+    pageFor(chapter),
+    pageFor(GREAT_WAR, 'guerra', {chapterId:chapter.id,partLabel:'INTERLÚDIO · ANTES DA GRANDE SEPARAÇÃO'})
+  ];
+  if (chapter.id === 'terras') return (['floresta','caixa','deserto'] as const).map((id,i) =>
+    pageFor({...chapter,...LANDS[id],id},id,{chapterId:'terras',partLabel:`AS TERRAS · ${i+1} DE 3`})
+  );
+  return [pageFor(chapter)];
+});
+const firstPageOf = (id:string) => READING_PAGES.findIndex(page=>page.chapterId===id);
+
+/** Realça Fluxo/Karma sem alterar nenhuma palavra do manuscrito. */
 function Ink({ children }: { children: string }) {
   return <>{children.split(/(Fluxo|Karma)/gi).map((part, index) => {
     if (/^fluxo$/i.test(part)) return <strong className="hs-ink-flux" key={index}>{part}</strong>;
@@ -411,65 +541,51 @@ function Ink({ children }: { children: string }) {
   })}</>;
 }
 
-type StorySpreadProps = {
-  chapter: Chapter;
-  index: number;
-  continuous?: boolean;
-  onPrevious?: () => void;
-  onNext?: () => void;
-};
-
-/** Uma folha de pergaminho: arte vinculada ao tema, lore fundamentada no Códice à esquerda.
- * Leitura em livro: texto rola dentro do pergaminho no desktop.
- * Leitura corrida ou celular: a página inteira rola naturalmente.
- */
-function StorySpread({chapter, index, continuous = false, onPrevious, onNext}: StorySpreadProps) {
-  const art = CHAPTER_ART[chapter.id as keyof typeof CHAPTER_ART] ?? CHAPTER_ART.principio;
-  const Icon = art.emblem;
-  const ordinal = ROMAN[index] ?? String(index + 1);
+type SpreadProps = {page:StoryPage; index:number; continuous?:boolean; onPrevious?:()=>void; onNext?:()=>void};
+function StorySpread({page,index,continuous=false,onPrevious,onNext}:SpreadProps){
+  const Icon = page.emblem;
+  const artPath = `/historia/cenas/livro/${page.scene}`;
+  const chapterIndex = CHAPTERS.findIndex(ch=>ch.id===page.chapterId);
+  const ordinal = ROMAN[chapterIndex] ?? String(chapterIndex+1);
   const gesture = useRef<{x:number;y:number}|null>(null);
-  const artPath = `/historia/cenas/${art.scene}`;
-
+  const isFirst = index===0;
   return <article
-    className={`hs-story-spread hs-theme-${art.tone} ${continuous ? 'hs-story-spread-continuous' : ''}`}
-    id={`historia-${chapter.id}`}
-    aria-label={`Capítulo ${index + 1}: ${titleOf(chapter)}`}
-    onTouchStart={event => {if (!continuous && event.touches[0]) gesture.current={x:event.touches[0].clientX,y:event.touches[0].clientY};}}
-    onTouchEnd={event => {
-      if (continuous || !gesture.current || !event.changedTouches[0]) return;
+    className={`hs-story-spread hs-theme-${page.tone} ${continuous?'hs-story-spread-continuous':''}`}
+    id={`historia-${page.id}`} aria-label={`${page.partLabel??`Capítulo ${ordinal}`}: ${page.title}`}
+    onTouchStart={event=>{if(!continuous&&event.touches[0])gesture.current={x:event.touches[0].clientX,y:event.touches[0].clientY};}}
+    onTouchEnd={event=>{
+      if(continuous||!gesture.current||!event.changedTouches[0])return;
       const dx=event.changedTouches[0].clientX-gesture.current.x;
       const dy=event.changedTouches[0].clientY-gesture.current.y;
       gesture.current=null;
-      if (Math.abs(dx)>70 && Math.abs(dx)>Math.abs(dy)*1.7) {
-        if (dx<0) onNext?.(); else onPrevious?.();
-      }
-    }}
-  >
+      if(Math.abs(dx)>80&&Math.abs(dx)>Math.abs(dy)*1.8) (dx<0?onNext:onPrevious)?.();
+    }}>
     <div className="hs-spread-inner">
-      <div className="hs-story-narrative">
+      <div className="hs-story-narrative" tabIndex={0} aria-label={`Texto de ${page.title}`}>
         <header className="hs-spread-title">
-          <span className="hs-chapter-number"><span aria-hidden="true">✧ ─── ✦ ─── ✧</span> CAPÍTULO {ordinal} <span aria-hidden="true">✧ ─── ✦ ─── ✧</span></span>
-          <h2>{titleOf(chapter)}</h2>
-          <p className="hs-chapter-deck"><Ink>{subtitleOf(chapter)}</Ink></p>
+          <span className="hs-chapter-number"><span aria-hidden="true">✧ ─── ✦ ─── ✧</span> CAPÍTULO {ordinal}<span aria-hidden="true">✧ ─── ✦ ─── ✧</span></span>
+          <h2>{page.title}</h2>
+          <p className="hs-chapter-deck"><Ink>{page.subtitle}</Ink></p>
+          {page.partLabel&&<p className="hs-part-label">{page.partLabel}</p>}
           <span className="hs-spread-rule" aria-hidden="true">─────── ✧ ✦ ✧ ───────</span>
         </header>
         <div className="hs-narrative-passages">
-          {[chapter.left,chapter.right].map((passage, part) => <section key={part} className="hs-story-passage">
+          {[page.left,page.right,...(page.extra??[])].map((passage,part)=><section key={part} className={`hs-story-passage ${part>1?'hs-story-passage--lore':''}`}>
             <h3>{passage.heading}</h3>
-            {passage.paragraphs.map((paragraph, paraIndex) => <p key={paraIndex}><Ink>{paragraph}</Ink></p>)}
+            {passage.paragraphs.map((paragraph,pidx)=><p key={pidx}><Ink>{paragraph}</Ink></p>)}
           </section>)}
         </div>
-        <footer className="hs-spread-source"><span>{chapter.source}</span><span>HERDEIROS · O DESPERTAR</span></footer>
+        <footer className="hs-spread-source"><span>{page.source}</span><span>HERDEIROS · O DESPERTAR</span></footer>
       </div>
-      <figure className="hs-story-illustration" aria-label={`Ilustração: ${art.note}`}>
+      <figure className="hs-story-illustration hs-approved-art"
+        style={{backgroundImage:`url(${artPath}-760.webp)`}} aria-label={`Ilustração aprovada: ${page.note}`}>
         <picture>
-          <source type="image/webp" srcSet={`${artPath}-480.webp 480w, ${artPath}-760.webp 760w, ${artPath}-1520.webp 1520w`} sizes="(max-width: 820px) 100vw, (max-width: 1260px) 50vw, 43vw" />
-          <img src={`${artPath}.webp`} alt={`${art.note}. Arte ilustrativa do capítulo ${titleOf(chapter)}.`}
-            loading={index === 0 && !continuous ? 'eager' : 'lazy'}
-            fetchPriority={index === 0 && !continuous ? 'high' : 'auto'}
-            decoding="async" width={760} height={990} draggable={false}/>
+          <source type="image/webp" srcSet={`${artPath}-480.webp 480w, ${artPath}-760.webp 760w, ${artPath}-1520.webp 1520w, ${artPath}-full.webp ${page.imageWidth}w`}
+            sizes="(max-width: 820px) 100vw, (max-width: 1320px) 50vw, 43vw"/>
+          <img src={`${artPath}-original.png`} alt={page.note} width={page.imageWidth} height={page.imageHeight}
+            decoding="async" fetchPriority={isFirst&&!continuous?'high':'auto'} loading={isFirst&&!continuous?'eager':'lazy'} draggable={false}/>
         </picture>
-        <figcaption><Icon size={17} aria-hidden="true"/><span>{art.note}</span></figcaption>
+        <figcaption><Icon size={17} aria-hidden="true"/><span>{page.note}</span></figcaption>
       </figure>
       <span className="hs-edge hs-edge-left" aria-hidden="true"/>
       <span className="hs-edge hs-edge-right" aria-hidden="true"/>
@@ -477,102 +593,102 @@ function StorySpread({chapter, index, continuous = false, onPrevious, onNext}: S
       <span className="hs-edge hs-edge-bottom" aria-hidden="true"/>
       <span className="hs-spread-glyph" aria-hidden="true">✧</span>
       <span className="hs-spread-seal" aria-hidden="true">✥</span>
-      {!continuous && <nav className="hs-parchment-turn" aria-label="Navegar pelos pergaminhos">
+      {!continuous&&<nav className="hs-parchment-turn" aria-label="Passar para outro pergaminho">
         <button type="button" onClick={onPrevious} disabled={index===0} aria-label="Pergaminho anterior" title="Pergaminho anterior"><ChevronLeft size={24}/></button>
-        <span aria-label={`Página ${index + 1} de ${CHAPTERS.length}`}>{index + 1} <small>/ {CHAPTERS.length}</small></span>
-        <button type="button" onClick={onNext} disabled={index===CHAPTERS.length-1} aria-label="Próximo pergaminho" title="Próximo pergaminho"><ChevronRight size={24}/></button>
+        <span aria-label={`Pergaminho ${index+1} de ${READING_PAGES.length}`}>{index+1} <small>/ {READING_PAGES.length}</small></span>
+        <button type="button" onClick={onNext} disabled={index===READING_PAGES.length-1} aria-label="Próximo pergaminho" title="Próximo pergaminho"><ChevronRight size={24}/></button>
       </nav>}
-      {continuous && <span className="hs-continuous-number" aria-label={`Página ${index+1} de ${CHAPTERS.length}`}>{index+1} / {CHAPTERS.length}</span>}
+      {continuous&&<span className="hs-continuous-number" aria-label={`Pergaminho ${index+1} de ${READING_PAGES.length}`}>{index+1} / {READING_PAGES.length}</span>}
     </div>
   </article>;
 }
 
-export function StoryBookPage({ onHome }: { onHome: () => void }) {
-  const [active, setActive] = useState(0);
-  const [indexOpen, setIndexOpen] = useState(false);
-  const [continuous, setContinuous] = useState(false);
-  const top = useRef<HTMLElement>(null);
-  const chapter = CHAPTERS[active] ?? CHAPTERS[0]!;
-  useEffect(() => {
-    const shell = document.querySelector('.app-shell');
+export function StoryBookPage({onHome}:{onHome:()=>void}) {
+  const [active,setActive]=useState(0);
+  const [indexOpen,setIndexOpen]=useState(false);
+  const [continuous,setContinuous]=useState(false);
+  const top=useRef<HTMLElement>(null);
+  const page=READING_PAGES[active]??READING_PAGES[0]!;
+  useEffect(()=>{
+    const shell=document.querySelector('.app-shell');
     shell?.classList.add('hs-history-shell');
-    return () => shell?.classList.remove('hs-history-shell');
-  }, []);
+    return ()=>shell?.classList.remove('hs-history-shell');
+  },[]);
 
-  const choose = (index: number) => {
-    const selected = Math.min(Math.max(index, 0), CHAPTERS.length - 1);
+  const choose=(index:number)=>{
+    const selected=Math.min(Math.max(index,0),READING_PAGES.length-1);
     setActive(selected);
     setIndexOpen(false);
-    requestAnimationFrame(() => {
-      const target = continuous ? document.getElementById(`historia-${CHAPTERS[selected]?.id}`) : top.current;
+    requestAnimationFrame(()=>{
+      const target=continuous?document.getElementById(`historia-${READING_PAGES[selected]?.id}`):top.current;
       target?.scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth'});
-      if (!continuous) document.querySelector<HTMLElement>('.hs-story-narrative')?.scrollTo({top:0});
+      if(!continuous)document.querySelector<HTMLElement>('.hs-story-spread:not(.hs-story-spread-continuous) .hs-story-narrative')?.scrollTo({top:0});
     });
   };
-
-  // Leitura por teclado, além dos botões e gestos horizontais do celular.
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (continuous || event.altKey || event.ctrlKey || event.metaKey) return;
-      if (event.target instanceof HTMLElement && (event.target.isContentEditable || ['INPUT','TEXTAREA','SELECT','BUTTON'].includes(event.target.tagName))) return;
-      if (event.key === 'ArrowRight' && active < CHAPTERS.length - 1) { event.preventDefault(); choose(active + 1); }
-      if (event.key === 'ArrowLeft' && active > 0) { event.preventDefault(); choose(active - 1); }
+  useEffect(()=>{
+    if(!continuous) return;
+    // Entrar em leitura corrida preserva o trecho atualmente selecionado.
+    requestAnimationFrame(()=>document.getElementById(`historia-${READING_PAGES[active]?.id}`)?.scrollIntoView({block:'start'}));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[continuous]);
+  useEffect(()=>{
+    const keyDown=(event:KeyboardEvent)=>{
+      if(continuous||event.altKey||event.ctrlKey||event.metaKey)return;
+      if(event.target instanceof HTMLElement&&(event.target.isContentEditable||['INPUT','TEXTAREA','SELECT','BUTTON'].includes(event.target.tagName)))return;
+      if(event.key==='ArrowRight'&&active<READING_PAGES.length-1){event.preventDefault();choose(active+1);}
+      if(event.key==='ArrowLeft'&&active>0){event.preventDefault();choose(active-1);}
     };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  // O evento acompanha as mudanças de página ou modo de leitura.
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, continuous]);
-
-  // No modo corrido, o índice destaca o capítulo visível sem interromper a leitura.
-  useEffect(() => {
-    if (!continuous || !('IntersectionObserver' in window)) return;
-    const observer = new IntersectionObserver(entries => {
-      for (const entry of entries) if (entry.isIntersecting) {
-        const found=CHAPTERS.findIndex(item => entry.target.id === `historia-${item.id}`);
-        if (found>=0) setActive(found);
+    window.addEventListener('keydown',keyDown);
+    return ()=>window.removeEventListener('keydown',keyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  },[active,continuous]);
+  useEffect(()=>{
+    if(!continuous||!('IntersectionObserver' in window))return;
+    const obs=new IntersectionObserver(entries=>{
+      for(const entry of entries)if(entry.isIntersecting){
+        const i=READING_PAGES.findIndex(item=>entry.target.id===`historia-${item.id}`);
+        if(i>=0)setActive(i);
       }
-    }, {rootMargin:'-12% 0px -65% 0px',threshold:0});
-    document.querySelectorAll('.hs-story-spread-continuous').forEach(element=>observer.observe(element));
-    return ()=>observer.disconnect();
-  }, [continuous]);
+    },{rootMargin:'-10% 0px -65% 0px',threshold:0});
+    document.querySelectorAll('.hs-story-spread-continuous').forEach(el=>obs.observe(el));
+    return ()=>obs.disconnect();
+  },[continuous]);
 
   return <section className="hs-story-page" aria-label="A História de Arcádia" ref={top}>
     <div className="hs-story-toolbar">
-      <button type="button" className="hs-index-toggle" aria-expanded={indexOpen} aria-controls="hs-story-index" onClick={() => setIndexOpen(value=>!value)}>
+      <button type="button" className="hs-index-toggle" aria-expanded={indexOpen} aria-controls="hs-story-index" onClick={()=>setIndexOpen(v=>!v)}>
         <List size={18}/> Índice dos capítulos
       </button>
-      <div className="hs-view-switch" role="group" aria-label="Escolha como ler a História">
-        <button type="button" className={!continuous?'active':''} aria-pressed={!continuous} onClick={() => setContinuous(false)}><BookOpen size={16}/> Pergaminhos</button>
-        <button type="button" className={continuous?'active':''} aria-pressed={continuous} onClick={() => setContinuous(true)}><ScrollText size={16}/> Leitura corrida</button>
+      <div className="hs-view-switch" role="group" aria-label="Modo de leitura">
+        <button type="button" className={!continuous?'active':''} aria-pressed={!continuous} onClick={()=>setContinuous(false)}><BookOpen size={16}/> Pergaminhos</button>
+        <button type="button" className={continuous?'active':''} aria-pressed={continuous} onClick={()=>setContinuous(true)}><ScrollText size={16}/> Leitura corrida</button>
       </div>
     </div>
     <div className="hs-story-layout">
-      <aside id="hs-story-index" className={`hs-story-index ${indexOpen ? 'is-open' : ''}`} aria-label="Índice dos capítulos">
-        <div className="hs-index-intro">
-          <span className="hs-index-crest" aria-hidden="true">✧</span>
-          <h1>A HISTÓRIA DE ARCÁDIA</h1>
-        </div>
+      <aside id="hs-story-index" className={`hs-story-index ${indexOpen?'is-open':''}`} aria-label="Índice dos 16 capítulos">
+        <div className="hs-index-intro"><span className="hs-index-crest" aria-hidden="true">✧</span><h1>A HISTÓRIA DE ARCÁDIA</h1></div>
         <nav className="hs-index-chapters" aria-label="Escolher capítulo">
-          {CHAPTERS.map((item,index) => {
-            const art = CHAPTER_ART[item.id as keyof typeof CHAPTER_ART] ?? CHAPTER_ART.principio;
-            const Glyph = art.emblem;
-            return <button type="button" key={item.id}
-              className={`hs-index-row ${active === index ? 'selected' : ''}`}
-              onClick={() => choose(index)} aria-current={active === index ? 'page' : undefined}>
-              <span className="hs-index-symbol" aria-hidden="true"><Glyph size={16}/></span>
-              <span className="hs-index-row-text"><strong>{ROMAN[index]}. {titleOf(item)}</strong><small>{active === index ? subtitleOf(item) : ''}</small></span>
-              <ChevronRight size={14} className="hs-index-chevron" aria-hidden="true"/>
-            </button>;
+          {CHAPTERS.map((item,i)=>{
+            const selected=page.chapterId===item.id;
+            const glyph=ART[item.id==='terras'?'floresta':item.id]?.emblem??Sparkles;
+            const Glyph=glyph;
+            return <div key={item.id} className="hs-index-group">
+              <button type="button" className={`hs-index-row ${selected?'selected':''}`} onClick={()=>choose(firstPageOf(item.id))} aria-current={selected?'page':undefined}>
+                <span className="hs-index-symbol" aria-hidden="true"><Glyph size={16}/></span>
+                <span className="hs-index-row-text"><strong>{ROMAN[i]}. {item.title}</strong><small>{selected?item.subtitle:''}</small></span>
+                <ChevronRight size={14} className="hs-index-chevron" aria-hidden="true"/>
+              </button>
+              {item.id==='primeiro-gaki'&&<button type="button" className={`hs-index-subrow ${page.id==='guerra'?'selected':''}`} onClick={()=>choose(READING_PAGES.findIndex(p=>p.id==='guerra'))}>↳ A Grande Guerra e a Traição</button>}
+              {item.id==='terras'&&(['floresta','caixa','deserto'] as const).map(id=><button type="button" key={id} className={`hs-index-subrow ${page.id===id?'selected':''}`} onClick={()=>choose(READING_PAGES.findIndex(p=>p.id===id))}>↳ {LANDS[id].title}</button>)}
+            </div>;
           })}
         </nav>
         <button type="button" className="hs-back-home" onClick={onHome}><Home size={16}/> Voltar ao portal</button>
       </aside>
       <div className="hs-reading-area">
-        {continuous ? <div className="hs-continuous-reader">
-          {CHAPTERS.map((item,index) => <StorySpread chapter={item} index={index} continuous key={item.id}/>) }
-        </div> : <StorySpread chapter={chapter} index={active} onPrevious={() => choose(active - 1)} onNext={() => choose(active + 1)}/>}
-        <p className="hs-story-reading-tip">{continuous ? 'Leitura corrida · deslize para acompanhar a crônica de Arcádia' : 'Vire as páginas pelas setas · no celular, deslize para o lado · no PC, use ← e →'}</p>
+        {continuous?<div className="hs-continuous-reader">{READING_PAGES.map((p,i)=><StorySpread key={p.id} page={p} index={i} continuous/>)}</div>
+          :<StorySpread page={page} index={active} onPrevious={()=>choose(active-1)} onNext={()=>choose(active+1)}/>}
+        <p className="hs-story-reading-tip">{continuous?'Leitura corrida · role a página para acompanhar toda a História de Arcádia':'Passe ao próximo pergaminho pelas setas · no celular, deslize para o lado · no PC, use ← e →'}</p>
         <div className="hs-story-colophon">HERDEIROS · O DESPERTAR — A HISTÓRIA DE ARCÁDIA</div>
       </div>
     </div>

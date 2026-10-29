@@ -240,3 +240,62 @@
  .hs-spread-title h2{font-size:clamp(27px,7.7vw,38px);}
  .hs-story-passage p{line-height:1.64;}
 }
+
+/* Ilustrações aprovadas têm enquadramento cinematográfico horizontal.
+   O fundo desfocado usa a própria arte; a composição integral permanece visível,
+   inclusive a paridade visual entre os dois planetas. */
+.hs-story-illustration.hs-approved-art{background-size:cover;background-position:center;background-repeat:no-repeat;}
+.hs-story-illustration.hs-approved-art::before{content:"";position:absolute;inset:-24px;background-image:inherit;background-size:cover;background-position:center;filter:blur(19px) brightness(.43) saturate(1.15);z-index:0;}
+.hs-story-illustration.hs-approved-art picture{position:relative;z-index:1;}
+.hs-story-illustration.hs-approved-art img{object-fit:contain;object-position:center center;filter:drop-shadow(0 0 14px #120917b0);}
+.hs-story-illustration.hs-approved-art figcaption{z-index:2;}
+
+/* Leitura das linhagens: o cabeçalho dos aprofundamentos históricos aparece
+   no pergaminho. Os dois primeiros blocos continuam com o visual original. */
+.hs-story-passage--lore{margin-top:22px;}
+.hs-story-passage--lore h3{
+  position:static!important;width:auto!important;height:auto!important;overflow:visible!important;
+  clip-path:none!important;white-space:normal!important;margin:23px 0 12px!important;
+  padding:7px 0 7px 12px!important;border:0!important;border-left:2px solid #a76a28!important;
+  border-bottom:1px solid #a76a283b!important;color:#643714!important;
+  font:600 clamp(15px,1.13vw,19px)/1.3 Georgia,serif!important;letter-spacing:.02em!important;
+  text-wrap:balance;
+}
+.hs-story-passage--lore p{margin-bottom:17px;}
+@media(max-width:520px){.hs-story-passage--lore h3{font-size:16px!important;margin:18px 0 10px!important;}}
+
+/* Livro final · 16 capítulos, 19 pergaminhos com arte exclusivamente aprovada. */
+.hs-index-group{min-width:0;display:grid;gap:2px;}
+.hs-index-subrow{display:block;width:calc(100% - 42px);margin:0 0 3px 42px;padding:4px 7px;background:transparent;border:0;border-left:1px solid #9f723c63;color:#a88c61!important;letter-spacing:.03em;font:normal 11px/1.35 Georgia,serif!important;text-align:left;}
+.hs-index-subrow:hover,.hs-index-subrow.selected{color:#ffe3aa!important;background:#92652726;border-left-color:#e9ba67;}
+.hs-part-label{margin:8px 0 0;font:600 10px/1.3 Georgia,serif;color:#754618;letter-spacing:.16em;text-transform:uppercase;}
+.hs-story-narrative:focus-visible{outline:2px solid #bf893c;outline-offset:-6px;}
+.hs-story-illustration.hs-approved-art{background-color:#392916;}
+.hs-story-illustration.hs-approved-art::before{z-index:0;inset:-28px;}
+.hs-story-illustration.hs-approved-art::after{content:"";position:absolute;pointer-events:none;inset:0;z-index:2;
+ background:linear-gradient(90deg,#ebcd9ae8 0%,#edc99677 6%,transparent 24%),linear-gradient(0deg,#301a0a66,transparent 18%);}
+.hs-story-illustration.hs-approved-art picture{display:flex;align-items:center;justify-content:center;height:100%;width:100%;position:relative;z-index:1;}
+.hs-story-illustration.hs-approved-art img{display:block;object-fit:contain;max-width:100%;max-height:100%;width:100%;height:100%;filter:none;}
+.hs-story-illustration.hs-approved-art figcaption{z-index:3;}
+.hs-story-passage:first-child p:first-of-type::first-letter{font-weight:700;}
+.hs-story-passage--lore h3{position:static!important;width:auto!important;height:auto!important;clip-path:none!important;white-space:normal!important;}
+.hs-story-passage{break-inside:avoid;}
+@media(max-width:820px){
+ .hs-story-illustration.hs-approved-art picture{position:absolute;inset:0;}
+ .hs-story-illustration.hs-approved-art img{object-fit:contain;object-position:center center;}
+ .hs-story-illustration.hs-approved-art::after{background:linear-gradient(180deg,#eccb9957,transparent 15%),linear-gradient(0deg,#29170a8c,transparent 22%);}
+ .hs-index-subrow{font-size:12px!important;min-height:25px;}
+}
+@media(max-width:520px){
+ .hs-story-illustration.hs-approved-art{aspect-ratio:1.45/1;}
+ .hs-story-illustration figcaption{bottom:16px!important;left:23px!important;right:10px!important;}
+ .hs-story-passage p{font-size:16px!important;line-height:1.7!important;}
+ .hs-story-narrative{padding-bottom:42px!important;}
+ .hs-parchment-turn{bottom:10px;}
+}
+
+/* O texto narrativo permanece exclusivamente à esquerda; as legendas ficam acessíveis a leitores de tela. */
+.hs-story-illustration.hs-approved-art figcaption{
+ position:absolute!important;width:1px!important;height:1px!important;padding:0!important;
+ overflow:hidden!important;white-space:nowrap!important;clip-path:inset(50%)!important;border:0!important;
+}
