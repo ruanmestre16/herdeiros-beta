@@ -1,0 +1,192 @@
+[
+  {
+    "id": "principio",
+    "origem": "/mnt/data/Herdeiros_Artes_Aprovadas/historia/i-primeiro-movimento/i-primeiro-movimento-original-aprovada.png",
+    "destino": "/historia/cenas/livro/principio-original.png",
+    "width": 1672,
+    "height": 941,
+    "sha256": "0bb962cfe54a5c1b8e522ed30c2b47e8c86dbfcd584f0acffe7ee5f4672f9ff2",
+    "status": "APROVADA",
+    "descricao": "Fluxo dourado líquido e Karma roxo como duas fumaças abstratas, no vazio."
+  },
+  {
+    "id": "nascimento",
+    "origem": "/mnt/data/Herdeiros_Artes_Aprovadas/historia/ii-o-nascimento/ii-o-nascimento-original-aprovada.png",
+    "destino": "/historia/cenas/livro/nascimento-original.png",
+    "width": 1672,
+    "height": 941,
+    "sha256": "9e18c76767fab64f74948f504de660de294a38bcca12c7dad5523f4e779da5c1",
+    "status": "APROVADA",
+    "descricao": "Nascimento do mundo primordial sob Fluxo predominante e Karma discreto."
+  },
+  {
+    "id": "primeiro-gaki",
+    "origem": "/mnt/data/Herdeiros_Artes_Aprovadas/historia/iii-o-primeiro-gaki/iii-o-primeiro-gaki-original-aprovada.png",
+    "destino": "/historia/cenas/livro/primeiro-gaki-original.png",
+    "width": 1672,
+    "height": 941,
+    "sha256": "c48886e0e726a0d3c012b34ab5cc593e3c282f9e7c097984ff894b9943149451",
+    "status": "APROVADA",
+    "descricao": "Primeiro Gaki colossal consumindo o Fluxo e espalhando corrupção na terra unificada."
+  },
+  {
+    "id": "guerra",
+    "origem": "/mnt/data/Herdeiros_Artes_Aprovadas/historia/grande-guerra-e-traicao/grande-guerra-e-traicao-original-aprovada.png",
+    "destino": "/historia/cenas/livro/guerra-original.png",
+    "width": 1672,
+    "height": 941,
+    "sha256": "3a4f71ea0438d6ed3b02d037c89ee534210cde3a62d34d20a32e4728a31cba8e",
+    "status": "APROVADA",
+    "descricao": "Grande Guerra: humanos e arcadianos contra Gakis de Karma e fumaça negra."
+  },
+  {
+    "id": "separacao",
+    "origem": "/mnt/data/Herdeiros_Artes_Aprovadas/historia/iv-a-grande-separacao/iv-a-grande-separacao-original-aprovada.png",
+    "destino": "/historia/cenas/livro/separacao-original.png",
+    "width": 1672,
+    "height": 941,
+    "sha256": "dd54202b841d68ec3dff40479b2fa095cf6ce150785003645bda2ebd3515f923",
+    "status": "APROVADA",
+    "descricao": "Grande Estrofe do Mundo com Karma saindo do Mundo Espelho e indo para Arcádia."
+  },
+  {
+    "id": "marcha",
+    "origem": "/mnt/data/Herdeiros_Artes_Aprovadas/historia/v-a-marcha-dos-mundos/v-a-marcha-dos-mundos-original-aprovada.png",
+    "destino": "/historia/cenas/livro/marcha-original.png",
+    "width": 1536,
+    "height": 1024,
+    "sha256": "c7487ab7c5646094d3afedca4bb2ac0b8af7d85f3f22e3d2011d9cc6eed29450",
+    "status": "APROVADA",
+    "descricao": "Planetas idênticos; Arcádia com Fluxo dourado e Karma roxo, Mundo Espelho natural."
+  },
+  {
+    "id": "ruinas",
+    "origem": "/mnt/data/Herdeiros_Artes_Aprovadas/historia/vi-a-era-das-ruinas/vi-a-era-das-ruinas-original-aprovada.png",
+    "destino": "/historia/cenas/livro/ruinas-original.png",
+    "width": 1672,
+    "height": 941,
+    "sha256": "5165322e6882ab0e884a0a34a670f8f2b82067c5b3df0e9f167172739a2e9814",
+    "status": "APROVADA",
+    "descricao": "Planeta árido com uma cúpula fechada por cima e por baixo protegendo três biomas."
+  },
+  {
+    "id": "arcadianos",
+    "origem": "/mnt/data/Herdeiros_Artes_Aprovadas/historia/vii-os-arcadianos/vii-os-arcadianos-original-aprovada.png",
+    "destino": "/historia/cenas/livro/arcadianos-original.png",
+    "width": 1672,
+    "height": 941,
+    "sha256": "b55abe926b51902743b072959b09c3998c1d1b64814caa8c7a958feffefd9434",
+    "status": "APROVADA",
+    "descricao": "Segunda arte escolhida explicitamente pelo autor neste capítulo, apesar de mostrar a cúpula."
+  },
+  {
+    "id": "humanos",
+    "origem": "/mnt/data/Herdeiros_Artes_Aprovadas/historia/viii-os-humanos/viii-os-humanos-original-aprovada.png",
+    "destino": "/historia/cenas/livro/humanos-original.png",
+    "width": 1672,
+    "height": 941,
+    "sha256": "f1cc3db69b8791e4e4b3ebf7c3f5619a11db34d76b435ef6fa2fc0dfae25e5ac",
+    "status": "APROVADA",
+    "descricao": "Multidão sob o Véu da Ignorância com pessoa destacada pelo Fluxo dourado."
+  },
+  {
+    "id": "agentes",
+    "origem": "/mnt/data/Herdeiros_Artes_Aprovadas/historia/ix-os-agentes-tecnologicos/ix-os-agentes-tecnologicos-original-aprovada.png",
+    "destino": "/historia/cenas/livro/agentes-original.png",
+    "width": 1619,
+    "height": 971,
+    "sha256": "adc68fddcaf0fa3a28b7f2b53fa44b6ca7a04cef2671978efc4c5063e29a6bdf",
+    "status": "APROVADA",
+    "descricao": "Três agentes tecnológicos de referência em grande laboratório."
+  },
+  {
+    "id": "floresta",
+    "origem": "/mnt/data/Herdeiros_Artes_Aprovadas/historia/as-terras/grande-floresta/grande-floresta-original-aprovada.png",
+    "destino": "/historia/cenas/livro/floresta-original.png",
+    "width": 1672,
+    "height": 941,
+    "sha256": "2ecbd47575f2b23efab2e4fd87bcfec8fc553353a794f1fad7f37d4189163c44",
+    "status": "APROVADA",
+    "descricao": "Grande Floresta com arvores colossais, plantas carnivoras ameaçadoras, animais bestiais e Fluxo dourado na natureza"
+  },
+  {
+    "id": "caixa",
+    "origem": "/mnt/data/Herdeiros_Artes_Aprovadas/historia/as-terras/a-caixa/a-caixa-original-aprovada.png",
+    "destino": "/historia/cenas/livro/caixa-original.png",
+    "width": 1672,
+    "height": 941,
+    "sha256": "a774a271edeafec76cf7da810609e3bf075bb8eeb6fef5ad5d9b7b3cceca080c",
+    "status": "APROVADA",
+    "descricao": "Arte aprovada pelo autor"
+  },
+  {
+    "id": "deserto",
+    "origem": "/mnt/data/Herdeiros_Artes_Aprovadas/historia/as-terras/grande-deserto/grande-deserto-original-aprovada.png",
+    "destino": "/historia/cenas/livro/deserto-original.png",
+    "width": 1672,
+    "height": 941,
+    "sha256": "2513ba9ab49164f05cbcca292fa4a19e69a52f73808a7e292365eddd34c7b525",
+    "status": "APROVADA",
+    "descricao": "Deserto original do continente, calor de dia e gelo à noite, criaturas transformáveis."
+  },
+  {
+    "id": "consorcio",
+    "origem": "/mnt/data/Herdeiros_Artes_Aprovadas/historia/o-consorcio/o-consorcio-original-aprovada.png",
+    "destino": "/historia/cenas/livro/consorcio-original.png",
+    "width": 1672,
+    "height": 941,
+    "sha256": "35741fbc258fdd58bec6eb540a19b39fc54a7eeb0063b5e9f9a3a734c97e3e80",
+    "status": "APROVADA",
+    "descricao": "Sede tecnológica de grande escala parcialmente escondida no deserto, metal escuro, agentes cibernéticos, dirigentes e poder militar do Consórcio."
+  },
+  {
+    "id": "bercos",
+    "origem": "/mnt/data/Herdeiros_Artes_Aprovadas/historia/os-bercos/os-bercos-original-aprovada.png",
+    "destino": "/historia/cenas/livro/bercos-original.png",
+    "width": 1672,
+    "height": 941,
+    "sha256": "632ac0c42adbede701c13b6ee4f9976fc09f1c578c9a253c7bd28d5ed813fb0a",
+    "status": "APROVADA",
+    "descricao": "Santuário de mármore branco e ouro com árvore branca e dourada, crianças de branco e agentes de terno preto com exceções de vestuário."
+  },
+  {
+    "id": "minerio",
+    "origem": "/mnt/data/Herdeiros_Artes_Aprovadas/historia/o-minerio-de-fluxo/o-minerio-de-fluxo-original-aprovada.png",
+    "destino": "/historia/cenas/livro/minerio-original.png",
+    "width": 1672,
+    "height": 941,
+    "sha256": "fd9031410c0b69a241b7e1f66e84d60f280b5393a7f4811bbefb5db7cf9978a6",
+    "status": "APROVADA",
+    "descricao": "Imensa caverna rochosa, minérios dourados, veios de energia Fluxo aprisionada na matéria, sem personagens nem construções."
+  },
+  {
+    "id": "lingua",
+    "origem": "/mnt/data/Herdeiros_Artes_Aprovadas/historia/a-lingua-mae/a-lingua-mae-original-aprovada.png",
+    "destino": "/historia/cenas/livro/lingua-original.png",
+    "width": 1672,
+    "height": 941,
+    "sha256": "064a46ba98e1c5288047c8ab48a822896adc36e8a031066d566c9bf980b5b5d6",
+    "status": "APROVADA",
+    "descricao": "Arte aprovada pelo autor"
+  },
+  {
+    "id": "escultores",
+    "origem": "/mnt/data/Herdeiros_Artes_Aprovadas/historia/os-escultores/os-escultores-original-aprovada.png",
+    "destino": "/historia/cenas/livro/escultores-original.png",
+    "width": 1672,
+    "height": 941,
+    "sha256": "c5d5515e8df7dad6ed786a69e8c131ddd0a4092391ff3a0ea85c2f10c27e8a67",
+    "status": "APROVADA",
+    "descricao": "Arte aprovada pelo autor"
+  },
+  {
+    "id": "herdeiros",
+    "origem": "/mnt/data/heróis_entre_mundos_dourados_e_neon.png",
+    "destino": "/historia/cenas/livro/herdeiros-original.png",
+    "width": 1672,
+    "height": 941,
+    "sha256": "17a5672561348d31d4fcf78d8a27e6a12616afd3c6b52f356956553a13f41a8f",
+    "status": "APROVADA",
+    "descricao": "O Legado dos Herdeiros, versão final corrigida e aprovada pelo autor, incluindo humano em roupa moderna e Gaki encapuzado de Karma roxo."
+  }
+]
