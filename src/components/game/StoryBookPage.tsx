@@ -10,7 +10,7 @@ type Chapter = { id: string; book: string; title: string; subtitle: string; sour
  */
 /** Ordem cronológica corrigida para a narrativa inicial: o Primeiro Gaki surge antes
  * da Grande Guerra e da Grande Estrofe, que por sua vez precede a Marcha dos Mundos.
- * A guerra é narrada dentro de "O Primeiro Gaki" e "A Grande Separação", mantendo 16 capítulos.
+ * A guerra é narrada dentro de "O Primeiro Gaki" e "A Grande Separação", mantendo agora 17 capítulos, incluindo a narrativa própria dos Gakis.
  * A partir de "Os Arcadianos", os capítulos são temáticos e não afirmam datas de surgimento.
  */
 const CHAPTERS: Chapter[] = [
@@ -75,23 +75,7 @@ const CHAPTERS: Chapter[] = [
         "Dos efeitos da corrupção vieram outros Gakis. Quando o Fluxo de uma vida é consumido ou distorcido pelo Karma, o resultado não é somente o fim: pode surgir uma identidade alterada pela persistência e pela fome.",
         "O Gaki é também uma das linhagens de Herdeiros. Sua origem carrega o risco da corrupção, mas nem toda trajetória termina na mesma escolha. O próprio Códice conta que alguns Gakis antigos rejeitaram a destruição e buscaram coexistir com os demais povos."
       ]
-    },
-    "extra": [
-      {
-        "heading": "Do instinto à consciência",
-        "paragraphs": [
-          "Os Irracionais são massas de fumaça negra sem forma estável: agem pelo instinto de consumir. Os Sencientes recuperam a fala e um princípio de lógica; seus corpos ainda oscilam entre matéria e sombra.",
-          "Os Inteligentes recuperam plenamente a razão, elaboram estratégias e conseguem conduzir Gakis inferiores. Acima deles estão os Velhos: seres de imensa antiguidade, capazes de remodelar o próprio corpo, assumir outras aparências e recuperar lembranças de vidas passadas."
-        ]
-      },
-      {
-        "heading": "Predadores, Herbívoros e Darks",
-        "paragraphs": [
-          "Há Gakis Predadores, que se alimentam de carne e energia vital e espalham corrupção. Mas também existem os raros Herbívoros ou Equilibrados: seres que procuram redenção, podem viver da energia da natureza ou de alimento preparado e proteger territórios.",
-          "O Códice ainda menciona os Darks, que transcendem as classes comuns e usam a distorção do Fluxo para corromper a realidade e outros despertos. Nenhuma dessas distinções apaga a história singular de cada Gaki."
-        ]
-      }
-    ]
+    }
   },
   {
     "id": "separacao",
@@ -233,6 +217,43 @@ const CHAPTERS: Chapter[] = [
         "paragraphs": [
           "Alguns humanos nascem com uma presença de Fluxo extraordinariamente intensa. São as Crianças-Farol, capazes de alterar ambientes ou atrair atenções perigosas mesmo antes de compreender o que carregam.",
           "Seu brilho chama predadores espirituais e o interesse do Consórcio, que o livro associa a experimentos brutais. A história dessas crianças mostra que carregar poder não significa ter escolhido o destino que outros tentam lhes impor."
+        ]
+      }
+    ]
+  },
+  {
+    "id": "gakis",
+    "book": "III · Os povos",
+    "title": "Os Gakis",
+    "subtitle": "Do instinto à consciência: as formas do Karma",
+    "source": "Códice Supremo · pp. 7 e 17; Bestiário · Gakis Irracionais, Sencientes, Inteligentes e Velhos",
+    "left": {
+      "heading": "Quem são os Gakis",
+      "paragraphs": [
+        "Os Gakis não nasceram junto aos primeiros humanos e arcadianos. A cobiça, a inveja e a malícia desses povos alimentaram o Karma até que surgiu o Primeiro Gaki, capaz de corromper vidas e consumir o Fluxo. A partir dele vieram outros seres, diferentes entre si em corpo, consciência e escolhas.",
+        "O Códice descreve a existência dos Gakis como corrupção, persistência e fome transformadas em identidade. Sua matéria pode oscilar entre fumaça negra e formas mais estáveis; eles moldam o próprio corpo em garras, membros alongados e outras extensões, em vez de manifestar uma Arma de Ego."
+      ]
+    },
+    "right": {
+      "heading": "A hierarquia da consciência",
+      "paragraphs": [
+        "Os Irracionais são as Bestas de Fumaça: massas negras disformes, guiadas pelo instinto de consumir. Os Sencientes já recuperaram a fala e uma lógica ainda rudimentar, mas continuam a alternar sombra e matéria, muitas vezes sem apresentar um rosto definido.",
+        "Os Inteligentes possuem linguagem elaborada, planejamento e a capacidade de comandar Gakis de classes inferiores. No alto da hierarquia estão os Velhos, cuja antiguidade e domínio da própria essência lhes permitem mudar de aparência, recuperar lembranças de outras vidas e vestir rostos como máscaras."
+      ]
+    },
+    "extra": [
+      {
+        "heading": "Predadores e Herbívoros",
+        "paragraphs": [
+          "Os Predadores, também chamados Carnívoros, alimentam-se de carne e energia vital, espalhando corrupção e medo. Em contraste, os raros Herbívoros, ou Equilibrados, procuram redenção e podem alimentar-se de energia da natureza ou de carne animal preparada, protegendo territórios em vez de destruí-los.",
+          "Essa distinção fala de alimentação e escolhas, não dos quatro graus de consciência. Um Gaki não é definido apenas pela fome: na Grande Guerra, alguns dos mais antigos se voltaram contra a destruição e escolheram a possibilidade de coexistência."
+        ]
+      },
+      {
+        "heading": "Darks — além das classes comuns",
+        "paragraphs": [
+          "O Códice também nomeia os Darks: seres que transcendem as classes comuns e dominam distorções do Fluxo capazes de corromper a realidade e outros despertos. Não constituem um quinto estágio da hierarquia Irracional–Senciente–Inteligente–Velho.",
+          "Por mais perigosa que seja sua origem, a história dos Gakis não se resume a uma única forma de agir. Instinto, consciência, poder e decisões individuais transformam o lugar que cada um ocupa em Arcádia."
         ]
       }
     ]
@@ -490,7 +511,7 @@ const LANDS: Record<"floresta" | "caixa" | "deserto", Omit<Chapter,"id" | "book"
 };
 
 
-// A numeração dos 16 capítulos é preservada. A Grande Guerra é um interlúdio,
+// A numeração agora reúne 17 capítulos. A Grande Guerra é um interlúdio,
 // e "As Terras" contém três pergaminhos, cada um com sua própria arte aprovada.
 // Os textos são adaptações de leitura do Códice e das definições autorais,
 // não novas regras ou reproduções de números de ficha.
@@ -502,8 +523,9 @@ const ART: Record<string, {tone:string; scene:string; emblem:typeof Sparkles; no
   separacao:{tone:'duo',scene:'separacao',emblem:Orbit,note:'A Grande Estrofe do Mundo',imageWidth:1672,imageHeight:941},
   marcha:{tone:'duo',scene:'marcha',emblem:Compass,note:'Arcádia e o Mundo Espelho',imageWidth:1536,imageHeight:1024},
   ruinas:{tone:'ember',scene:'ruinas',emblem:Building2,note:'A Cúpula de Som sobre o continente preservado',imageWidth:1672,imageHeight:941},
-  arcadianos:{tone:'flux',scene:'arcadianos',emblem:Sun,note:'Os Arcadianos — arte aprovada pelo autor',imageWidth:1672,imageHeight:941},
+  arcadianos:{tone:'flux',scene:'arcadianos',emblem:Sun,note:'Os Arcadianos reunidos diante de Arcádia — ilustração escolhida pelo autor',imageWidth:972,imageHeight:941},
   humanos:{tone:'human',scene:'humanos',emblem:Eye,note:'Um humano despertando em meio aos que vivem sob o Véu',imageWidth:1672,imageHeight:941},
+  gakis:{tone:'karma',scene:'gakis',emblem:Flame,note:'Gakis Senciente, Inteligente e Velho — ilustração em revisão',imageWidth:922,imageHeight:941},
   agentes:{tone:'tech',scene:'agentes',emblem:Cpu,note:'Os Agentes Tecnológicos do Consórcio',imageWidth:1619,imageHeight:971},
   floresta:{tone:'nature',scene:'floresta',emblem:LeafIcon,note:'A Grande Floresta, exuberante e perigosa',imageWidth:1672,imageHeight:941},
   caixa:{tone:'tech',scene:'caixa',emblem:Building2,note:'A Caixa e sua Torre do Tempo',imageWidth:1672,imageHeight:941},
@@ -515,7 +537,7 @@ const ART: Record<string, {tone:string; scene:string; emblem:typeof Sparkles; no
   escultores:{tone:'duo',scene:'escultores',emblem:Feather,note:'Escultores de diferentes estilos gravando a Língua Mãe',imageWidth:1672,imageHeight:941},
   herdeiros:{tone:'duo',scene:'herdeiros',emblem:Crown,note:'Os diferentes Herdeiros diante do futuro de ambos os mundos',imageWidth:1672,imageHeight:941}
 };
-const ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI'];
+const ROMAN = ['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII'];
 type StoryPage = Chapter & { chapterId:string; scene:string; tone:string; note:string; emblem:typeof Sparkles; imageWidth:number; imageHeight:number; partLabel?:string };
 function pageFor(ch:Chapter, artId = ch.id, opts:Partial<StoryPage> = {}):StoryPage {
   return {...ch,chapterId:ch.id, ...ART[artId]!, ...opts};
@@ -665,7 +687,7 @@ export function StoryBookPage({onHome}:{onHome:()=>void}) {
       </div>
     </div>
     <div className="hs-story-layout">
-      <aside id="hs-story-index" className={`hs-story-index ${indexOpen?'is-open':''}`} aria-label="Índice dos 16 capítulos">
+      <aside id="hs-story-index" className={`hs-story-index ${indexOpen?'is-open':''}`} aria-label="Índice dos 17 capítulos">
         <div className="hs-index-intro"><span className="hs-index-crest" aria-hidden="true">✧</span><h1>A HISTÓRIA DE ARCÁDIA</h1></div>
         <nav className="hs-index-chapters" aria-label="Escolher capítulo">
           {CHAPTERS.map((item,i)=>{
