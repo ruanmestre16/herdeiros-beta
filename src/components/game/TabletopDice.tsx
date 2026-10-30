@@ -5,6 +5,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { NOMENCLATURE_CRIT_DICE, absorbActionLabel, absorbFromDice, attrLabelFor, dieFor, forceActionLabel, isTechAgent, forceFluxFromDice, karmaDamageBonus, techCoreConsumed, karmaMaximum, parseDice, nomenclatureLabel, techniqueRules, weaponAttrFor, weaponByKey, weaponDiceFor, weaponRules, withSheetState, sheetState, type Attr, type Character } from '@/lib/game';
 import { damageDiceFaces, parseDamageFormula } from '@/lib/weapon-damage';
 import type { RollEntry } from './SheetExtras';
+import { Dice3DStage } from './Dice3DStage';
+import './dice-3d.css';
 
 /**
  * Janela de dados da mesa (estilo mesa virtual): arrastável, com dados rolando numa telinha.
@@ -16,6 +18,7 @@ const MAX_DICE = 40;
 const ACCENT: Record<number, string> = { 4: '#3db89a', 6: '#bea9eb', 8: '#c9a227', 10: '#e08fb0', 12: '#7fb2e5', 20: '#f0e8d4' };
 const STAGE_W = 320; const STAGE_H = 190;
 const POS_KEY = 'herdeiros-dice-pos';
+const VISUAL_KEY = 'herdeiros-dice-visual';
 const COLOR_KEY = 'herdeiros-dice-color';
 /** Temas de cor do dado. "Clássico" mantém uma cor por tipo de dado; os demais pintam todos os dados da mesma cor. */
 const THEMES: { key: string; label: string; color: string | null }[] = [
@@ -49,6 +52,21 @@ function sanitizeRoll(raw: unknown): TableRoll | null {
   const total = Number(m.total); if (!Number.isFinite(total)) return null;
   return { id: m.id.slice(0, 64), userId: String(m.userId ?? '').slice(0, 64), name: String(m.name ?? 'Jogador').slice(0, 40), source: String(m.source ?? 'Rolagem').slice(0, 140), expression: String(m.expression ?? '').slice(0, 160), dice: m.dice.map(Number).filter(Number.isFinite).slice(0, 40), total: clamp(Math.trunc(total), -9999, 9999), ts: Number(m.ts) || Date.now() };
 }
+/** Só anima rolagens feitas em outras áreas quando a expressão especifica
+ * exatamente os dados que originaram seus resultados. Nunca inventar faces. */
+function facesFromExpression(expression: string, values: number[]): number[] | null {
+  const found: number[] = [];
+  const re = /(^|[^\w])(\d*)d(20|12|10|8|6|4)(?!\d)/gi;
+  for (const m of expression.matchAll(re)) {
+    const count = m[2] ? Number(m[2]) : 1, sides = Number(m[3]);
+    if (count < 1 || count > MAX_DICE) return null;
+    for (let i=0;i<count;i++) found.push(sides);
+    if (found.length>MAX_DICE) return null;
+  }
+  if (found.length !== values.length || found.some((sd,i)=>!Number.isInteger(values[i]) || values[i]!<1 || values[i]!>sd)) return null;
+  return found;
+}
+
 const rollSide = (sides: number) => 1 + Math.floor(Math.random() * sides);
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
@@ -181,6 +199,7 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
   const [open, setOpen] = useState(false);
   const [pos, setPos] = useState<{ x: number; y: number } | null>(null);
   const [mode, setMode] = useState<'manual' | 'ficha'>('manual');
+  const [view3d, setView3d] = useState(true);
   const [counts, setCounts] = useState<Record<number, number>>({ 4: 0, 6: 0, 8: 0, 10: 0, 12: 0, 20: 1 });
   const [bonus, setBonus] = useState(0);
   const [current, setCurrent] = useState<DiceRollMsg | null>(null);
@@ -214,9 +233,14 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
 
   useEffect(() => {
     setMounted(true);
+    try { setView3d(localStorage.getItem(VISUAL_KEY) !== '2d'); } catch { /* ignore */ }
     try { const c = localStorage.getItem(COLOR_KEY); if (c && HEX.test(c)) setColor(c); if (localStorage.getItem('herdeiros-share-rolls') === 'off') setShareMine(false); } catch { /* ignore */ }
     try { const raw = localStorage.getItem(POS_KEY); if (raw) { const p = JSON.parse(raw) as { x: number; y: number }; if (Number.isFinite(p.x) && Number.isFinite(p.y)) setPos({ x: clamp(p.x, 0, Math.max(0, window.innerWidth - 120)), y: clamp(p.y, 0, Math.max(0, window.innerHeight - 80)) }); } } catch { /* ignore */ }
   }, []);
+
+  function toggle3d() {
+    setView3d(active => {const next=!active;try {localStorage.setItem(VISUAL_KEY,next?'3d':'2d');}catch { /* ignore */ }return next;});
+  }
 
   const show = useCallback((m: DiceRollMsg) => {
     setCurrent(m); setSettledId('');
@@ -246,11 +270,29 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
       const r = sanitizeRoll({ ...base, source: d.source, expression: d.expression }); if (!r) return;
       setFeed(f => [r, ...f].slice(0, 40));
       const pub = sanitizeRoll({ ...base, source: d.publicSource ?? d.source, expression: d.publicExpression ?? d.expression });
-      const ch = channelRef.current; if (pub && ch && onlineRef.current && shareRef.current) void ch.send({ type: 'broadcast', event: 'table_roll', payload: pub });
+      const ch = channelRef.current;
+      if (pub && ch && onlineRef.current && shareRef.current) void ch.send({ type: 'broadcast', event: 'table_roll', payload: pub });
+      // Ataque, iniciativa, dano, técnicas e demais ações da ficha também podem
+      // aparecer como dados tridimensionais para toda a mesa, com resultado igual.
+      const faces = facesFromExpression(d.expression, d.dice);
+      if (faces?.length) {
+        const local: DiceRollMsg = {
+          id:base.id, userId:base.userId, name:base.name,
+          label:d.source.slice(0,80),
+          dice: faces.map((sides,i)=>({sides,value:d.dice[i]!})),
+          agg:'sum', bonus:0, result:d.total, ts:base.ts,
+        };
+        show(local);
+        if (autoOpenRef.current) setOpen(true);
+        if (ch && onlineRef.current && shareRef.current) {
+          const shared: DiceRollMsg = { ...local, label:(d.publicSource ?? d.source).slice(0,80) };
+          void ch.send({ type:'broadcast', event:'dice_roll', payload:shared });
+        }
+      }
     };
     window.addEventListener('herdeiros:roll', onAppRoll);
     return () => window.removeEventListener('herdeiros:roll', onAppRoll);
-  }, []);
+  }, [show]);
   useEffect(() => { if (open) setUnread(0); }, [open, feed]);
   const runEffect = useCallback((id: string) => {
     const eff = pendingFx.current.get(id); if (!eff) return; pendingFx.current.delete(id);
@@ -269,7 +311,7 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
     const eff = fx ? fx(values) : null;
     if (eff?.block && live) { setWarn(eff.block); return; }
     const msg: DiceRollMsg = { id: crypto.randomUUID(), userId: userId ?? 'local', name, label, dice: dice.map((sides, i) => ({ sides, value: values[i] ?? 1 })), agg, bonus: extra, ts: Date.now(), ...(color ? { color } : {}), ...(eff?.result !== undefined ? { result: eff.result } : {}), ...(eff?.note ? { note: `${eff.note}${live && eff.apply ? ' · aplicado na ficha' : ''}` } : {}) };
-    if (live && eff?.apply) { pendingFx.current.set(msg.id, eff); window.setTimeout(() => runEffect(msg.id), 3600); }
+    if (live && eff?.apply) { pendingFx.current.set(msg.id, eff); window.setTimeout(() => runEffect(msg.id), 6500); }
     show(msg); setOpen(true);
     const ch = channelRef.current;
     if (ch && online && shareRef.current) void ch.send({ type: 'broadcast', event: 'dice_roll', payload: msg });
@@ -341,10 +383,14 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
     <div className="tdice-head" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
       <GripHorizontal size={16} /><strong>Dados da mesa</strong>
       <span className={`tdice-live ${online ? 'on' : ''}`}>{campaignId && userId ? (online ? 'ao vivo' : 'conectando') : 'só local'}</span>
+      <button type="button" className="tdice-visual-switch" title={view3d?'Mudar para visualização clássica':'Ativar dados 3D'} aria-label={view3d?'Usar visualização 2D':'Usar dados tridimensionais'} aria-pressed={view3d} onPointerDown={e=>e.stopPropagation()} onClick={toggle3d}>{view3d?'3D':'2D'}</button>
       <button type="button" className="tdice-x" onClick={() => setOpen(false)} aria-label="Fechar a janela de dados"><X size={16} /></button>
     </div>
     <div className="tdice-body">
-      <DiceStage roll={current} tint={!current || current.userId === (userId ?? 'local') ? color : (current.color ?? null)} onSettled={onSettled} />
+      {view3d
+        ? <Dice3DStage roll={current} tint={!current || current.userId === (userId ?? 'local') ? color : (current.color ?? null)} onSettled={onSettled}/>
+        : <DiceStage roll={current} tint={!current || current.userId === (userId ?? 'local') ? color : (current.color ?? null)} onSettled={onSettled}/>}
+
       <div className="tdice-colors" role="radiogroup" aria-label="Cor dos dados">
         {THEMES.map(t => <button type="button" key={t.key} role="radio" aria-checked={color === t.color} title={t.label} aria-label={`Dado ${t.label}`} className={`tdice-swatch ${color === t.color ? 'on' : ''}`} style={t.color ? { background: t.color } : undefined} onClick={() => pickColor(t.color)}>{t.color ? '' : 'C'}</button>)}
         <label className="tdice-swatch tdice-custom" title="Cor personalizada" aria-label="Cor personalizada do dado"><input type="color" value={color ?? '#c9a227'} onChange={e => pickColor(e.target.value)} /></label>
