@@ -57,5 +57,5 @@
 .hc-chronicle-entry span{color:#debd80}
 .hc-sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(max-width:780px){.hc-sessions{grid-template-columns:1fr}.hc-session-list{max-height:250px}.hc-objective-create{grid-template-columns:1fr}.hc-objective{grid-template-columns:27px minmax(0,1fr)}.hc-objective-actions{grid-column:2}.hc-center{padding-left:8px;padding-right:8px}.hc-form-row{grid-template-columns:1fr}}
-@media(max-width:440px){.hc-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}.hc-tabs button{justify-content:center;padding:9px 5px;font-size:11px;gap:4px}.hc-panel-header h2{font-size:19px}.hc-session-list,.hc-session-detail,.hc-objectives,.hc-chronicle{padding:13px}.hc-hero{padding:18px 13px}}
+@media(max-width:440px){.hc-tabs{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:5px}.hc-tabs button{justify-content:center;padding:9px 5px;font-size:11px;gap:4px}.hc-panel-header h2{font-size:19px}.hc-session-list,.hc-session-detail,.hc-objectives,.hc-chronicle{padding:13px}.hc-hero{padding:18px 13px}}
 @media(prefers-reduced-motion:reduce){.hc-session-choice,.hc-tabs button{transition:none}}

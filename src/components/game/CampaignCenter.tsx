@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import './campaign-center.css';
+import { CampaignLibrary } from './CampaignLibrary';
 
 type SessionStatus = 'planejada' | 'em_andamento' | 'concluida';
 type ObjectiveStatus = 'aberto' | 'concluido';
@@ -76,7 +77,7 @@ export function CampaignCenter({ campaignId, campaignName, userId, isMaster, mem
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [notice, setNotice] = useState('');
-  const [tab, setTab] = useState<'sessoes' | 'objetivos' | 'cronica'>('sessoes');
+  const [tab, setTab] = useState<'sessoes' | 'objetivos' | 'cronica' | 'biblioteca'>('sessoes');
   const current = sessions.find(s => s.id === selectedId) ?? null;
   const openObjectives = useMemo(() => objectives.filter(o => o.status === 'aberto').length, [objectives]);
 
@@ -221,6 +222,7 @@ export function CampaignCenter({ campaignId, campaignName, userId, isMaster, mem
       <button type="button" role="tab" aria-selected={tab === 'sessoes'} className={tab === 'sessoes' ? 'is-active' : ''} onClick={() => setTab('sessoes')}><CalendarDays size={17}/> Sessões</button>
       <button type="button" role="tab" aria-selected={tab === 'objetivos'} className={tab === 'objetivos' ? 'is-active' : ''} onClick={() => setTab('objetivos')}><ClipboardList size={17}/> Objetivos</button>
       <button type="button" role="tab" aria-selected={tab === 'cronica'} className={tab === 'cronica' ? 'is-active' : ''} onClick={() => setTab('cronica')}><ScrollText size={17}/> Crônica</button>
+      <button type="button" role="tab" aria-selected={tab === 'biblioteca'} className={tab === 'biblioteca' ? 'is-active' : ''} onClick={() => setTab('biblioteca')}><BookOpen size={17}/> Biblioteca</button>
     </div>
     {notice && <p className="hc-notice" role="status">{notice}</p>}
     {loading && <p className="hc-loading" role="status">Sincronizando dados da campanha...</p>}
@@ -257,6 +259,7 @@ export function CampaignCenter({ campaignId, campaignName, userId, isMaster, mem
       </article>)}</div>
     </div>}
 
+    {tab === 'biblioteca' && <CampaignLibrary campaignId={campaignId} userId={userId} isMaster={isMaster} />}
     {tab === 'cronica' && <section className="hc-chronicle"><div className="hc-panel-header"><h2>Crônica recente</h2><span>Registros existentes da mesa</span></div>
       <p className="hc-muted">Os acontecimentos do combate e da mesa continuam sendo registrados pelas ferramentas que você já usa. Esta área apenas reúne a leitura dos registros.</p>
       {!log.length && <p className="hc-empty-copy">Nenhum acontecimento registrado ainda.</p>}
