@@ -25,7 +25,7 @@ import { MonsterDashboard } from './MonsterDashboard';
 import { LineagesPage } from './LineagesPage';
 import { RulebookPage } from './RulebookPage';
 import { PortalHome } from './PortalHome';
-import { StoryBookPage } from './StoryBookPage';
+import { HistoryAtlasPage } from './HistoryAtlasPage';
 import { KillCallFx } from './KillCallFx';
 import { TabletopDice } from './TabletopDice';
 import './herdeiros-navigation.css';
@@ -170,7 +170,7 @@ export function GameApp({ combatOnly = false }: { combatOnly?: boolean } = {}) {
   <header className="topbar"><div className="topbar-inner"><Button variant="ghost" className="brand" onClick={()=>go('inicio')}><span className="brand-mark">✦</span><span>HERDEIROS<span className="brand-dot">.</span></span></Button><nav className={`main-nav ${mobileNav?'nav-open':''}`} aria-label="Navegação principal">{nav.map(item=><Button key={item.key} variant="ghost" className={`nav-item ${area===item.key||(item.key==='mesa'&&area==='mestre')?'nav-active':''}`} onClick={()=>go(item.key)}><item.icon size={15}/>{item.label}</Button>)}</nav><div className="topbar-actions"><span className="live-indicator"><i/> MESA VIVA</span><Button variant="outline" size="sm" onClick={()=>setAuthOpen(true)} className="account-button">{data.userId?<><Users/> {data.profileName || 'Definir perfil'}</>:<><LogIn/> Entrar</>}</Button><Button variant="ghost" size="icon" className="mobile-menu" onClick={()=>setMobileNav(!mobileNav)} aria-label="Abrir menu">{mobileNav?<X/>:<Menu/>}</Button></div></div></header>
   <main className="main-wrap">
    {area==='inicio'&&<PortalHome onNavigate={next=>go(next)} onCreate={()=>{setWizardLineage('Humano');setWizardOpen(true);go('jogador')}} onLogin={()=>setAuthOpen(true)} signedIn={!!data.userId} characterCount={data.userId?data.characters.length:0} campaignCount={data.userId?data.campaigns.length:0} profileName={data.profileName}/>}
-   {area==='historia'&&<StoryBookPage onHome={()=>go('inicio')}/>}
+   {area==='historia'&&<HistoryAtlasPage onHome={()=>go('inicio')}/>}
    {(area==='mesa'||area==='mestre')&&<div className="herdeiros-hub" aria-label="Navegação da mesa e do mestre">
      <div className="herdeiros-hub-title"><span>SESSÃO ATIVA</span><strong>Mesa / Mestre</strong><small>Jogar, narrar e administrar no mesmo lugar.</small></div>
      <div className="herdeiros-hub-actions" role="group" aria-label="Visão da sessão">

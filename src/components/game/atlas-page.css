@@ -1,0 +1,71 @@
+/* Herdeiros: Atlas geográfico. Estilos isolados para não alterar o Livro. */
+.ha-history-root{--ha-gold:#e4be77;--ha-ink:#e9dac4;--ha-shadow:#110e14;--ha-purple:#4a244e;color:var(--ha-ink);font-family:Georgia,'Times New Roman',serif;width:100%;min-width:0;}
+.ha-history-root *{box-sizing:border-box}
+.ha-history-root [hidden]{display:none!important}
+.ha-history-root button{font:inherit;cursor:pointer}
+.ha-history-root button:focus-visible{outline:3px solid #f2c77a;outline-offset:3px}
+.ha-primary-switch{display:flex;align-items:center;justify-content:center;gap:clamp(12px,3vw,30px);padding:17px 18px;margin:0 auto 12px;border:1px solid #9771436b;border-radius:6px;background:linear-gradient(105deg,#100b0ef0,#292019ed 55%,#140c12);box-shadow:0 12px 45px #0005;max-width:1450px;flex-wrap:wrap}
+.ha-primary-caption{font-family:Georgia,serif;font-size:11px;letter-spacing:.24em;color:#d9b578;font-weight:700}
+.ha-primary-buttons{display:flex;flex-wrap:wrap;gap:7px}
+.ha-primary-buttons button{border-radius:4px;display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:44px;min-width:170px;padding:10px 18px;border:1px solid #8d653f;background:#100e12;color:#e5c896;letter-spacing:.02em;transition:background .18s,border-color .18s,color .18s}
+.ha-primary-buttons button:hover,.ha-primary-buttons button.active{border-color:#f4c578;background:linear-gradient(130deg,#7d5228,#312219);color:#fff1c8;box-shadow:0 0 20px #b8834424}
+.ha-atlas{min-width:0;width:min(1390px,100%);margin:0 auto;padding:22px clamp(9px,2vw,28px) 68px;background:radial-gradient(ellipse at 50% 0%,#64402c38,transparent 67%),linear-gradient(180deg,#110d13,#100e13 76%);border:1px solid #77533870;border-radius:8px;font-family:Georgia,'Times New Roman',serif}
+.ha-header{text-align:center;max-width:830px;margin:10px auto 28px}
+.ha-eyebrow{display:inline-flex;align-items:center;gap:9px;font-size:11px;letter-spacing:.24em;color:#d1ac73}
+.ha-header h1{font-family:Georgia,serif;font-weight:500;text-transform:uppercase;letter-spacing:.12em;line-height:1.12;color:#f2d7a9;font-size:clamp(28px,4vw,55px);margin:12px 0 9px}
+.ha-header>p{font-size:clamp(14px,1.4vw,17px);line-height:1.6;color:#cbbba8;margin:0 auto}
+.ha-map-panel{border:1px solid #866642;border-radius:6px;overflow:hidden;background:#181318;box-shadow:0 25px 55px #0007}
+.ha-map-heading{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;padding:12px 16px;background:linear-gradient(115deg,#25170f,#171017);color:#e9cc92}
+.ha-map-heading span{display:inline-flex;align-items:center;gap:9px;font-size:12px;letter-spacing:.13em;font-weight:700}
+.ha-map-heading small{font-size:11px;color:#c2b1a0}
+.ha-map{position:relative;margin:0;overflow:hidden;aspect-ratio:4/3}
+.ha-map picture,.ha-map img{display:block;width:100%;height:100%}
+.ha-map img{object-fit:cover}
+.ha-map::after{content:'';position:absolute;inset:0;box-shadow:inset 0 0 38px #0a0711a9;pointer-events:none}
+.ha-map-pins{position:absolute;inset:0;z-index:1}
+.ha-map-pin{position:absolute;display:flex;align-items:center;justify-content:center;gap:5px;transform:translate(-50%,-50%);background:#0c0b10d9;border:1px solid #dcb375;border-radius:999px;color:#f9dba8;padding:7px 10px;box-shadow:0 3px 13px #0a0816aa;font-weight:700!important;font-size:clamp(10px,1vw,13px)!important;text-shadow:0 1px 2px #000;white-space:nowrap;transition:background .18s,box-shadow .18s}
+.ha-map-pin:hover{background:#674223;box-shadow:0 0 0 3px #edc2864e,0 6px 20px #0009}
+.ha-pin-dot{background:#f7d595;border-radius:50%;width:6px;height:6px;flex:none;box-shadow:0 0 8px #e9bc73}
+.ha-pin-floresta{left:17%;top:43%}.ha-pin-caixa{left:50%;top:52%}.ha-pin-deserto{left:83%;top:43%}.ha-pin-norte{left:49%;top:15%}.ha-pin-sul{left:51%;top:84%}
+.ha-map-note{margin:0;padding:11px 16px;display:flex;align-items:flex-start;gap:9px;background:#19151b;color:#cfbda3;font-size:12px;line-height:1.5}
+.ha-map-note svg{flex:none;color:#d9b882}
+.ha-region-list-head{text-align:center;margin:32px 0 18px}
+.ha-region-list-head h2{font-family:Georgia,serif;font-size:clamp(23px,3vw,32px);color:#eed1a2;font-weight:500;margin:0 0 8px}
+.ha-region-list-head p{font-size:14px;color:#c8b6a3;margin:0}
+.ha-region-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.ha-region-card{border:1px solid #8f6d4d!important;border-radius:5px;background:#1b1519!important;color:#f1dcc2!important;text-align:left!important;min-width:0;overflow:hidden;box-shadow:0 15px 27px #0005;transition:border-color .15s,transform .15s,box-shadow .15s}
+.ha-region-card:hover{border-color:#e2b974!important;transform:translateY(-2px);box-shadow:0 20px 32px #0008}
+.ha-region-card-art{height:clamp(180px,18vw,250px);overflow:hidden;background:#181418}
+.ha-region-card-art picture,.ha-region-card-art img{display:block;width:100%;height:100%}
+.ha-region-card-art img{object-fit:cover;object-position:center}
+.ha-region-card-info{padding:17px 20px 20px}
+.ha-region-card-info>span{font-size:10px;text-transform:uppercase;letter-spacing:.16em;color:#c6a878}
+.ha-region-card h3{font-size:clamp(20px,2.5vw,27px);font-weight:500;color:#f0d8ad;margin:8px 0}
+.ha-region-card p{color:#d6c5b7;font-size:13px;line-height:1.55;margin:0 0 16px;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.ha-region-card strong{display:inline-flex;align-items:center;gap:8px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#f3ca81}
+.ha-atlas-foot{display:flex;align-items:center;justify-content:space-between;gap:18px;margin-top:28px;padding:16px 0;border-top:1px solid #79604786;font-size:12px;color:#c9b49b}
+.ha-atlas-foot>div{display:flex;align-items:center;gap:10px;line-height:1.5}.ha-atlas-foot>span{display:flex;gap:7px;color:#caa76f}
+.ha-region-navigation{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:1px 0 16px;font-size:11px;letter-spacing:.09em;color:#bb9f7f}
+.ha-region-navigation button,.ha-region-footer button{border:1px solid #9d7041;border-radius:4px;background:#271b16;color:#f0d2a3;display:inline-flex;gap:9px;align-items:center;padding:10px 14px;min-height:43px}
+.ha-region-navigation button:hover,.ha-region-footer button:hover{background:#5b3c24}
+.ha-region-hero{position:relative;height:clamp(260px,40vw,515px);overflow:hidden;border:1px solid #967247;border-radius:6px;background:#0e0b12}
+.ha-region-hero picture,.ha-region-hero img,.ha-region-hero>.ha-fim-art{display:block;width:100%;height:100%}
+.ha-region-hero img{object-fit:cover;object-position:center}
+.ha-region-hero::after{content:'';position:absolute;inset:0;pointer-events:none;background:linear-gradient(to top,#0b0b0ef2,transparent 64%)}
+.ha-region-heading{position:absolute;z-index:1;left:clamp(18px,4vw,54px);bottom:clamp(18px,4vw,45px);right:25px;color:#f5dbad;text-shadow:0 2px 10px #000b}
+.ha-region-heading>span{font-size:11px;letter-spacing:.2em}
+.ha-region-heading h1{font-size:clamp(32px,5vw,60px);font-weight:500;margin:8px 0 4px;text-transform:uppercase;line-height:1.1}
+.ha-region-heading p{margin:0;font-size:clamp(13px,1.6vw,18px)}
+.ha-region-body{max-width:1050px;margin:0 auto;padding:20px clamp(10px,3vw,36px) 34px}
+.ha-region-lede{font-size:clamp(16px,1.8vw,21px);line-height:1.8;color:#ebdac0;margin:8px 0 24px}
+.ha-region-sections{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:15px}
+.ha-lore-section{border:1px solid #795f4580;border-radius:5px;background:linear-gradient(135deg,#2a201d,#15131b);padding:21px 23px}
+.ha-lore-section h2{font-size:19px;color:#eac894;font-weight:500;margin:0 0 10px}
+.ha-lore-section p{font-size:14px;line-height:1.72;color:#d5c6b5;margin:0}
+.ha-region-footer{display:flex;justify-content:center;padding-top:26px}
+.ha-fim-art{position:relative;overflow:hidden;background:#0a090f}
+.ha-fim-art svg{display:block;width:100%;height:100%}
+.ha-fim-caption{position:absolute;right:12px;top:12px;background:#08090bb3;color:#dfc79e;font-size:10px;padding:6px 8px;border-radius:4px}
+@media(max-width:800px){.ha-map-pin{padding:6px 7px}.ha-pin-text{font-size:10px}.ha-region-card-info{padding:14px 15px 17px}.ha-atlas{padding:13px 9px 40px}.ha-region-sections{grid-template-columns:1fr}}
+@media(max-width:620px){.ha-primary-switch{margin:0 4px 8px;padding:10px 8px;gap:7px}.ha-primary-caption{font-size:10px}.ha-primary-buttons{display:grid;grid-template-columns:1fr 1fr;width:100%}.ha-primary-buttons button{font-size:12px;min-width:0;padding:9px 5px;min-height:45px}.ha-header{margin:12px auto 20px}.ha-map-heading{padding:10px 12px}.ha-map-heading small{display:none}.ha-map{aspect-ratio:4/3;overflow:hidden}.ha-map img{object-fit:cover;object-position:center}.ha-map-pin{padding:6px;border-radius:50%;min-width:31px;min-height:31px}.ha-pin-text{display:none}.ha-pin-dot{width:8px;height:8px}.ha-map-note{font-size:11px;padding:10px 12px}.ha-region-grid{grid-template-columns:1fr;gap:12px}.ha-region-card-art{height:190px}.ha-region-hero{height:280px}.ha-region-navigation>span{font-size:9px}.ha-atlas-foot{align-items:flex-start;flex-direction:column}.ha-region-body{padding:15px 7px 25px}.ha-region-lede{line-height:1.6}}
+@media(prefers-reduced-motion:reduce){.ha-primary-buttons button,.ha-region-card,.ha-map-pin{transition:none}.ha-region-card:hover{transform:none}}
