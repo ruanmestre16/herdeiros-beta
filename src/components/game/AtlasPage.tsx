@@ -1,4 +1,5 @@
-import { ArrowLeft, ArrowRight, BookOpen, Compass, Landmark, Leaf, MapPinned, Mountain, Shield, Sparkles, Sun, Wind } from 'lucide-react';
+import { useCallback, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import { ArrowLeft, ArrowRight, BookOpen, Compass, Landmark, Leaf, MapPinned, Minus, Mountain, Plus, RotateCcw, Shield, Sparkles, Sun, Wind, WandSparkles } from 'lucide-react';
 import './atlas-page.css';
 
 export type AtlasRegionId = 'floresta' | 'caixa' | 'deserto' | 'grande-fim';
@@ -98,13 +99,115 @@ function RegionPicture({ region, eager = false }: { region: AtlasRegion; eager?:
   </picture>;
 }
 
-const markers: { region: AtlasRegionId; className: string; title: string }[] = [
-  { region: 'floresta', className: 'ha-pin-floresta', title: 'Grande Floresta' },
-  { region: 'caixa', className: 'ha-pin-caixa', title: 'A Caixa' },
-  { region: 'deserto', className: 'ha-pin-deserto', title: 'Grande Deserto' },
-  { region: 'grande-fim', className: 'ha-pin-norte', title: 'Grande Fim · Norte' },
-  { region: 'grande-fim', className: 'ha-pin-sul', title: 'Grande Fim · Sul' },
+const markers: { region: AtlasRegionId; className: string; title: string; short: string }[] = [
+  { region: 'floresta', className: 'ha-pin-floresta', title: 'Grande Floresta', short: 'Floresta' },
+  { region: 'caixa', className: 'ha-pin-caixa', title: 'A Caixa', short: 'A Caixa' },
+  { region: 'deserto', className: 'ha-pin-deserto', title: 'Grande Deserto', short: 'Deserto' },
+  { region: 'grande-fim', className: 'ha-pin-norte', title: 'Grande Fim · Norte', short: 'Grande Fim · Norte' },
+  { region: 'grande-fim', className: 'ha-pin-sul', title: 'Grande Fim · Sul', short: 'Grande Fim · Sul' },
 ];
+
+const MIN_ZOOM = 1;
+const MAX_ZOOM = 2.5;
+const ZOOM_STEP = 0.25;
+type MapPosition = { x: number; y: number };
+
+/**
+ * A Etapa 2 utiliza o mapa já aprovado e mantém as regiões da Etapa 1.
+ * Arraste e zoom modificam APENAS a camada visual do mapa (incluindo pinos),
+ * sem mudar navegação, histórico, texto do livro ou coordenadas salvas.
+ * Os limites de arrasto impedem que o usuário perca o mapa de vista.
+ */
+function AtlasWorldMap({ onSelectRegion }: { onSelectRegion: (region: AtlasRegionId) => void }) {
+  const [zoom, setZoom] = useState(1);
+  const [pan, setPan] = useState<MapPosition>({ x: 0, y: 0 });
+  const [animated, setAnimated] = useState(true);
+  const [dragging, setDragging] = useState(false);
+  const viewport = useRef<HTMLDivElement>(null);
+  const dragState = useRef<{ pointerId: number; x: number; y: number; pan: MapPosition } | null>(null);
+
+  const clampPan = useCallback((next: MapPosition, nextZoom: number): MapPosition => {
+    const rect = viewport.current?.getBoundingClientRect();
+    const w = rect?.width ?? 1000;
+    const h = rect?.height ?? 750;
+    const limitX = (w * (nextZoom - 1)) / 2;
+    const limitY = (h * (nextZoom - 1)) / 2;
+    return {
+      x: Math.max(-limitX, Math.min(limitX, next.x)),
+      y: Math.max(-limitY, Math.min(limitY, next.y)),
+    };
+  }, []);
+
+  function applyZoom(next: number) {
+    const clamped = Math.min(MAX_ZOOM, Math.max(MIN_ZOOM, Math.round(next * 100) / 100));
+    setPan(current => clampPan(current, clamped));
+    setZoom(clamped);
+  }
+
+  function resetMap() {
+    dragState.current = null;
+    setDragging(false);
+    setZoom(1);
+    setPan({ x: 0, y: 0 });
+  }
+
+  function startDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    if (zoom === MIN_ZOOM || event.button !== 0 || (event.target as HTMLElement).closest('button')) return;
+    dragState.current = { pointerId: event.pointerId, x: event.clientX, y: event.clientY, pan };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    setDragging(true);
+  }
+
+  function moveDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    const drag = dragState.current;
+    if (!drag || drag.pointerId !== event.pointerId) return;
+    setPan(clampPan({ x: drag.pan.x + event.clientX - drag.x, y: drag.pan.y + event.clientY - drag.y }, zoom));
+  }
+
+  function endDrag(event: ReactPointerEvent<HTMLDivElement>) {
+    if (dragState.current?.pointerId !== event.pointerId) return;
+    dragState.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    setDragging(false);
+  }
+
+
+  return <div className="ha-world-map" aria-label="Mapa ilustrado interativo do continente protegido de Arcádia">
+    <div className="ha-map-tools" role="group" aria-label="Controles do mapa">
+      <button type="button" title="Ampliar o mapa" aria-label="Ampliar o mapa" disabled={zoom >= MAX_ZOOM} onClick={() => applyZoom(zoom + ZOOM_STEP)}><Plus size={19}/></button>
+      <output className="ha-map-zoom" aria-live="off" aria-label={`Ampliação ${Math.round(zoom*100)} por cento`}>{Math.round(zoom*100)}%</output>
+      <button type="button" title="Reduzir o mapa" aria-label="Reduzir o mapa" disabled={zoom <= MIN_ZOOM} onClick={() => applyZoom(zoom - ZOOM_STEP)}><Minus size={19}/></button>
+      <button type="button" title="Centralizar mapa" aria-label="Centralizar mapa" onClick={resetMap}><RotateCcw size={18}/></button>
+      <span className="ha-map-tools-separator" aria-hidden="true"/>
+      <button type="button" className={animated?'ha-map-anim-active':''} aria-pressed={animated} title={animated?'Desligar animações':'Ligar animações'} aria-label={animated?'Desligar animações do mapa':'Ligar animações do mapa'} onClick={() => setAnimated(value => !value)}><WandSparkles size={18}/></button>
+    </div>
+    <figure className={`ha-map ${zoom > 1 ? 'ha-map-zoomed' : ''} ${dragging ? 'ha-map-dragging' : ''} ${animated ? 'ha-map-animated' : 'ha-map-still'}`}>
+      <div ref={viewport} className="ha-map-viewport" onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>
+        <div className="ha-map-canvas" style={{transform:`translate3d(${pan.x}px, ${pan.y}px, 0) scale(${zoom})`}}>
+          <picture>
+            <source media="(max-width: 680px)" srcSet="/atlas/mapa-arcadia-760.webp"/>
+            <img src="/atlas/mapa-arcadia-1520.webp" alt="Vista aérea de Arcádia: Grande Floresta à esquerda, a metrópole de A Caixa cercada por muralhas no centro, Grande Deserto à direita e dois corredores negros do Grande Fim acima e abaixo" draggable={false} loading="eager" decoding="async"/>
+          </picture>
+          <div className="ha-map-atmosphere" aria-hidden="true">
+            <i className="ha-weather ha-fog"/><i className="ha-weather ha-sand"/><i className="ha-weather ha-void-north"/><i className="ha-weather ha-void-south"/><i className="ha-weather ha-tower"/>
+            <i className="ha-ward ha-ward-north"/><i className="ha-ward ha-ward-south"/>
+          </div>
+          <div className="ha-map-pins" role="group" aria-label="Regiões clicáveis do mapa">
+            {markers.map(marker => <button type="button" key={marker.className} className={`ha-map-pin ${marker.className}`} onClick={() => onSelectRegion(marker.region)} title={`Explorar ${marker.title}`} aria-label={`Explorar ${marker.title}`}><span className="ha-pin-dot"/><span className="ha-pin-text">{marker.title}</span></button>)}
+          </div>
+        </div>
+      </div>
+      <div className="ha-map-north" aria-hidden="true"><Compass size={20}/><span>N</span></div>
+      <figcaption className="ha-map-instruction">{zoom > 1 ? 'Arraste para explorar · toque em um ponto para abrir a região' : 'Selecione uma região · use + para aproximar'}</figcaption>
+    </figure>
+    <div className="ha-map-legend" aria-label="Legenda do mapa">
+      <span className="ha-legend-item ha-legend-forest"><i/> Grande Floresta</span>
+      <span className="ha-legend-item ha-legend-city"><i/> A Caixa</span>
+      <span className="ha-legend-item ha-legend-desert"><i/> Grande Deserto</span>
+      <span className="ha-legend-item ha-legend-void"><i/> Grande Fim · Norte e Sul</span>
+    </div>
+  </div>;
+}
 
 export function AtlasPage({ regionId, onSelectRegion }: {regionId: AtlasRegionId | null; onSelectRegion:(region:AtlasRegionId|null)=>void}) {
   const region = ATLAS_REGIONS.find(item=>item.id===regionId);
@@ -124,10 +227,7 @@ export function AtlasPage({ regionId, onSelectRegion }: {regionId: AtlasRegionId
       <header className="ha-header"><span className="ha-eyebrow"><Compass size={18}/> HERDEIROS · O DESPERTAR</span><h1>Atlas de Arcádia</h1><p>Conheça as terras que sobreviveram sob a Cúpula de Som: seus povos, seus caminhos e os mistérios que ainda guardam.</p></header>
       <div className="ha-map-panel">
         <div className="ha-map-heading"><span><MapPinned size={19}/> VISÃO GERAL</span><small>Selecione uma região do mapa ou dos cartões abaixo</small></div>
-        <figure className="ha-map">
-          <picture><source media="(max-width: 680px)" srcSet="/atlas/mapa-arcadia-760.webp"/><img src="/atlas/mapa-arcadia-1520.webp" alt="Representação ilustrada do continente protegido: floresta à esquerda, metrópole central, deserto à direita e duas regiões negras de interseção ao norte e ao sul" loading="eager"/></picture>
-          <div className="ha-map-pins" aria-label="Pontos de interesse do mapa">{markers.map(marker=><button type="button" key={marker.className} className={`ha-map-pin ${marker.className}`} onClick={()=>onSelectRegion(marker.region)} title={`Explorar ${marker.title}`} aria-label={`Explorar ${marker.title}`}><span className="ha-pin-dot"/><span className="ha-pin-text">{marker.title}</span></button>)}</div>
-        </figure>
+        <AtlasWorldMap onSelectRegion={onSelectRegion}/>
         <p className="ha-map-note"><Shield size={16}/> Mapa ilustrativo do território conhecido — não representa distâncias, rotas precisas ou fronteiras administrativas.</p>
       </div>
       <div className="ha-region-list-head"><h2>Terras e regiões</h2><p>Escolha uma região para ler sobre seus habitantes, sua geografia e seus perigos.</p></div>

@@ -69,3 +69,54 @@
 @media(max-width:800px){.ha-map-pin{padding:6px 7px}.ha-pin-text{font-size:10px}.ha-region-card-info{padding:14px 15px 17px}.ha-atlas{padding:13px 9px 40px}.ha-region-sections{grid-template-columns:1fr}}
 @media(max-width:620px){.ha-primary-switch{margin:0 4px 8px;padding:10px 8px;gap:7px}.ha-primary-caption{font-size:10px}.ha-primary-buttons{display:grid;grid-template-columns:1fr 1fr;width:100%}.ha-primary-buttons button{font-size:12px;min-width:0;padding:9px 5px;min-height:45px}.ha-header{margin:12px auto 20px}.ha-map-heading{padding:10px 12px}.ha-map-heading small{display:none}.ha-map{aspect-ratio:4/3;overflow:hidden}.ha-map img{object-fit:cover;object-position:center}.ha-map-pin{padding:6px;border-radius:50%;min-width:31px;min-height:31px}.ha-pin-text{display:none}.ha-pin-dot{width:8px;height:8px}.ha-map-note{font-size:11px;padding:10px 12px}.ha-region-grid{grid-template-columns:1fr;gap:12px}.ha-region-card-art{height:190px}.ha-region-hero{height:280px}.ha-region-navigation>span{font-size:9px}.ha-atlas-foot{align-items:flex-start;flex-direction:column}.ha-region-body{padding:15px 7px 25px}.ha-region-lede{line-height:1.6}}
 @media(prefers-reduced-motion:reduce){.ha-primary-buttons button,.ha-region-card,.ha-map-pin{transition:none}.ha-region-card:hover{transform:none}}
+
+/* ETAPA 2 — mapa geral vivo e explorável: acrescenta controles, nunca altera o pergaminho */
+.ha-world-map{position:relative;background:#100e14;isolation:isolate}
+.ha-map-tools{display:flex;align-items:center;justify-content:flex-end;gap:5px;padding:9px 12px;border-bottom:1px solid #6e4e32;background:#171116;color:#e7ca95}
+.ha-map-tools button{width:38px;height:38px;border:1px solid #8d6d48;border-radius:4px;background:#241a1b;color:#eace91;display:inline-flex;align-items:center;justify-content:center;transition:background .15s,border-color .15s}
+.ha-map-tools button:not(:disabled):hover,.ha-map-tools button.ha-map-anim-active{background:#533624;border-color:#ebc17b}
+.ha-map-tools button:disabled{opacity:.38;cursor:not-allowed}
+.ha-map-zoom{font:700 12px/1 Georgia,serif;min-width:48px;text-align:center;color:#f0d5a9}
+.ha-map-tools-separator{height:23px;border-left:1px solid #8d694b;margin:0 5px}
+.ha-map{position:relative;width:100%;aspect-ratio:4/3;overflow:hidden;margin:0;background:#101018;contain:layout paint}
+.ha-map-viewport{position:absolute;inset:0;overflow:hidden;touch-action:pan-y;user-select:none}
+.ha-map-zoomed .ha-map-viewport{touch-action:none;cursor:grab}
+.ha-map-dragging .ha-map-viewport{cursor:grabbing}
+.ha-map-canvas{position:absolute;inset:0;transform-origin:center center;will-change:transform}
+.ha-map-canvas picture,.ha-map-canvas img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;pointer-events:none}
+.ha-map-canvas::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:1;box-shadow:inset 0 0 55px #05040996}
+.ha-map-atmosphere{position:absolute;inset:0;z-index:1;overflow:hidden;pointer-events:none}
+.ha-weather{position:absolute;display:block;pointer-events:none;mix-blend-mode:screen;opacity:.3;will-change:transform,opacity}
+.ha-fog{left:-7%;top:9%;width:46%;height:69%;border-radius:50%;background:radial-gradient(ellipse at center,#e8f7fa5a,transparent 66%);filter:blur(12px)}
+.ha-sand{right:-5%;top:8%;width:43%;height:78%;background:radial-gradient(ellipse at center,#f1b76f55,transparent 66%);filter:blur(13px)}
+.ha-void-north{left:37%;top:0%;width:29%;height:28%;background:radial-gradient(ellipse at 50% 50%,#ad82c947,transparent 62%);filter:blur(14px)}
+.ha-void-south{left:34%;bottom:-6%;width:31%;height:34%;background:radial-gradient(ellipse at 50% 50%,#ad82c941,transparent 62%);filter:blur(15px)}
+.ha-tower{left:49.5%;top:26%;width:2%;height:35%;background:linear-gradient(90deg,transparent,#f9ebc88b,transparent);filter:blur(8px);opacity:.35}
+.ha-ward{position:absolute;width:6px;height:6px;border-radius:50%;background:#ffdf9c;box-shadow:0 0 12px 4px #ffe2a94d;opacity:.42}
+.ha-ward-north{left:44%;top:14%}.ha-ward-south{left:47%;top:83%}
+.ha-map-animated .ha-fog{animation:ha-drift-fog 17s ease-in-out infinite alternate}
+.ha-map-animated .ha-sand{animation:ha-drift-sand 15s ease-in-out infinite alternate}
+.ha-map-animated .ha-void-north,.ha-map-animated .ha-void-south{animation:ha-void-breathe 7s ease-in-out infinite alternate}
+.ha-map-animated .ha-tower{animation:ha-tower-pulse 6s ease-in-out infinite alternate}
+.ha-map-animated .ha-ward{animation:ha-ward-pulse 3.5s ease-in-out infinite alternate}
+.ha-map-animated .ha-ward-south{animation-delay:1.5s}
+.ha-map-still .ha-weather{opacity:.17}
+.ha-map-still .ha-ward{opacity:.25}
+.ha-map-pins{position:absolute;inset:0;z-index:3;pointer-events:none}
+.ha-map-pin{pointer-events:auto;touch-action:manipulation;box-shadow:0 4px 12px #000c,0 0 0 2px #f5ce7d2d;background:#161117e8}
+.ha-map-pin:focus-visible{outline:3px solid #f5d087;outline-offset:4px}
+.ha-map-pin.ha-pin-norte,.ha-map-pin.ha-pin-sul{background:#20172ae8;border-color:#c9abd5;color:#e8d5f6}
+.ha-map-pin.ha-pin-norte .ha-pin-dot,.ha-map-pin.ha-pin-sul .ha-pin-dot{background:#b98bc9;box-shadow:0 0 9px #bb8fda}
+.ha-map-north{position:absolute;right:14px;top:12px;display:flex;align-items:center;flex-direction:column;pointer-events:none;z-index:4;text-shadow:0 1px 2px #000;color:#f5e3b8;font-size:10px;font-weight:bold;letter-spacing:.1em;filter:drop-shadow(0 2px 3px #000)}
+.ha-map-instruction{position:absolute;bottom:10px;left:50%;transform:translateX(-50%);z-index:4;background:#0c0912c9;border:1px solid #9a754a94;border-radius:5px;max-width:calc(100% - 22px);padding:7px 11px;color:#ffe1b0;font-size:11px;line-height:1.3;text-align:center;pointer-events:none}
+.ha-map-legend{display:flex;align-items:center;justify-content:center;flex-wrap:wrap;column-gap:21px;row-gap:9px;padding:13px 14px;color:#dfc5a7;font-size:12px;background:#1d1517;border-top:1px solid #51412f}
+.ha-legend-item{display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+.ha-legend-item i{display:inline-block;width:10px;height:10px;border:1px solid #f6dbad86;border-radius:50%;box-shadow:0 0 7px #0004}
+.ha-legend-forest i{background:#68854a}.ha-legend-city i{background:#d9b77c}.ha-legend-desert i{background:#d6a76a}.ha-legend-void i{background:#77618a}
+@keyframes ha-drift-fog{0%{transform:translate(-7%,-3%);opacity:.17}100%{transform:translate(13%,5%);opacity:.38}}
+@keyframes ha-drift-sand{0%{transform:translate(9%,-4%);opacity:.14}100%{transform:translate(-15%,6%);opacity:.3}}
+@keyframes ha-void-breathe{0%{opacity:.13;transform:scale(.9)}100%{opacity:.47;transform:scale(1.13)}}
+@keyframes ha-tower-pulse{0%{opacity:.15}100%{opacity:.5}}
+@keyframes ha-ward-pulse{0%{opacity:.35;box-shadow:0 0 4px 2px #e4b97555}100%{opacity:.9;box-shadow:0 0 18px 6px #ffe2a9aa}}
+@media(max-width:620px){.ha-map-tools{justify-content:center}.ha-map-tools button{height:42px;width:42px}.ha-map-north{right:10px;top:10px}.ha-map-legend{font-size:10px;gap:10px;padding:12px 8px}.ha-map-instruction{font-size:10px;bottom:8px;min-width:70%}.ha-map-pin{min-width:34px;min-height:34px}}
+@media(prefers-reduced-motion:reduce){.ha-map-animated .ha-weather,.ha-map-animated .ha-ward{animation:none!important}.ha-weather{will-change:auto}}
