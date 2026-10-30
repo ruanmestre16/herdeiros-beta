@@ -333,7 +333,7 @@ export function techEyeRules(c: Character) {
 }
 
 // Persistent rule state shares the existing JSON abilities field; no table changes.
-export type SheetState = { excess: number; rounds: number; agony: boolean; failures: number; stable: boolean; dead: boolean; standard: boolean; agonyDt: number; coins: number; anchorBroken: boolean; weaponDamageType: string; weaponHistory?: { at: string; from: string; to: string; damageType: string }[]; weaponMode: 'linhagem' | 'comum'; path: 'arma' | 'nomenclatura' | ''; weaponRank: number; nomRank: number; milestones: string[]; milestoneChoices: Record<string, string>; techGsMarks?: Record<string, TechGsPath>; techCoreMarks?: number[]; techCoreMount?: TechCoreMount; techCoreConcept?: TechCoreConcept; techCorePending?: TechCorePending | null; techGsNotes?: Record<string, string>; techGsFavorite?: string; techModularEquipped?: boolean; techSightings?: TechSighting[]; techniqueUpgrades: Record<string, { improved?: 'dano' | 'alcance'; mastered?: boolean; favorite?: string }>; attributeFloor: Partial<Record<Attr, number>>; attributeBudget: number; highestStage: number; specialEffect: string; fluxLink: boolean; mimic: { name: string; effect: string }[]; mimicClosed: string[]; ecoUsed: boolean; trueWeapon: boolean; relic: { name: string; text: string } };
+export type SheetState = { esquivaOverride?: number | null; bloqueioOverride?: number | null; excess: number; rounds: number; agony: boolean; failures: number; stable: boolean; dead: boolean; standard: boolean; agonyDt: number; coins: number; anchorBroken: boolean; weaponDamageType: string; weaponHistory?: { at: string; from: string; to: string; damageType: string }[]; weaponMode: 'linhagem' | 'comum'; path: 'arma' | 'nomenclatura' | ''; weaponRank: number; nomRank: number; milestones: string[]; milestoneChoices: Record<string, string>; techGsMarks?: Record<string, TechGsPath>; techCoreMarks?: number[]; techCoreMount?: TechCoreMount; techCoreConcept?: TechCoreConcept; techCorePending?: TechCorePending | null; techGsNotes?: Record<string, string>; techGsFavorite?: string; techModularEquipped?: boolean; techSightings?: TechSighting[]; techniqueUpgrades: Record<string, { improved?: 'dano' | 'alcance'; mastered?: boolean; favorite?: string }>; attributeFloor: Partial<Record<Attr, number>>; attributeBudget: number; highestStage: number; specialEffect: string; fluxLink: boolean; mimic: { name: string; effect: string }[]; mimicClosed: string[]; ecoUsed: boolean; trueWeapon: boolean; relic: { name: string; text: string } };
 export const emptySheetState: SheetState = { excess: 0, rounds: 0, agony: false, failures: 0, stable: false, dead: false, standard: false, agonyDt: 6, coins: 0, anchorBroken: false, weaponDamageType: '', weaponMode: 'linhagem', path: '', weaponRank: 0, nomRank: 0, milestones: [], milestoneChoices: {}, techGsMarks: {}, techCoreMarks: [], techCoreMount: 'arma', techCoreConcept: {name:'',effect:'',damage:'',masterpieceEffect:'',masterpieceDamage:''}, techCorePending: null, techGsNotes: {}, techGsFavorite: '', techModularEquipped: false, techSightings: [], techniqueUpgrades: {}, attributeFloor: {}, attributeBudget: 0, highestStage: 0, specialEffect: '', fluxLink: false, mimic: [], mimicClosed: [], ecoUsed: false, trueWeapon: false, relic: { name: '', text: '' } };
 export function sheetState(c: Character): SheetState {
   try { return { ...emptySheetState, ...JSON.parse(c.abilities.find(a => a.kind === 'state')?.description ?? '{}') } as SheetState; }
@@ -341,6 +341,23 @@ export function sheetState(c: Character): SheetState {
 }
 export function withSheetState(c: Character, patch: Partial<SheetState>): Character['abilities'] {
   return [...c.abilities.filter(a => a.kind !== 'state'), { kind: 'state', name: '__rule_state__', description: JSON.stringify({ ...sheetState(c), ...patch }) }];
+}
+/** Defesas ajustadas diretamente na ficha. Sem ajuste, seguem CORPO; cópias do Bestiário
+ * usam os valores particulares do monstro até receberem ajustes próprios. */
+export type DefenseKey = 'esquiva' | 'bloqueio';
+export function effectiveDefenses(c: Character): { esquiva: number; bloqueio: number; deslocamento: number } {
+  const calculated = derived(c.corpo);
+  const state = sheetState(c);
+  const bestiary = (c as Character & { bestiary?: { esquiva?: number; bloqueio?: number } }).bestiary;
+  return {
+    esquiva: state.esquivaOverride ?? bestiary?.esquiva ?? calculated.esquiva,
+    bloqueio: state.bloqueioOverride ?? bestiary?.bloqueio ?? calculated.bloqueio,
+    deslocamento: calculated.deslocamento,
+  };
+}
+export function defensePatch(c: Character, key: DefenseKey, value: number | null): Partial<Character> {
+  const normalized = value === null ? null : Math.min(9999, Math.max(0, Math.round(value)));
+  return { abilities: withSheetState(c, { [key === 'esquiva' ? 'esquivaOverride' : 'bloqueioOverride']: normalized }) };
 }
 /* ---------- Partilhar PF excedentes ---------- */
 /** "Mais de 2 pontos" de Sincronia = nível 3 ou maior. */
