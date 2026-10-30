@@ -31,6 +31,7 @@ import { TabletopDice } from './TabletopDice';
 import './herdeiros-navigation.css';
 import { ExplorationTab } from './TableTools';
 import { CampaignCenter } from './CampaignCenter';
+import { CharacterBackup } from './CharacterBackup';
 import { npcShows, hideNpcNames } from '@/lib/game';
 
 type Area = 'inicio'|'historia'|'jogador'|'mesa'|'mestre'|'rolador'|'regras'|'bestiario'|'linhagens';
@@ -192,6 +193,7 @@ export function GameApp({ combatOnly = false }: { combatOnly?: boolean } = {}) {
    {area==='jogador' && <>{wizardOpen && <CharacterCreationWizard initialLineage={wizardLineage} onClose={()=>{setWizardOpen(false);setWizardLineage('Humano')}} onCreate={createGuidedCharacter}/>}<div className="scene-banner"><img src={scene} width={1536} height={1024} alt="Herdeiro diante de um portal de Fluxo ancestral"/><div className="scene-content"><span className="eyebrow"><span className="eyebrow-line"/> O DESPERTAR COMEÇA AQUI</span><h1>Seu destino.<br/><em>Sua história.</em></h1><p>Cada escolha deixa uma marca no <span className="text-flux">Fluxo</span>.</p></div><span className="scene-corner">HERDEIROS / FICHA DE PERSONAGEM</span></div>
     <div className="page-heading"><div><span className="eyebrow subtle">ÁREA DO JOGADOR <span className="slash">/</span> FICHAS</span><h2>Personagem <em>jogável</em></h2><p className="muted-copy">Dê forma ao seu Herdeiro e acompanhe cada mudança da jornada.</p></div><div className="flex flex-wrap items-center gap-2">
       {campaign && myMembership?.character_id && <Button variant="outline" className="min-h-11" onClick={openCombatWindow}><Swords/> Abrir combate {campaign.combat_active ? '· ao vivo' : ''}</Button>}
+      <CharacterBackup characters={data.characters} selected={character} onImport={data.addCharacter}/>
       <Button onClick={()=>setWizardOpen(true)}><Plus/> Criar nova ficha</Button>
     </div></div>
     <div className="workspace-layout"><aside className="sidebar"><SectionHeading title="Suas fichas" aside={<span className="tiny-count">{data.characters.length.toString().padStart(2,'0')}</span>}/><div className="sheet-list">{data.characters.map(c=><Button variant="ghost" className={`sheet-list-item ${character?.id===c.id?'selected':''}`} key={c.id} onClick={()=>{setSheetId(c.id);setSheetTab('Geral')}}><span className="sheet-avatar">{c.name.slice(0,1).toUpperCase()}</span><span className="sheet-list-info"><strong>{c.name||'Sem nome'}</strong><small>{c.lineage} · Estágio {stageIndexFor(c.lineage,c.stage)+1}</small></span><ArrowRight size={14}/></Button>)}{!data.characters.length&&<div className="empty-side">Nenhuma ficha criada.</div>}</div><div className="sidebar-note"><Sparkles size={16}/><span>O <span className="text-flux">Fluxo</span> muda com suas escolhas.</span></div></aside>
