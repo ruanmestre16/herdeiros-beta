@@ -214,7 +214,7 @@ function AtlasWorldMap({ onSelectRegion, animated, onToggleAnimated }: { onSelec
       <button type="button" title="Centralizar mapa" aria-label="Centralizar mapa" onClick={resetMap}><RotateCcw size={18} /></button>
       <span className="ha-map-tools-separator" aria-hidden="true" />
       <AtlasEffectsButton animated={animated} onToggle={onToggleAnimated} />
-      <span className="ha-reduced-motion-hint">Movimento reduzido nas configurações do dispositivo.</span>
+      <span className="ha-reduced-motion-hint">Movimento reduzido no dispositivo: ative manualmente se desejar.</span>
     </div>
     <figure className={`ha-map ${zoom > 1 ? 'ha-map-zoomed' : ''} ${dragging ? 'ha-map-dragging' : ''} ${animated ? 'ha-map-animated' : 'ha-map-still'}`}>
       <div ref={viewport} className="ha-map-viewport" onPointerDown={startDrag} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={endDrag}>
@@ -263,7 +263,11 @@ function AtlasWorldMap({ onSelectRegion, animated, onToggleAnimated }: { onSelec
 
 export function AtlasPage({ regionId, onSelectRegion }: { regionId: AtlasRegionId | null; onSelectRegion: (region: AtlasRegionId | null) => void }) {
   const region = ATLAS_REGIONS.find(item => item.id === regionId);
-  const [animated, setAnimated] = useState(true);
+  // Prefere movimento reduzido? Começa pausado, mas a opção manual continua disponível.
+  const [animated, setAnimated] = useState<boolean>(() => {
+    if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return false;
+    return !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  });
 
   return <section className="ha-atlas" aria-label="Atlas de Arcádia">
     {region ? <>

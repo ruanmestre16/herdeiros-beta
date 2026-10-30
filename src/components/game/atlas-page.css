@@ -119,7 +119,7 @@
 @keyframes ha-tower-pulse{0%{opacity:.15}100%{opacity:.5}}
 @keyframes ha-ward-pulse{0%{opacity:.35;box-shadow:0 0 4px 2px #e4b97555}100%{opacity:.9;box-shadow:0 0 18px 6px #ffe2a9aa}}
 @media(max-width:620px){.ha-map-tools{justify-content:center}.ha-map-tools button{height:42px;width:42px}.ha-map-north{right:10px;top:10px}.ha-map-legend{font-size:10px;gap:10px;padding:12px 8px}.ha-map-instruction{font-size:10px;bottom:8px;min-width:70%}.ha-map-pin{min-width:34px;min-height:34px}}
-@media(prefers-reduced-motion:reduce){.ha-map-animated .ha-weather,.ha-map-animated .ha-ward{animation:none!important}.ha-weather{will-change:auto}}
+
 
 /* ETAPA 3 — animações atmosféricas por região */
 .ha-effects-toggle{display:inline-flex;align-items:center;gap:8px;padding:9px 12px;min-height:38px;border:1px solid #8d6d48;border-radius:4px;background:#241a1b;color:#eace91;font-size:12px;letter-spacing:.03em;transition:background .15s,border-color .15s,color .15s}
@@ -203,7 +203,7 @@
 
 @media(max-width:800px){.ha-region-hero-tools{right:10px;top:10px}.ha-effects-toggle{font-size:11px;padding:8px 10px;min-height:36px}}
 @media(max-width:620px){.ha-map-tools .ha-effects-toggle{width:auto;max-width:100%;padding:10px 12px;font-size:11px}.ha-region-hero-tools{left:10px;right:auto;top:10px}}
-@media(prefers-reduced-motion:reduce){.ha-region-atmosphere .ha-scene-el{animation:none!important;opacity:.12!important}.ha-effects-toggle{display:none}}
+
 
 /* =============================================================
   ATLAS — CORREÇÃO DE ANIMAÇÕES VISÍVEIS
@@ -283,11 +283,13 @@
 .ha-effects-toggle.is-active{border-color:#f3c87e;background:#5b391a}
 .ha-map-tools .ha-effects-toggle{width:auto!important;height:auto!important;min-width:160px}
 
-@media(prefers-reduced-motion:reduce){
-  .ha-map-animated .ha-map-mote,.ha-map-animated .ha-live-route,.ha-map-animated .ha-live-route-core,.ha-map-animated .ha-live-tower-ring,
-  .ha-map-animated .ha-weather,.ha-map-animated .ha-ward,.ha-scene-animated .ha-scene-el,.ha-scene-animated .ha-region-mote {animation:none!important}
-  .ha-map-live-routes,.ha-map-live-motes,.ha-region-live-motes{opacity:.12!important}
-}
+
 
 .ha-reduced-motion-hint{display:none;color:#ead7b7;font-size:11px;padding:0 7px;line-height:1.3}
 @media(prefers-reduced-motion:reduce){.ha-reduced-motion-hint{display:block}}
+
+/* Ajustes finais: o usuário pode ativar os efeitos mesmo se o dispositivo preferir redução de movimento. */
+.ha-effects-toggle:focus-visible{outline:3px solid #ffe7ab;outline-offset:3px}
+.ha-region-card:focus-visible{outline:3px solid #ffe7ab;outline-offset:4px}
+.ha-map-tools .ha-effects-toggle{line-height:1.2;white-space:nowrap}
+@media(max-width:620px){.ha-map-tools{flex-wrap:wrap;gap:7px}.ha-map-tools .ha-effects-toggle{flex-basis:100%;max-width:260px}.ha-reduced-motion-hint{max-width:260px;text-align:center}}
