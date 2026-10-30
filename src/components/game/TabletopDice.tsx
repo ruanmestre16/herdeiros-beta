@@ -54,17 +54,24 @@ function sanitizeRoll(raw: unknown): TableRoll | null {
 }
 /** Só anima rolagens feitas em outras áreas quando a expressão especifica
  * exatamente os dados que originaram seus resultados. Nunca inventar faces. */
-function facesFromExpression(expression: string, values: number[]): number[] | null {
-  const found: number[] = [];
+/**
+ * Extrai as faces reais da fórmula que a própria ficha usou (não sorteia de novo).
+ * Dados negativos do dano são armazenados assinados; o sólido mostra o módulo
+ * do valor e o resultado total original é mantido para não mudar as regras.
+ */
+function diceFromSheetExpression(expression: string, values: number[]): DieRoll[] | null {
+  const faces: number[] = [];
   const re = /(^|[^\w])(\d*)d(20|12|10|8|6|4)(?!\d)/gi;
   for (const m of expression.matchAll(re)) {
-    const count = m[2] ? Number(m[2]) : 1, sides = Number(m[3]);
-    if (count < 1 || count > MAX_DICE) return null;
-    for (let i=0;i<count;i++) found.push(sides);
-    if (found.length>MAX_DICE) return null;
+    const count = m[2] ? Number(m[2]) : 1;
+    const sides = Number(m[3]);
+    if (!Number.isInteger(count) || count < 1 || count > MAX_DICE) return null;
+    for (let i=0; i<count; i++) faces.push(sides);
+    if (faces.length > MAX_DICE) return null;
   }
-  if (found.length !== values.length || found.some((sd,i)=>!Number.isInteger(values[i]) || values[i]!<1 || values[i]!>sd)) return null;
-  return found;
+  if (!faces.length || faces.length !== values.length) return null;
+  if (faces.some((sides,i)=>!Number.isInteger(values[i]) || Math.abs(values[i]!)<1 || Math.abs(values[i]!)>sides)) return null;
+  return faces.map((sides,i)=>({sides,value:Math.abs(values[i]!)}));
 }
 
 const rollSide = (sides: number) => 1 + Math.floor(Math.random() * sides);
@@ -215,6 +222,7 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
   /** Tudo que a mesa rolou (qualquer parte do app), visível a todos. */
   const [feed, setFeed] = useState<TableRoll[]>([]);
   const [unread, setUnread] = useState(0);
+  const [historyOpen, setHistoryOpen] = useState(false);
   /** O Mestre liga e desliga se as próprias rolagens aparecem para os jogadores (jogadores sempre compartilham). */
   const [shareMine, setShareMine] = useState(true);
   const shareRef = useRef(true); shareRef.current = !isMaster || shareMine;
@@ -229,6 +237,9 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
   const drag = useRef<{ dx: number; dy: number } | null>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const autoOpenRef = useRef(true);
+  // Um lançamento criado na própria janela não deve ser animado duas vezes
+  // quando a sua alteração de PF/PN é registrada no histórico da ficha.
+  const skipLocalLogRef = useRef(false);
   autoOpenRef.current = autoOpen;
 
   useEffect(() => {
@@ -265,7 +276,7 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
   // Toda rolagem do app (addRoll) chega aqui: entra no registro da mesa e é enviada aos outros.
   useEffect(() => {
     const onAppRoll = (e: Event) => {
-      const d = (e as CustomEvent<{ expression: string; dice: number[]; total: number; source: string; publicExpression?: string; publicSource?: string }>).detail; if (!d) return;
+      const d = (e as CustomEvent<{ expression: string; dice: number[]; total: number; source: string; publicExpression?: string; publicSource?: string }>).detail; if (!d || skipLocalLogRef.current) return;
       const base = { id: crypto.randomUUID(), userId: userRef.current ?? 'local', name: nameRef.current, dice: d.dice, total: d.total, ts: Date.now() };
       const r = sanitizeRoll({ ...base, source: d.source, expression: d.expression }); if (!r) return;
       setFeed(f => [r, ...f].slice(0, 40));
@@ -274,15 +285,16 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
       if (pub && ch && onlineRef.current && shareRef.current) void ch.send({ type: 'broadcast', event: 'table_roll', payload: pub });
       // Ataque, iniciativa, dano, técnicas e demais ações da ficha também podem
       // aparecer como dados tridimensionais para toda a mesa, com resultado igual.
-      const faces = facesFromExpression(d.expression, d.dice);
-      if (faces?.length) {
+      const dice = diceFromSheetExpression(d.expression, d.dice);
+      if (dice?.length) {
         const local: DiceRollMsg = {
           id:base.id, userId:base.userId, name:base.name,
           label:d.source.slice(0,80),
-          dice: faces.map((sides,i)=>({sides,value:d.dice[i]!})),
+          dice,
           agg:'sum', bonus:0, result:d.total, ts:base.ts,
         };
         show(local);
+        // Abrir no topo do palco, mesmo que o histórico estivesse rolado.
         if (autoOpenRef.current) setOpen(true);
         if (ch && onlineRef.current && shareRef.current) {
           const shared: DiceRollMsg = { ...local, label:(d.publicSource ?? d.source).slice(0,80) };
@@ -298,7 +310,10 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
     const eff = pendingFx.current.get(id); if (!eff) return; pendingFx.current.delete(id);
     const c = charRef.current; const apply = applyRef.current; if (!c || !apply || !eff.apply) return;
     apply(eff.apply(c));
-    if (eff.log) addRollRef.current?.(eff.log);
+    if (eff.log) {
+      skipLocalLogRef.current = true;
+      try { addRollRef.current?.(eff.log); } finally { skipLocalLogRef.current = false; }
+    }
   }, []);
   const onSettled = useCallback((id: string) => { setSettledId(id); runEffect(id); }, [runEffect]);
   function pickColor(c: string | null) { setColor(c); try { if (c) localStorage.setItem(COLOR_KEY, c); else localStorage.removeItem(COLOR_KEY); } catch { /* ignore */ } }
@@ -387,6 +402,7 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
       <button type="button" className="tdice-x" onClick={() => setOpen(false)} aria-label="Fechar a janela de dados"><X size={16} /></button>
     </div>
     <div className="tdice-body">
+      <div className="tdice-stage-fixed" aria-label="Dados e resultado da rolagem atual">
       {view3d
         ? <Dice3DStage roll={current} tint={!current || current.userId === (userId ?? 'local') ? color : (current.color ?? null)} onSettled={onSettled}/>
         : <DiceStage roll={current} tint={!current || current.userId === (userId ?? 'local') ? color : (current.color ?? null)} onSettled={onSettled}/>}
@@ -401,6 +417,8 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
           {settled ? <><strong className="tdice-total">{total(current)}</strong><small>{breakdown(current)}{current.bonus ? ` · bônus ${current.bonus > 0 ? '+' : '−'}${Math.abs(current.bonus)}` : ''}{current.agg === 'max' ? ' · vale o maior dado' : ''}</small>{current.note && <small className="tdice-note">{current.note}</small>}</> : <small>rolando…</small>}
         </> : <small>Nenhuma rolagem ainda.</small>}
       </div>
+      </div>
+      <div className="tdice-scroll" aria-label="Opções e histórico de dados">
       <div className="tdice-tabs" role="tablist">
         <button type="button" role="tab" aria-selected={mode === 'manual'} className={mode === 'manual' ? 'on' : ''} onClick={() => setMode('manual')}>Jogar manual</button>
         <button type="button" role="tab" aria-selected={mode === 'ficha'} className={mode === 'ficha' ? 'on' : ''} onClick={() => setMode('ficha')}>Da ficha</button>
@@ -447,15 +465,24 @@ export function TabletopDice({ campaignId, userId, name, character, onApply, add
           <small className="muted-copy">Com isso ligado, a absorção e a energia do Núcleo/Fluxo atualizam PF ou PN (e Destruição do Núcleo para Agentes; Karma para outras linhagens) na ficha, e o acerto das técnicas desconta seu custo. O dano das armas e Nomenclaturas só é mostrado: quem sofre o dano é controlado no combate.</small>
         </> : <small className="muted-copy">Abra uma ficha para rolar com os dados dela.</small>}
       </div>}
-      <div className="tdice-history"><span className="field-kicker">ROLAGENS DA MESA (TUDO QUE FOI ROLADO)</span>
-        {!feed.length && <small className="muted-copy">Ataques, danos, testes e absorções de todos aparecem aqui.</small>}
-        {feed.slice(0, 20).map(r => <div className="tdice-row" key={r.id} title={r.expression}><span><strong>{r.name}</strong> · {r.source}<small className="block muted-copy">{r.expression}{r.dice.length ? ` · dados ${r.dice.join(', ')}` : ''}</small></span><strong>{r.total}</strong></div>)}
+      <div className="tdice-logs">
+        <details className="tdice-log-panel">
+          <summary>Registro da mesa <span>{feed.length} rolagens</span></summary>
+          <div className="tdice-log-list" aria-label="Registro de rolagens de jogadores e mestre">
+            {!feed.length && <small className="muted-copy">Ataques, danos, testes e absorções aparecem aqui.</small>}
+            {feed.slice(0, 20).map(r => <div className="tdice-row" key={r.id} title={r.expression}><span><strong>{r.name}</strong> · {r.source}<small className="block muted-copy">{r.expression}{r.dice.length ? ` · dados ${r.dice.join(', ')}` : ''}</small></span><strong>{r.total}</strong></div>)}
+          </div>
+        </details>
+        {history.length > 0 && <details className="tdice-log-panel" open={historyOpen} onToggle={e => setHistoryOpen(e.currentTarget.open)}>
+          <summary>Últimas rolagens 3D <span>{history.length}</span></summary>
+          <div className="tdice-log-list" aria-label="Últimas rolagens tridimensionais">
+            {history.map(h => <button type="button" key={h.id} className="tdice-row" onClick={() => show(h)}><span><i className="tdice-dot" style={{ background: h.color ?? '#c9a227' }} />{h.name} · {h.label}</span><strong>{total(h)}</strong></button>)}
+          </div>
+        </details>}
         {isMaster && <label className="tdice-auto"><input type="checkbox" checked={shareMine} onChange={e => { setShareMine(e.target.checked); try { localStorage.setItem('herdeiros-share-rolls', e.target.checked ? 'on' : 'off'); } catch { /* ignore */ } }} /> Mostrar as minhas rolagens à mesa (desligado: só eu vejo)</label>}
       </div>
-      {history.length > 0 && <div className="tdice-history"><span className="field-kicker">ÚLTIMAS ROLAGENS DA MESA</span>
-        {history.map(h => <button type="button" key={h.id} className="tdice-row" onClick={() => show(h)}><span><i className="tdice-dot" style={{ background: h.color ?? '#c9a227' }} />{h.name} · {h.label}</span><strong>{total(h)}</strong></button>)}
-      </div>}
       <label className="tdice-auto"><input type="checkbox" checked={autoOpen} onChange={e => setAutoOpen(e.target.checked)} /> Abrir a janela quando alguém da mesa rolar</label>
+      </div>
     </div>
   </div>;
 }

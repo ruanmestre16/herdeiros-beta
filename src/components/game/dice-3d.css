@@ -8,3 +8,26 @@
 .tdice-body{overflow:auto;min-height:0}
 @media(max-width:430px){.tdice-3d-legend{font-size:8px}.tdice-visual-switch{min-width:30px}}
 @media(prefers-reduced-motion:reduce){.tdice-3d-legend{opacity:.95}}
+
+/* Correção: o palco de dados não participa mais da rolagem do histórico. */
+.tdice-win{height:min(760px,calc(100dvh - 24px));max-height:calc(100dvh - 24px);overflow:hidden}
+.tdice-head{flex:0 0 auto}
+.tdice-win .tdice-body{display:flex;flex:1 1 auto;flex-direction:column;min-height:0;overflow:hidden;gap:0;padding:0}
+.tdice-stage-fixed{display:flex;flex:0 0 auto;flex-direction:column;gap:8px;padding:10px 12px 9px;border-bottom:1px solid #493c53;background:#14111b;min-height:0;box-shadow:0 5px 12px #05030b66;position:relative;z-index:1}
+.tdice-stage-fixed>.tdice-3d-wrap{flex:0 0 auto;min-height:0}
+.tdice-stage-fixed .tdice-result{min-height:50px;max-height:95px;overflow-y:auto}
+.tdice-stage-fixed .tdice-colors{flex:0 0 auto}
+.tdice-scroll{flex:1 1 auto;min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:12px;display:flex;flex-direction:column;gap:10px;scrollbar-width:thin;scrollbar-color:#654d6f transparent}
+.tdice-scroll .tdice-tabs{flex:0 0 auto}
+.tdice-logs{display:flex;flex-direction:column;gap:8px;margin-top:5px}
+.tdice-log-panel{border:1px solid #493c53;border-radius:9px;background:#16131e;min-width:0}
+.tdice-log-panel>summary{display:flex;justify-content:space-between;align-items:center;cursor:pointer;list-style:none;padding:10px 11px;gap:8px;font-size:11px;font-weight:700;color:#e7d5aa}
+.tdice-log-panel>summary::-webkit-details-marker{display:none}
+.tdice-log-panel>summary::before{content:'▸';font-size:13px;color:#d6ad68}
+.tdice-log-panel[open]>summary::before{content:'▾'}
+.tdice-log-panel>summary span{margin-left:auto;color:#a99aac;font-weight:400;white-space:nowrap}
+.tdice-log-list{display:flex;flex-direction:column;gap:5px;max-height:154px;overflow-y:auto;padding:3px 8px 9px;overscroll-behavior:contain}
+.tdice-log-list .tdice-row{flex:0 0 auto;min-width:0}
+.tdice-log-list .tdice-row>span{min-width:0;overflow-wrap:anywhere}
+.tdice-log-list .tdice-row>strong{flex:0 0 auto}
+@media(max-width:600px){.tdice-win{height:min(660px,calc(100dvh - 12px));max-height:calc(100dvh - 12px)}.tdice-stage-fixed{padding:8px 9px 7px;gap:5px}.tdice-scroll{padding:8px;gap:8px}.tdice-stage-fixed .tdice-colors{gap:5px}.tdice-stage-fixed .tdice-result{min-height:42px}.tdice-stage-fixed .tdice-3d-stage{max-height:clamp(115px,28dvh,190px)}}
