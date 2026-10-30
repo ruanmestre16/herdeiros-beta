@@ -3,7 +3,7 @@ import { Activity, Dices, Plus, Sparkles, Swords, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Meter, SectionHeading, Stepper } from './Controls';
 import {
-  derived, dieFor, rollDice, initiativeRoll, karmaMaximum, karmaStage, isTechAgent, attrLabelFor, nomenclatureLabel, resourceBarLabel, resourceStageLabel, forceActionLabel, forceFlux, attackRoll, weaponAttackAttrFor,
+  derived, effectiveDefenses, defensePatch, dieFor, rollDice, initiativeRoll, karmaMaximum, karmaStage, isTechAgent, attrLabelFor, nomenclatureLabel, resourceBarLabel, resourceStageLabel, forceActionLabel, forceFlux, attackRoll, weaponAttackAttrFor,
   splitStory, joinStory, stageIndexFor, LINEAGE_STAGES, techCoreConsumed, type Character,
 } from '@/lib/game';
 import { SyncEditor, GakiPassive, WeaponPanel, NomenclaturesTab, AbilitiesTab, AbsorbPfAction, KarmaTest, AgonyPanel, hasAnchor, ANCHOR_NAME, type RollEntry } from './SheetExtras';
@@ -12,6 +12,7 @@ import { threatTier, type MonsterSheet } from './NewNpcDialog';
 import { splitBestiaryAbilities, nucleusAsNomenclatures } from '@/lib/master-bestiary';
 import { MasterAbilityCards } from './MasterAbilityCards';
 import { TechCoreStability } from './TechCoreStability';
+import { DefenseControl } from './DefenseControl';
 
 const TABS = ['Geral', 'Nomenclaturas', 'Habilidades', 'Inventário', 'História'] as const;
 type Tab = (typeof TABS)[number];
@@ -58,7 +59,11 @@ export function NpcFullSheet({ character, update, addRoll, setInitiative }: { ch
       </Panel>
       <Panel title="Atributos"><div className="attributes-grid">{(['corpo', 'mente', 'espirito'] as const).map(attr => <div className="attribute" key={attr}><span>{attrLabelFor(attr, character.lineage)}</span><strong>{character[attr]}</strong><small>1d{dieFor(character[attr])}</small><Button size="sm" variant="ghost" onClick={() => test(attr)}><Dices size={13} /> Rolar</Button></div>)}</div>
         <div className="step-grid">{(['corpo', 'mente', 'espirito'] as const).map(attr => <Stepper key={attr} label={attrLabelFor(attr, character.lineage)} value={character[attr]} min={1} max={5} onChange={value => { const next = { ...character, [attr]: value }; if (monster) { update({ [attr]: value }); } else { const stats = derived(next.corpo); update({ [attr]: value, pv_max: stats.pv, pv_current: Math.min(next.pv_current, stats.pv), pf_max: next.espirito * 20, pf_current: Math.min(next.pf_current, next.espirito * 20) }); } }} />)}</div>
-        <div className="defense-row">{[['ESQUIVA', beast?.esquiva ?? derived(character.corpo).esquiva], ['BLOQUEIO', beast?.bloqueio ?? derived(character.corpo).bloqueio], ['DESLOCAMENTO', beast?.deslocamento ?? `${derived(character.corpo).deslocamento}m`]].map(([label, value]) => <div key={label}><span>{label}</span><strong>{value}</strong></div>)}</div>
+        <div className="defense-row">
+          <DefenseControl label="ESQUIVA" value={effectiveDefenses(character).esquiva} base={beast?undefined:derived(character.corpo).esquiva} onReset={()=>update(defensePatch(character,'esquiva',null))} onChange={v=>beast?saveBestiary({esquiva:v}):update(defensePatch(character,'esquiva',v))}/>
+          <DefenseControl label="BLOQUEIO" value={effectiveDefenses(character).bloqueio} base={beast?undefined:derived(character.corpo).bloqueio} onReset={()=>update(defensePatch(character,'bloqueio',null))} onChange={v=>beast?saveBestiary({bloqueio:v}):update(defensePatch(character,'bloqueio',v))}/>
+          <div><span>DESLOCAMENTO</span><strong>{beast?.deslocamento ?? `${derived(character.corpo).deslocamento}m`}</strong></div>
+        </div>
       </Panel>
     </div><div className="stack">
       <Panel title="Recursos"><div className="resource-grid">

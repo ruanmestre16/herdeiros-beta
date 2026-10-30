@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Activity, ArrowRight, BookOpen, Brain, Eye, ChevronDown, Dices, Heart, HeartPulse, Minus, Package, Plus, ScrollText, Shield, Sparkles, Swords, UserRound, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
-  attackRoll, derived, dieFor, isTechAgent, joinStory, nomenclatureFamilies,
+  attackRoll, derived, effectiveDefenses, defensePatch, dieFor, isTechAgent, joinStory, nomenclatureFamilies,
   nomenclatureLabel, rollDice, splitStory, weaponAttackAttrFor, sheetState, techCoreConsumed, type Character,
 } from '@/lib/game';
 import {
@@ -12,6 +12,7 @@ import {
   type RollEntry,
 } from './SheetExtras';
 import { PlayerSheetCompact } from './PlayerSheetCompact';
+import { DefenseControl } from './DefenseControl';
 import { GsControl } from './GsControl';
 import { TechAgentGsPanel, TechEyePanel } from './TechAgentGsPanel';
 import { TechCoreStability } from './TechCoreStability';
@@ -105,7 +106,7 @@ export function PlayerSheetUnified({ character, update, addRoll, onRoll, tablema
  const tech=isTechAgent(character.lineage);
  const resource=tech?'PN':'PF';
  const corePending=tech?sheetState(character).techCorePending:null;
- const defenses=derived(character.corpo);
+ const defenses=effectiveDefenses(character);
  const groups=useMemo(()=>nomenclatureFamilies(character),[character.nomenclatures]);
  const rawAbilities=character.abilities.filter(a=>!a.kind);
  const label = nomenclatureLabel(character.lineage,true);
@@ -116,7 +117,7 @@ export function PlayerSheetUnified({ character, update, addRoll, onRoll, tablema
  return <div className="hu-sheet" data-sheet="unificada">
    <div className="hu-hero">
      <div className="hu-hero-title"><span>HERDEIROS · FICHA VIVA</span><h2>{character.name||'Herdeiro sem nome'}</h2><p>{tech?'Humano · Agente Tecnológico':character.lineage} · {character.stage} · GS {character.gs}</p></div>
-     <div className="hu-hero-stats"><div><small>PV</small><strong>{character.pv_current}<em>/{character.pv_max}</em></strong></div><div><small>{resource}</small><strong>{character.pf_current}<em>/{character.pf_max}</em></strong></div><div><small>ESQUIVA</small><strong>{defenses.esquiva}</strong></div><div><small>BLOQUEIO</small><strong>{defenses.bloqueio}</strong></div></div>
+     <div className="hu-hero-stats"><div><small>PV</small><strong>{character.pv_current}<em>/{character.pv_max}</em></strong></div><div><small>{resource}</small><strong>{character.pf_current}<em>/{character.pf_max}</em></strong></div><DefenseControl label="ESQUIVA" disabled={readOnly} value={defenses.esquiva} base={derived(character.corpo).esquiva} onReset={()=>update(defensePatch(character,'esquiva',null))} onChange={v=>update(defensePatch(character,'esquiva',v))}/><DefenseControl label="BLOQUEIO" disabled={readOnly} value={defenses.bloqueio} base={derived(character.corpo).bloqueio} onReset={()=>update(defensePatch(character,'bloqueio',null))} onChange={v=>update(defensePatch(character,'bloqueio',v))}/></div>
    </div>
    <nav className="hu-nav" aria-label="Áreas da ficha completa">{NAV.map(({id,icon:Icon,tip})=><button type="button" key={id} className={section===id?'hu-nav-active':''} aria-current={section===id?'page':undefined} title={tip} onClick={()=>select(id)}><Icon size={18}/><span>{id==='Nomenclaturas'?label:id}</span></button>)}</nav>
    <fieldset disabled={readOnly} className="hu-edit-scope">

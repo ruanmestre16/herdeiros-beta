@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { BookOpen, Brain, ChevronRight, Dices, HeartPulse, ScrollText, Shield, Sparkles, Swords, UserRound, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Stepper, Meter } from './Controls';
-import { attrLabelFor, attributeInfo, derived, dieFor, isTechAgent, karmaMaximum, LINEAGE_STAGES, nomenclatureLabel, splitStory, joinStory, stageIndexFor, weaponDiceFor, weaponAttrFor, type Character } from '@/lib/game';
+import { attrLabelFor, attributeInfo, derived, effectiveDefenses, defensePatch, dieFor, isTechAgent, karmaMaximum, LINEAGE_STAGES, nomenclatureLabel, splitStory, joinStory, stageIndexFor, weaponDiceFor, weaponAttrFor, type Character } from '@/lib/game';
 import { TechCoreStability } from './TechCoreStability';
+import { DefenseControl } from './DefenseControl';
 import { KarmaRiskPanel } from './KarmaRiskPanel';
 import type { RollEntry } from './SheetExtras';
 import './sheet-redesign.css';
@@ -26,7 +27,7 @@ export function PlayerSheetCompact({ character:c, onUpdate, onOpenDetail, onTab,
 }) {
  const [section,setSection]=useState<Section>('Resumo');
  const tech=isTechAgent(c.lineage);
- const derivedStats=derived(c.corpo);
+ const derivedStats={...derived(c.corpo),...effectiveDefenses(c)};
  const attr=attributeInfo(c);
  const stage=LINEAGE_STAGES[c.lineage]?.[stageIndexFor(c.lineage,c.stage)];
  const fullName=c.lineage==='Agente Tecnológico'?'Humano · Agente Tecnológico':c.lineage;
@@ -48,6 +49,7 @@ export function PlayerSheetCompact({ character:c, onUpdate, onOpenDetail, onTab,
      {tech&&<TechCoreStability character={c} update={onUpdate} compact showForce={false} />}
      {!tech&&<KarmaRiskPanel character={c} update={onUpdate} {...(addRoll?{addRoll}:{})} compact />}
      <div className="h-sheet-metrics"><div><small>CORPO</small><strong>{c.corpo}</strong></div><div><small>MENTE</small><strong>{c.mente}</strong></div><div><small>{tech?'TECNOLOGIA':'ESPÍRITO'}</small><strong>{c.espirito}</strong></div><div><small>ESQUIVA / BLOQUEIO</small><strong>{derivedStats.esquiva} / {derivedStats.bloqueio}</strong></div></div>
+     <div className="hd-defense-pair"><DefenseControl label="ESQUIVA" value={derivedStats.esquiva} base={derived(c.corpo).esquiva} onReset={()=>onUpdate(defensePatch(c,'esquiva',null))} onChange={v=>onUpdate(defensePatch(c,'esquiva',v))}/><DefenseControl label="BLOQUEIO" value={derivedStats.bloqueio} base={derived(c.corpo).bloqueio} onReset={()=>onUpdate(defensePatch(c,'bloqueio',null))} onChange={v=>onUpdate(defensePatch(c,'bloqueio',v))}/></div>
      <div className="h-sheet-summary-grid">
        <button type="button" onClick={()=>setSection('Identidade')}><UserRound size={20}/><span><strong>Identidade</strong><small>{c.concept || 'Nome, origem, conceito e estágio'}</small></span><ChevronRight size={17}/></button>
        <button type="button" onClick={()=>setSection('Atributos')}><Dices size={20}/><span><strong>Atributos</strong><small>{attr.free} ponto(s) disponível(is) · Deslocamento {derivedStats.deslocamento}m</small></span><ChevronRight size={17}/></button>
@@ -74,7 +76,7 @@ export function PlayerSheetCompact({ character:c, onUpdate, onOpenDetail, onTab,
      <div className="h-sheet-points"><span>Pontos livres no estágio {attr.stage}</span><strong>{attr.free} <small>/ {attr.budget}</small></strong></div>
      {(['corpo','mente','espirito'] as const).map(key=><div className="h-sheet-attr-editor" key={key}><div><strong>{attrLabelFor(key,c.lineage)}</strong><small>Dado do atributo: 1d{dieFor(c[key])}</small></div><Stepper label="VALOR" value={c[key]} min={1} max={attr.cap} onChange={v=>changeAttr(key,v)}/><Button variant="outline" size="sm" onClick={()=>onRoll(`1d${dieFor(c[key])}`,`Teste de ${attrLabelFor(key,c.lineage)}`)}><Dices size={15}/> Rolar</Button></div>)}
      {notice&&<p className="h-sheet-error" role="alert">{notice}</p>}
-     <div className="h-sheet-metrics"><div><small>PV BASE</small><strong>{derivedStats.pv}</strong></div><div><small>ESQUIVA</small><strong>{derivedStats.esquiva}</strong></div><div><small>BLOQUEIO</small><strong>{derivedStats.bloqueio}</strong></div><div><small>MOVIMENTO</small><strong>{derivedStats.deslocamento}m</strong></div></div>
+     <div className="h-sheet-metrics"><div><small>PV BASE</small><strong>{derivedStats.pv}</strong></div><DefenseControl label="ESQUIVA" value={derivedStats.esquiva} base={derived(c.corpo).esquiva} onReset={()=>onUpdate(defensePatch(c,'esquiva',null))} onChange={v=>onUpdate(defensePatch(c,'esquiva',v))}/><DefenseControl label="BLOQUEIO" value={derivedStats.bloqueio} base={derived(c.corpo).bloqueio} onReset={()=>onUpdate(defensePatch(c,'bloqueio',null))} onChange={v=>onUpdate(defensePatch(c,'bloqueio',v))}/><div><small>MOVIMENTO</small><strong>{derivedStats.deslocamento}m</strong></div></div>
    </div>}
    {section==='Recursos'&&<div className="h-sheet-compact-flow">
      <div className="h-sheet-section-title"><h3>Vida, Fluxo e condições</h3><p>Alterações aparecem na mesa pelo Supabase, usando o salvamento existente.</p></div>

@@ -3,7 +3,7 @@ import { ArrowRight, ExternalLink, BookOpen, Check, ChevronDown, Copy, Dices, Ey
 import { Button } from '@/components/ui/button';
 import { Stepper, Meter, SectionHeading } from './Controls';
 import { useGameData } from './useGameData';
-import { derived, roll, karmaMaximum, karmaStage, splitStory, joinStory, isTechAgent, attrLabelFor, resourceStageLabel, resourceBarLabel, LINEAGE_STAGES, stageIndexFor, forceActionLabel, nomenclatureLabel, normalizeCharacter, forceFlux, attackRoll, weaponAttrFor, v8SheetPatch, attributeInfo, sheetState, withSheetState, agonyStatus, agonyLabel, agonyEnter, type Character, type Npc } from '@/lib/game';
+import { derived, roll, karmaMaximum, karmaStage, splitStory, joinStory, isTechAgent, attrLabelFor, resourceStageLabel, resourceBarLabel, LINEAGE_STAGES, stageIndexFor, forceActionLabel, nomenclatureLabel, normalizeCharacter, effectiveDefenses, defensePatch, forceFlux, attackRoll, weaponAttrFor, v8SheetPatch, attributeInfo, sheetState, withSheetState, agonyStatus, agonyLabel, agonyEnter, type Character, type Npc } from '@/lib/game';
 import { supabase } from '@/integrations/supabase/client';
 import { lovable } from '@/integrations/lovable/index';
 import scene from '@/assets/flux-scene.jpg';
@@ -20,6 +20,7 @@ import { MasterAbilityCards } from './MasterAbilityCards';
 import { WeaponDamageEditor } from './WeaponDamageEditor';
 import { rollDamageFormula } from '@/lib/weapon-damage';
 import { NpcFullSheet } from './NpcFullSheet';
+import { DefenseControl } from './DefenseControl';
 import { MonsterDashboard } from './MonsterDashboard';
 import { LineagesPage } from './LineagesPage';
 import { RulebookPage } from './RulebookPage';
@@ -131,7 +132,7 @@ export function GameApp({ combatOnly = false }: { combatOnly?: boolean } = {}) {
   ].filter(Boolean).join('\n\n') : '';
   const id=await data.addCharacter({
     ...clean,id:crypto.randomUUID(),initiative:null,
-    abilities:[...clean.abilities,...importedAbilities],
+    abilities:withSheetState({...clean,abilities:[...clean.abilities,...importedAbilities]}, {esquivaOverride:npc.esquiva,bloqueioOverride:npc.bloqueio}),
     story:sourceInfo ? `${clean.story}${clean.story?'\n\n':''}${sourceInfo}` : clean.story,
   });
   if(!id)return;
@@ -271,20 +272,30 @@ function NpcEditor({npc,update,remove,throwDice,addRoll,importSheet,defaultOpen=
     const next={...sheet,...partial};
     const mirror:Record<string,unknown>={};
     for(const k of NPC_MIRROR) if(k in partial) mirror[k]=(partial as Record<string,unknown>)[k];
-    if('corpo' in partial && !(sheet as MonsterSheet).bestiary){const d=derived(next.corpo);mirror['esquiva']=d.esquiva;mirror['bloqueio']=d.bloqueio;}
+    if(('corpo' in partial || 'abilities' in partial) && !(sheet as MonsterSheet).bestiary){const d=effectiveDefenses(next);mirror['esquiva']=d.esquiva;mirror['bloqueio']=d.bloqueio;}
     const beastPatch=(partial as Partial<MonsterSheet>).bestiary;
     if(beastPatch && monsterMeta){if(beastPatch.esquiva!==monsterMeta.esquiva)mirror['esquiva']=beastPatch.esquiva;if(beastPatch.bloqueio!==monsterMeta.bloqueio)mirror['bloqueio']=beastPatch.bloqueio;}
     update({ ...(mirror as Partial<Npc>), notes: joinNpcNotes(text, next) });
   };
+  const editNpcDefense=(stat:'esquiva'|'bloqueio',value:number)=>{
+    if(sheet){
+      if(monsterMeta) updateSheet({bestiary:{...monsterMeta,[stat]:value}} as Partial<Character>);
+      else updateSheet(defensePatch(sheet,stat,value));
+    } else update({[stat]:value} as Partial<Npc>);
+  };
   return <Panel title={monsterMeta?.category || (sheet?.lineage && sheet.lineage !== 'Criatura' ? sheet.lineage : npc.kind==='inimigo' ? 'Inimigo da Mesa' : 'NPC da Mesa')} action={<div className="flex gap-2"><Button size="sm" variant="outline" onClick={()=>update({hidden:!npc.hidden})} title={npc.hidden?'Mostrar aos jogadores':'Ocultar dos jogadores'}>{npc.hidden?<EyeOff/>:<Eye/>}<span className="hide-mobile">{npc.hidden?'Oculto':'Visível'}</span></Button>{([['name','Nome','os jogadores veem o nome'],['hp','Vida','os jogadores veem a vida'],['sheet','Ficha','os jogadores podem abrir a ficha']] as const).map(([k,label,tip])=>{const on=npcShows(npc,k);return <Button key={k} size="sm" variant="outline" aria-pressed={on} onClick={()=>update(({[`show_${k}`]:!on} as Partial<Npc>))} title={`${on?'Ligado':'Desligado'}: ${tip}`}>{on?<Eye/>:<EyeOff/>}<span className="hide-mobile">{label}</span></Button>;})}<Button size="icon" variant="ghost" onClick={remove} title="Excluir NPC" aria-label="Excluir NPC"><Trash2/></Button></div>}>
     <div className="h-npc-summary"><div className="h-npc-summary-info"><span className="h-sheet-kicker">{npc.kind==='inimigo'?'AMEAÇA':'NPC'} · {npc.hidden?'OCULTO':'VISÍVEL'}</span><strong>{npc.name}</strong><small>{npc.pv_current}/{npc.pv_max} PV · {npc.pf_current}/{npc.pf_max} {sheet && isTechAgent(sheet.lineage)?'PN':'PF'} · Esquiva {npc.esquiva} · Bloqueio {npc.bloqueio}</small></div><div className="h-npc-summary-actions"><Button size="sm" variant="outline" onClick={()=>update({pv_current:Math.max(0,npc.pv_current-5)})}>−5 PV</Button><Button size="sm" variant="outline" onClick={()=>update({pv_current:Math.min(npc.pv_max,npc.pv_current+5)})}>+5 PV</Button><Button size="sm" variant="outline" onClick={importSheet}><Plus size={15}/> Exportar para minhas fichas</Button><Button size="sm" onClick={()=>setExpanded(v=>!v)} aria-expanded={expanded}>{expanded?'Recolher':'Abrir ficha'} <ChevronDown size={14}/></Button></div></div>
+    <div className="hd-defense-pair hd-npc-defense">
+      <DefenseControl label="ESQUIVA" value={npc.esquiva} base={monsterMeta?undefined:derived(npc.corpo).esquiva} onChange={v=>editNpcDefense('esquiva',v)}/>
+      <DefenseControl label="BLOQUEIO" value={npc.bloqueio} base={monsterMeta?undefined:derived(npc.corpo).bloqueio} onChange={v=>editNpcDefense('bloqueio',v)}/>
+    </div>
     {expanded && (sheet && (monsterMeta || (sheet as MonsterSheet).gaki) ? <MonsterDashboard character={sheet} update={updateSheet} addRoll={addRoll} setInitiative={n=>update({initiative:n})} notesText={text} onNotesChange={value=>update({notes:joinNpcNotes(value,sheet)})} npcKind={npc.kind} onKindChange={kind=>update({kind})}/> : <> 
     <details className="hu-block hu-npc-section" open>
       <summary><HeartPulse size={19}/><span><strong>Identidade, PV e atributos</strong><small>Valores rápidos e defensivos da ficha</small></span><ChevronDown size={17}/></summary>
       <div className="hu-block-body">
     <div className="npc-identity"><TextInput label="NOME" value={npc.name} onChange={name=>update({name})}/><label className="field"><span className="field-label">TIPO</span><select value={npc.kind} onChange={e=>update({kind:e.target.value})}><option value="inimigo">Inimigo</option><option value="npc">NPC</option></select></label></div>
     <div className="resource-grid npc-resources"><Stepper label="PV" value={npc.pv_current} max={npc.pv_max} tone="health" onChange={pv_current=>update({pv_current})}/><Stepper label="PV MÁX." value={npc.pv_max} tone="health" onChange={pv_max=>update({pv_max,pv_current:Math.min(npc.pv_current,pv_max)})}/><Stepper label="PF" value={npc.pf_current} max={npc.pf_max} tone="flux" onChange={pf_current=>update({pf_current})}/><Stepper label="PF MÁX." value={npc.pf_max} tone="flux" onChange={pf_max=>update({pf_max,pf_current:Math.min(npc.pf_current,pf_max)})}/></div>
-    <div className="npc-stats">{(['corpo','mente','espirito','esquiva','bloqueio'] as const).map(stat=><Stepper key={stat} label={stat.toUpperCase()} value={npc[stat]} min={['corpo','mente','espirito'].includes(stat)?1:0} max={['corpo','mente','espirito'].includes(stat)?5:99} onChange={value=>{const patch:Partial<Npc>={[stat]:value};if(stat==='corpo' && !(sheet as MonsterSheet | null)?.bestiary){const s=derived(value);patch.esquiva=s.esquiva;patch.bloqueio=s.bloqueio;}if((stat==='esquiva'||stat==='bloqueio') && (sheet as MonsterSheet | null)?.bestiary){patch.notes=joinNpcNotes(text,{...sheet!,bestiary:{...(sheet as MonsterSheet).bestiary,[stat]:value}} as MonsterSheet)}update(patch)}}/>)}</div>
+    <div className="npc-stats">{(['corpo','mente','espirito','esquiva','bloqueio'] as const).map(stat=><Stepper key={stat} label={stat.toUpperCase()} value={npc[stat]} min={['corpo','mente','espirito'].includes(stat)?1:0} max={['corpo','mente','espirito'].includes(stat)?5:9999} onChange={value=>{const patch:Partial<Npc>={[stat]:value};if(stat==='corpo' && !(sheet as MonsterSheet | null)?.bestiary){const d=sheet?effectiveDefenses({...sheet,corpo:value}):derived(value);patch.esquiva=d.esquiva;patch.bloqueio=d.bloqueio;}if((stat==='esquiva'||stat==='bloqueio') && sheet){editNpcDefense(stat,value);return;}update(patch)}}/>)}</div>
       </div>
     </details>
     <details className="hu-block hu-npc-section">

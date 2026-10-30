@@ -1,4 +1,4 @@
-import { derived, normalizeCharacter, type Character, type Npc } from '@/lib/game';
+import { derived, effectiveDefenses, normalizeCharacter, type Character, type Npc } from '@/lib/game';
 
 /** Mesmo formato já usado pelo editor de NPC: texto das observações + ficha completa guardada junto. */
 export const SHEET_MARK = '\n\n<<<FICHA>>>\n';
@@ -29,6 +29,6 @@ export function applyNpcSheetPatch(npc: Npc, partial: Partial<Character>): Npc {
   const next = { ...sheet, ...partial };
   const mirror: Record<string, unknown> = {};
   for (const k of NPC_MIRROR) if (k in partial) mirror[k] = (partial as Record<string, unknown>)[k];
-  if ('corpo' in partial && !(sheet as Character & { bestiary?: unknown }).bestiary) { const d = derived(next.corpo); mirror['esquiva'] = d.esquiva; mirror['bloqueio'] = d.bloqueio; }
+  if (('corpo' in partial || 'abilities' in partial) && !(sheet as Character & { bestiary?: unknown }).bestiary) { const d = effectiveDefenses(next); mirror['esquiva'] = d.esquiva; mirror['bloqueio'] = d.bloqueio; }
   return { ...npc, ...(mirror as Partial<Npc>), notes: joinNpcNotes(text, next) };
 }

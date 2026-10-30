@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import {
   NOMENCLATURE_CRIT_DICE, PROTECTION_MIN_ELO, stylizedCritThreshold, TRIPLE_CRIT_COST, WEAPONS,
   npcShows, hideNpcNames, UNKNOWN_NPC_NAME, ECO_COST, EXTRA_COST, EXTRA_REFINED_COST, CHAMADO_COST, FUSION_COST, FLUX_LINK_COST, mimicUseCost, vengeanceCost, vengeanceBonus, vengeanceShares, pathLevels, extraAttackRoll, combinedRoll, rollDice, sheetState, withSheetState,
-  attackRoll, canTripleCrit, weaponAttrFor, counterRoll, damageRoll, danceStep, derived, dieFor, forceFlux, initiativeRoll, nomenclatureLabel, nomenclatureLevelLabel, attrLabelFor,
+  attackRoll, canTripleCrit, weaponAttrFor, counterRoll, damageRoll, danceStep, derived, effectiveDefenses, dieFor, forceFlux, initiativeRoll, nomenclatureLabel, nomenclatureLevelLabel, attrLabelFor,
   karmaDamageBonus, karmaMaximum, weaponByKey, weaponRules, techniqueRules, upgradedDamage, protectRoll, syncLevelWith, stageIndexFor, isHuman, agonyStatus, agonyLabel, forceActionLabel, isTechAgent, techCoreConsumed, coreDestructionPercent,
   type Attr, type Campaign, type Character, type NomenclatureKind, type Npc,
 } from '@/lib/game';
@@ -70,7 +70,7 @@ const REACTION_NAME: Record<Reaction | 'nenhuma', string> = {
 };
 
 function toCombatants(party: Character[], npcs: Npc[]): Combatant[] {
-  const pcs = party.map<Combatant>(c => { const d = derived(c.corpo); return { id: c.id, kind: 'pc', name: c.name, pv: c.pv_current, pvMax: c.pv_max, pf: c.pf_current, pfMax: c.pf_max, corpo: c.corpo, mente: c.mente, espirito: c.espirito, esquiva: d.esquiva, bloqueio: d.bloqueio, initiative: c.initiative, pc: c }; });
+  const pcs = party.map<Combatant>(c => { const d = effectiveDefenses(c); return { id: c.id, kind: 'pc', name: c.name, pv: c.pv_current, pvMax: c.pv_max, pf: c.pf_current, pfMax: c.pf_max, corpo: c.corpo, mente: c.mente, espirito: c.espirito, esquiva: d.esquiva, bloqueio: d.bloqueio, initiative: c.initiative, pc: c }; });
   const ns = npcs.map<Combatant>(n => ({ id: n.id, kind: 'npc', name: n.name, pv: n.pv_current, pvMax: n.pv_max, pf: n.pf_current, pfMax: n.pf_max, corpo: n.corpo, mente: n.mente, espirito: n.espirito, esquiva: n.esquiva, bloqueio: n.bloqueio, initiative: n.initiative ?? null, npc: n }));
   return [...pcs, ...ns].sort((a, b) => (b.initiative ?? -999) - (a.initiative ?? -999));
 }

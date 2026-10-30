@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { Activity, BookOpen, ChevronDown, Dices, Minus, Plus, Shield, Skull, Sparkles, Swords } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Stepper } from './Controls';
-import { attackRoll, attrLabelFor, derived, dieFor, initiativeRoll, isTechAgent, rollDice, splitStory, joinStory, type Character } from '@/lib/game';
+import { attackRoll, attrLabelFor, derived, effectiveDefenses, defensePatch, dieFor, initiativeRoll, isTechAgent, rollDice, splitStory, joinStory, type Character } from '@/lib/game';
 import { BESTIARY_PDF, readBestiaryAttacks } from '@/lib/bestiary';
 import { parseDamageFormula, rollDamageFormula } from '@/lib/weapon-damage';
 import { splitBestiaryAbilities, nucleusAsNomenclatures } from '@/lib/master-bestiary';
 import { MasterAbilityCards } from './MasterAbilityCards';
 import { NpcFullSheet } from './NpcFullSheet';
+import { DefenseControl } from './DefenseControl';
 import { threatTier, type BestiaryMeta, type MonsterSheet } from './NewNpcDialog';
 import type { RollEntry } from './SheetExtras';
 import './monster-dashboard.css';
@@ -41,7 +42,7 @@ export function MonsterDashboard({character,update,addRoll,setInitiative,notesTe
   const meta=monster.bestiary;
   const tech=isTechAgent(character.lineage);
   const resource=tech?'PN':'PF';
-  const defenses=derived(character.corpo);
+  const defenses=effectiveDefenses(character);
   const attacks=meta?readBestiaryAttacks(meta.ataques):[];
   const cards=meta?.abilityCards??splitBestiaryAbilities(meta?.habilidades??'');
   const nucleus=meta?.nucleusCards??[];
@@ -108,8 +109,8 @@ export function MonsterDashboard({character,update,addRoll,setInitiative,notesTe
       </div>)}
     </div>
     <div className="hm-monster-defense" aria-label="Defesas e movimento">
-      <div><span>ESQUIVA</span><strong>{meta?.esquiva??defenses.esquiva}</strong></div>
-      <div><span>BLOQUEIO</span><strong>{meta?.bloqueio??defenses.bloqueio}</strong></div>
+      <DefenseControl label="ESQUIVA" value={defenses.esquiva} base={meta?undefined:derived(character.corpo).esquiva} onReset={()=>update(defensePatch(character,'esquiva',null))} onChange={v=>meta?saveMeta({esquiva:v}):update(defensePatch(character,'esquiva',v))}/>
+      <DefenseControl label="BLOQUEIO" value={defenses.bloqueio} base={meta?undefined:derived(character.corpo).bloqueio} onReset={()=>update(defensePatch(character,'bloqueio',null))} onChange={v=>meta?saveMeta({bloqueio:v}):update(defensePatch(character,'bloqueio',v))}/>
       <div><span>DESLOCAMENTO</span><strong>{meta?.deslocamento??`${defenses.deslocamento} m`}</strong></div>
     </div>
 
@@ -164,8 +165,7 @@ export function MonsterDashboard({character,update,addRoll,setInitiative,notesTe
       <div className="hm-monster-edit-grid">
         <Stepper label="PV MÁXIMO" value={character.pv_max} min={1} max={9999} onChange={pv_max=>update({pv_max,pv_current:Math.min(pv_max,character.pv_current)})}/>
         <Stepper label={`${resource} MÁXIMO`} value={character.pf_max} min={0} max={9999} onChange={pf_max=>update({pf_max,pf_current:Math.min(pf_max,character.pf_current)})}/>
-        {!!meta&&<><Stepper label="ESQUIVA" value={meta.esquiva} min={0} max={99} onChange={esquiva=>saveMeta({esquiva})}/><Stepper label="BLOQUEIO" value={meta.bloqueio} min={0} max={99} onChange={bloqueio=>saveMeta({bloqueio})}/>
-          <Stepper label="NÍVEL DE AMEAÇA" value={meta.threat} min={1} max={99} onChange={threat=>saveMeta({threat})}/></>}
+        {!!meta&&<><Stepper label="NÍVEL DE AMEAÇA" value={meta.threat} min={1} max={99} onChange={threat=>saveMeta({threat})}/></>}
       </div>
       {npcKind!==undefined&&onKindChange&&<label className="field"><span className="field-label">TIPO NA MESA</span><select value={npcKind} onChange={e=>onKindChange(e.target.value)}><option value="inimigo">Inimigo</option><option value="npc">NPC</option></select></label>}
       {!!meta&&<div className="hm-monster-edit-grid">
