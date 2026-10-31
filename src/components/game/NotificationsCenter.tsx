@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Bell, BookOpen, CheckCheck, ChevronRight, RefreshCw, ScrollText, Shield, Swords, Trash2, Users, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import './notifications-center.css';
+import './viewport-overlays.css';
 
 export type NotificationDestination = 'mesa' | 'mestre' | 'campanhas' | 'biblioteca';
 
@@ -173,8 +175,7 @@ export function NotificationsCenter({
       {unread > 0 && <span className="hn-count" aria-hidden="true">{unread > 99 ? '99+' : unread}</span>}
       <span className="hn-trigger-text">Avisos</span>
     </button>
-    {opened && <>
-      <div className="hn-backdrop" onMouseDown={() => setOpened(false)} aria-hidden="true" />
+    {opened && createPortal(<><div className="hn-backdrop" onMouseDown={() => setOpened(false)} aria-hidden="true" />
       <section id={panelId} className="hn-panel" role="dialog" aria-modal="false" aria-label="Central de Notificações">
         <header className="hn-heading">
           <div><span className="hn-kicker">HERDEIROS · MESA VIVA</span><h2>Notificações</h2><p>Avisos importantes das suas campanhas</p></div>
@@ -210,6 +211,6 @@ export function NotificationsCenter({
           </footer>
         </> : <div className="hn-guest"><Bell size={28} /><p>Entre na sua conta para receber notificações das suas campanhas.</p><button type="button" onClick={() => { setOpened(false); onLogin(); }}>Entrar na conta</button></div>}
       </section>
-    </>}
+    </>, document.body)}
   </div>;
 }

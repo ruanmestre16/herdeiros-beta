@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { BookOpen, FileText, FolderOpen, Library, LoaderCircle, Map, Search, Shield, Swords, UserRound, Users, X } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import type { SupabaseClient } from '@supabase/supabase-js';
@@ -6,6 +7,7 @@ import { BESTIARY } from '@/lib/bestiary';
 import { SEARCH_RULES } from '@/lib/herdeiros-search-rules';
 import type { Campaign, Character, Npc } from '@/lib/game';
 import './global-search.css';
+import './viewport-overlays.css';
 
 type Kind = 'regra' | 'bestiario' | 'ficha' | 'npc' | 'campanha' | 'sessao' | 'objetivo' | 'biblioteca' | 'pagina';
 export type GlobalSearchResult = { key: string; kind: Kind; title: string; description: string; keywords?: string; id?: string; campaignId?: string };
@@ -229,7 +231,7 @@ export function GlobalSearch({ userId, characters, partyCharacters, npcs, campai
     <button type="button" className="hg-search-trigger" onClick={() => setOpen(true)} title="Pesquisa Geral (Ctrl+K)" aria-label="Abrir Pesquisa Geral">
       <Search size={17} aria-hidden="true" /><span className="hg-search-trigger-label">Pesquisar</span><kbd>Ctrl K</kbd>
     </button>
-    {open && <div className="hg-search-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setOpen(false); }}>
+    {open && createPortal(<div className="hg-search-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) setOpen(false); }}>
       <section role="dialog" aria-modal="true" aria-label="Pesquisa Geral do Herdeiros" className="hg-search-dialog">
         <div className="hg-search-bar"><Search size={22} aria-hidden="true"/><input ref={inputRef} value={query} onChange={e => setQuery(e.target.value)} onKeyDown={onInputKey} placeholder="Busque uma regra, criatura, personagem, campanha..." aria-label="Digite sua pesquisa" autoComplete="off" />
           {query && <button type="button" className="hg-search-clear" onClick={() => { setQuery(''); inputRef.current?.focus(); }} aria-label="Limpar pesquisa"><X size={17}/></button>}
@@ -243,6 +245,6 @@ export function GlobalSearch({ userId, characters, partyCharacters, npcs, campai
         </div>
         <div className="hg-search-footer"><span>{loading ? <><LoaderCircle size={14} className="hg-search-spin"/> Procurando na campanha...</> : `${items.length}${items.length === 60 ? '+' : ''} resultados`}{partial ? ' · Parte das informações da campanha não pôde ser consultada.' : ''}</span><span>↑↓ selecionar · Enter abrir · Esc fechar</span></div>
       </section>
-    </div>}
+    </div>, document.body)}
   </>;
 }

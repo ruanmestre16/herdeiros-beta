@@ -39,3 +39,36 @@
 .hn-spin{animation:hn-spin 1s linear infinite}
 @media(max-width:760px){.hn-root{z-index:250}.hn-panel{top:55px;right:10px;max-height:calc(100dvh - 65px)}.hn-heading{padding:18px 16px 13px}.hn-trigger{padding:8px;min-width:36px}.hn-trigger-text{display:none}.hn-item{padding-right:8px}.hn-item-actions{gap:0}.hn-footer{flex-direction:column}.hn-footer button{justify-content:center}}
 @media(prefers-reduced-motion:reduce){.hn-spin{animation:none}}
+
+/* 2026-10-31: painel renderizado fora do header, sem cortes no viewport. */
+.hn-backdrop {z-index: 12990;}
+.hn-panel {
+  box-sizing: border-box;
+  z-index: 12991;
+  min-height: 0;
+  max-width: calc(100vw - 20px);
+  max-height: calc(100dvh - 88px - env(safe-area-inset-bottom));
+}
+.hn-heading, .hn-toolbar, .hn-footer {flex-shrink: 0;}
+.hn-list {min-height: 0; flex: 1 1 auto;}
+@media (max-width: 760px) {
+  .hn-panel {
+    top: max(8px, env(safe-area-inset-top));
+    right: max(8px, env(safe-area-inset-right));
+    bottom: max(8px, env(safe-area-inset-bottom));
+    left: max(8px, env(safe-area-inset-left));
+    width: auto;
+    max-width: none;
+    max-height: none;
+    height: auto;
+    border-radius: 14px;
+  }
+}
+@media (max-height: 500px) and (min-width: 761px) {
+  .hn-panel {
+    top: 8px;
+    bottom: 8px;
+    height: auto;
+    max-height: none;
+  }
+}

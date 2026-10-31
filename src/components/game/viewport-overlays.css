@@ -1,0 +1,40 @@
+/* Herdeiros — correção global e pontual de diálogos cortados.
+   Importado por Pesquisa e Notificações; não altera telas nem fichas.
+   Não use overflow-x:hidden no body: isso poderia afetar elementos sticky. */
+
+/* Login, compartilhar, criação de NPC e outros modais antigos usam .modal-backdrop. */
+.app-shell .modal-backdrop {
+  box-sizing: border-box;
+  padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+           max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.app-shell .modal-backdrop > .auth-modal,
+.app-shell .modal-backdrop > .hm-dialog {
+  box-sizing: border-box;
+  min-width: 0;
+  max-width: min(100%, 94vw);
+  max-height: calc(100dvh - 24px) !important;
+  overflow-x: hidden;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  margin: auto;
+}
+/* Os radixes/shadcn já usam portal; limite apenas o conteúdo de dialog para telas pequenas. */
+[data-radix-popper-content-wrapper] {max-width: calc(100vw - 12px);}
+:where([data-slot="dialog-content"], [data-slot="alert-dialog-content"]) {
+  max-width: calc(100vw - 24px);
+  max-height: calc(100dvh - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+@media (max-width: 600px) {
+  .app-shell .modal-backdrop > .auth-modal,
+  .app-shell .modal-backdrop > .hm-dialog {padding: 24px 16px;}
+  .app-shell .modal-backdrop .field,
+  .app-shell .modal-backdrop input,
+  .app-shell .modal-backdrop select,
+  .app-shell .modal-backdrop textarea {min-width: 0;max-width: 100%;}
+}

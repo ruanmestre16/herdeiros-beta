@@ -24,3 +24,49 @@
 .hg-search-spin{animation:hg-search-rotate 1s linear infinite}@keyframes hg-search-rotate{to{transform:rotate(360deg)}}
 @media(max-width:900px){.hg-search-trigger{min-width:34px;width:36px;padding:7px}.hg-search-trigger-label,.hg-search-trigger kbd{display:none}}
 @media(max-width:620px){.hg-search-backdrop{padding:11px 8px}.hg-search-dialog{max-height:calc(100dvh - 22px);height:calc(100dvh - 22px);border-radius:12px}.hg-search-bar{padding:13px 10px;gap:8px}.hg-search-filters{padding:9px;gap:5px}.hg-search-filters button{font-size:10px;padding:6px 9px}.hg-search-result{padding:9px 5px;gap:7px}.hg-search-result-body strong{font-size:12px}.hg-search-result-type{font-size:9px}.hg-search-footer span:last-child{display:none}}
+
+/* 2026-10-31: layout de pesquisa na janela inteira (portal para document.body). */
+.hg-search-backdrop {
+  box-sizing: border-box;
+  width: 100vw;
+  height: 100vh;
+  height: 100dvh;
+  padding: max(12px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right))
+           max(12px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.hg-search-dialog {
+  box-sizing: border-box;
+  flex: 0 1 750px;
+  min-width: 0;
+  min-height: 0;
+  max-width: calc(100vw - 20px);
+  max-height: calc(100dvh - 24px);
+}
+.hg-search-bar, .hg-search-filters, .hg-search-footer {flex-shrink: 0;}
+.hg-search-list {min-height: 0; flex: 1 1 auto;}
+.hg-search-result-body, .hg-search-footer {min-width: 0;}
+@media (max-width: 620px) {
+  .hg-search-backdrop {
+    align-items: stretch;
+    padding: max(6px, env(safe-area-inset-top)) max(6px, env(safe-area-inset-right))
+             max(6px, env(safe-area-inset-bottom)) max(6px, env(safe-area-inset-left));
+  }
+  .hg-search-dialog {
+    width: 100%;
+    max-width: none;
+    max-height: none;
+    height: 100%;
+    flex: 1 1 auto;
+    border-radius: 12px;
+  }
+  .hg-search-footer {padding: 9px 12px;}
+}
+@media (max-height: 520px) and (min-width: 621px) {
+  .hg-search-backdrop {align-items: stretch;}
+  .hg-search-dialog {max-height: none; height: 100%; margin: 0 auto;}
+}
