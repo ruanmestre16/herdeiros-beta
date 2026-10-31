@@ -17,41 +17,18 @@
 .hp-exact-stage{position:relative;width:100%;max-width:1672px;aspect-ratio:1672/941;margin:0 auto;isolation:isolate;background:#090508}
 .hp-exact-background{display:block;width:100%;height:100%;object-fit:fill;user-select:none;pointer-events:none}
 .hp-exact-stage:before{content:'';position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(ellipse 18% 25% at 18% 23%,#ffd48217,transparent 80%),radial-gradient(ellipse 21% 25% at 55% 20%,#ab2dce12,transparent 83%);animation:hp-exact-aura 9s ease-in-out infinite alternate}
-.hp-exact-hotspot{position:absolute;z-index:2;display:block;margin:0;padding:0;border:0;border-radius:5px;background:transparent;color:transparent;cursor:pointer;-webkit-tap-highlight-color:transparent}
-/* Área clicável sobre a arte já desenhada: o mouse não cria contorno retangular. */
-.hp-exact-desktop .hp-exact-hotspot,
-.hp-exact-desktop .hp-exact-hotspot:hover,
-.hp-exact-desktop .hp-exact-hotspot:active,
-.hp-exact-desktop .hp-exact-hotspot:focus:not(:focus-visible){
-  appearance:none;
-  -webkit-appearance:none;
-  background:transparent!important;
-  border:0!important;
-  outline:0!important;
-  box-shadow:none!important;
-  filter:none!important;
-  transform:none!important;
-  transition:none!important;
-  -webkit-tap-highlight-color:transparent;
-}
-/* Acessibilidade: tabulação continua revelando onde está o foco. */
-.hp-exact-desktop .hp-exact-hotspot:focus-visible{
-  background:transparent!important;
-  border:0!important;
-  box-shadow:none!important;
-  outline:2px solid #f5d6a0!important;
-  outline-offset:-3px;
-}
-/* Acabamento somente no desktop: centraliza a arte sem mudar suas proporções. */
-.hp-exact-desktop{
-  background:radial-gradient(ellipse 65% 50% at 50% 25%,#5b2b3724,transparent 78%),
-             linear-gradient(90deg,#0b070c,#120b12 50%,#0b070c);
-}
-.hp-exact-desktop .hp-exact-stage{
-  box-shadow:0 20px 65px #0007;
-}
-
-.hp-exact-hotspot:focus-visible{outline:3px solid #ffda83;outline-offset:2px;box-shadow:0 0 0 4px #0d090c}
+.hp-exact-hotspot{position:absolute;z-index:2;display:block;margin:0;padding:0;border:0;border-radius:14px;background:transparent;color:transparent;cursor:pointer;-webkit-tap-highlight-color:transparent;overflow:visible;isolation:isolate}
+.hp-exact-hotspot::before{content:"";position:absolute;inset:-10px;border-radius:18px;pointer-events:none;opacity:0;transition:opacity .18s ease,transform .18s ease,filter .18s ease;background:
+ radial-gradient(circle at top left,#ffe4a6 0 10px,transparent 11px),
+ radial-gradient(circle at top right,#ffd27f 0 10px,transparent 11px),
+ radial-gradient(circle at bottom left,#ffd27f 0 10px,transparent 11px),
+ radial-gradient(circle at bottom right,#ffe9bb 0 10px,transparent 11px);filter:drop-shadow(0 0 4px #f6bf59) drop-shadow(0 0 12px #d8921e)}
+.hp-exact-hotspot::after{content:"";position:absolute;inset:-4px;border-radius:16px;pointer-events:none;opacity:0;transition:opacity .18s ease,transform .18s ease;box-shadow:0 0 0 1px #d8a34c88,0 0 12px #f0bb5666,0 0 22px #c7861d33}
+.hp-exact-hotspot:hover::before,.hp-exact-hotspot:hover::after,.hp-exact-hotspot:focus-visible::before,.hp-exact-hotspot:focus-visible::after{opacity:1}
+.hp-exact-hotspot:hover::before,.hp-exact-hotspot:focus-visible::before{transform:scale(1.01)}
+.hp-exact-hotspot:hover::after,.hp-exact-hotspot:focus-visible::after{transform:scale(1.005)}
+.hp-exact-hotspot:hover{background:transparent;box-shadow:none}
+.hp-exact-hotspot:focus-visible{outline:3px solid #ffda83;outline-offset:4px;box-shadow:none}
 .hp-exact-search{position:absolute;z-index:5;border-radius:60px}
 .hp-exact-search input{display:block;width:100%;height:100%;font-size:clamp(10px,0.9vw,14px);color:#ffe4b3;border:0;outline:0;background:transparent;padding:0 8px 0 24%;border-radius:60px;caret-color:#f5cd80}
 .hp-exact-search input:focus{background:#100b16bd;box-shadow:0 0 0 1px #d4ab70a8}
@@ -159,53 +136,3 @@
 }
 @media(max-width:365px){.hp-mobile-hero-copy{padding-left:10px;padding-right:10px}.hp-mobile-hero-copy h1{font-size:35px}.hp-m-actions{grid-template-columns:1fr}.hp-mobile-hero{min-height:630px}}
 @media(prefers-reduced-motion:reduce),(prefers-reduced-data:reduce){.hp-exact-portrait,.hp-exact-stage:before{animation:none!important}}
-
-
-/* ================================================================
-   HERDEIROS - TELA INICIAL EM TELA CHEIA (DESKTOP)
-   A imagem e os hotspots usam a MESMA caixa percentual: nenhuma
-   navegacao, regra, jogo, banco ou tela de celular e alterada.
-   Sem max-width de 1672px e sem moldura centralizada.
-   ================================================================ */
-@media (min-width: 1101px) {
-  .app-shell:has(.hp-exact-home) > .main-wrap,
-  .app-shell.hp-exact-shell > .main-wrap {
-    width: 100%;
-    max-width: none;
-    padding: 0;
-    margin: 0;
-    min-height: 100vh;
-    min-height: 100svh;
-  }
-
-  .hp-exact-home,
-  .hp-exact-desktop {
-    width: 100%;
-    max-width: none;
-    min-height: 100vh;
-    min-height: 100svh;
-    margin: 0;
-    padding: 0;
-  }
-
-  .hp-exact-desktop .hp-exact-stage {
-    position: relative;
-    display: block;
-    width: 100%;
-    max-width: none;
-    height: 100vh;
-    height: 100svh;
-    min-height: 100vh;
-    min-height: 100svh;
-    aspect-ratio: auto;
-    margin: 0;
-    box-shadow: none;
-  }
-
-  .hp-exact-desktop .hp-exact-background {
-    display: block;
-    width: 100%;
-    height: 100%;
-    object-fit: fill;
-  }
-}
