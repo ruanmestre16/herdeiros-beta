@@ -69,6 +69,24 @@ export function CampaignLibrary({ campaignId, userId, isMaster }: Props) {
     .filter(item => `${item.title}\n${item.description}`.toLocaleLowerCase('pt-BR').includes(query.toLocaleLowerCase('pt-BR'))),
   [campaignId, isMaster, items, filter, query]);
   const selected = items.find(item => item.campaign_id === campaignId && (isMaster || item.visibility === 'mesa') && item.id === selectedId) ?? null;
+  // Foco vindo da Pesquisa Geral; confirmação apenas quando item acessível está carregado.
+  useEffect(() => {
+    const focus = () => {
+      try {
+        const raw = sessionStorage.getItem('herdeiros:global-search-target');
+        if (!raw || !campaignId) return;
+        const target = JSON.parse(raw) as { kind?: string; id?: string; campaignId?: string };
+        if (target.kind !== 'biblioteca' || target.campaignId !== campaignId) return;
+        if (items.some(item => item.id === target.id && item.campaign_id === campaignId && (isMaster || item.visibility === 'mesa'))) {
+          setQuery(''); setFilter('todos'); setSelectedId(target.id ?? null);
+          sessionStorage.removeItem('herdeiros:global-search-target');
+        }
+      } catch { /* ignore */ }
+    };
+    focus(); window.addEventListener('herdeiros:global-search-focus', focus);
+    return () => window.removeEventListener('herdeiros:global-search-focus', focus);
+  }, [campaignId, isMaster, items]);
+
 
   const load = useCallback(async () => {
     if (!campaignId || !userId) return;

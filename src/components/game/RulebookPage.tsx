@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ArrowRight, BookOpen, ChevronDown, ChevronUp, Compass, Flame, HeartPulse, Search, Shield, Sparkles, Swords, X, Zap } from 'lucide-react';
 import { derived, dieFor, WEAPONS } from '@/lib/game';
 import './rulebook-page.css';
@@ -99,6 +99,24 @@ export function RulebookPage({ onLineages, onOpenLineages }: { onLineages?: () =
  const [search, setSearch] = useState('');
  const [open, setOpen] = useState<string[]>([]);
  const [showExamples, setShowExamples] = useState(true);
+ // Abre a regra encontrada na Pesquisa Geral, sem modificar o conteúdo do Códice.
+ useEffect(() => {
+  const focus = () => {
+   try {
+    const raw = sessionStorage.getItem('herdeiros:global-search-target');
+    if (!raw) return;
+    const target = JSON.parse(raw) as { kind?: string; id?: string; title?: string };
+    if (target.kind !== 'regra') return;
+    const matched = rules.find(rule => rule.id === target.id);
+    if (!matched) return;
+    setCategory('Todas'); setSearch(matched.title); setOpen([matched.id]);
+    sessionStorage.removeItem('herdeiros:global-search-target');
+   } catch { /* ignore */ }
+  };
+  focus(); window.addEventListener('herdeiros:global-search-focus', focus);
+  return () => window.removeEventListener('herdeiros:global-search-focus', focus);
+ }, []);
+
  const filtered = useMemo(() => rules.filter(rule =>
   (category === 'Todas' || rule.group === category) &&
   (!search.trim() || normalise([rule.title, rule.teaser, rule.group, rule.keywords, ...rule.points].filter(Boolean).join(' ')).includes(normalise(search.trim())))

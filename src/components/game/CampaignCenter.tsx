@@ -80,6 +80,29 @@ export function CampaignCenter({ campaignId, campaignName, userId, isMaster, mem
   const [tab, setTab] = useState<'sessoes' | 'objetivos' | 'cronica' | 'biblioteca'>('sessoes');
   const current = sessions.find(s => s.id === selectedId) ?? null;
   const openObjectives = useMemo(() => objectives.filter(o => o.status === 'aberto').length, [objectives]);
+  // Foco opcional vindo da Pesquisa Geral: abre a aba correta.
+  useEffect(() => {
+    const focus = () => {
+      try {
+        const raw = sessionStorage.getItem('herdeiros:global-search-target');
+        if (!raw || !campaignId) return;
+        const target = JSON.parse(raw) as { kind?: string; id?: string; campaignId?: string };
+        if (target.campaignId !== campaignId) return;
+        if (target.kind === 'biblioteca') { setTab('biblioteca'); return; }
+        if (target.kind === 'objetivo') { setTab('objetivos'); sessionStorage.removeItem('herdeiros:global-search-target'); return; }
+        if (target.kind === 'sessao') {
+          setTab('sessoes');
+          if (sessions.some(s => s.id === target.id)) {
+            setSelectedId(target.id ?? null);
+            sessionStorage.removeItem('herdeiros:global-search-target');
+          }
+        }
+      } catch { /* ignore */ }
+    };
+    focus(); window.addEventListener('herdeiros:global-search-focus', focus);
+    return () => window.removeEventListener('herdeiros:global-search-focus', focus);
+  }, [campaignId, sessions]);
+
 
   const load = useCallback(async () => {
     if (!campaignId || !userId) return;

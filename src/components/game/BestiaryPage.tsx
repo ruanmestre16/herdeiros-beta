@@ -37,6 +37,24 @@ export function BestiaryPage({ onManage }: { onManage?: ((template: BestiaryTemp
   const [selectedId, setSelectedId] = useState('');
   const [bookOpen, setBookOpen] = useState(false);
   const [page, setPage] = useState(1);
+  // Seleção direta da criatura encontrada na Pesquisa Geral.
+  useEffect(() => {
+    const focus = () => {
+      try {
+        const raw = sessionStorage.getItem('herdeiros:global-search-target');
+        if (!raw) return;
+        const target = JSON.parse(raw) as { kind?: string; id?: string; title?: string };
+        if (target.kind !== 'bestiario') return;
+        const matched = BESTIARY.find(t => t.id === target.id);
+        if (!matched) return;
+        setRegion('todas'); setCategory('Todas'); setSearch(matched.name); setSelectedId(matched.id);
+        sessionStorage.removeItem('herdeiros:global-search-target');
+      } catch { /* ignore */ }
+    };
+    focus(); window.addEventListener('herdeiros:global-search-focus', focus);
+    return () => window.removeEventListener('herdeiros:global-search-focus', focus);
+  }, []);
+
   const filtered = useMemo(() => BESTIARY.filter(t =>
     (region === 'todas' || originOf(t) === region) &&
     (category === 'Todas' || t.category === category) &&

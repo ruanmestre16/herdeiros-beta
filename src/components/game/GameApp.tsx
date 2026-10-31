@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Stepper, Meter, SectionHeading } from './Controls';
 import { useGameData } from './useGameData';
 import { NotificationsCenter } from './NotificationsCenter';
+import { GlobalSearch, type GlobalSearchResult } from './GlobalSearch';
 import { BeginnerGuide, type GuideDestination, type GuideAction } from './BeginnerGuide';
 import { derived, roll, karmaMaximum, karmaStage, splitStory, joinStory, isTechAgent, attrLabelFor, resourceStageLabel, resourceBarLabel, LINEAGE_STAGES, stageIndexFor, forceActionLabel, nomenclatureLabel, normalizeCharacter, effectiveDefenses, defensePatch, forceFlux, attackRoll, weaponAttrFor, v8SheetPatch, attributeInfo, sheetState, withSheetState, agonyStatus, agonyLabel, agonyEnter, type Character, type Npc } from '@/lib/game';
 import { supabase } from '@/integrations/supabase/client';
@@ -103,6 +104,28 @@ export function GameApp({ combatOnly = false }: { combatOnly?: boolean } = {}) {
    const frame=requestAnimationFrame(()=>document.getElementById(`npc-card-${openNpcId}`)?.scrollIntoView({behavior:'smooth',block:'nearest'}));
    return ()=>cancelAnimationFrame(frame);
  },[openNpcId,area,masterTab,campaignNpcs.length]);
+ function openSearchResult(result:GlobalSearchResult) {
+   if(result.campaignId && data.campaigns.some(c=>c.id===result.campaignId)) setCampaignId(result.campaignId);
+   if(result.kind==='ficha' && result.id){setSheetId(result.id);setSheetTab('Geral');go('jogador');return;}
+   if(result.kind==='npc' && result.id){setOpenNpcId(result.id);setMasterTab('NPCs e inimigos');go('mestre');return;}
+   if(result.kind==='campanha'){go('mesa');return;}
+   if(result.kind==='sessao'||result.kind==='objetivo'||result.kind==='biblioteca'){
+     try{sessionStorage.setItem('herdeiros:global-search-target',JSON.stringify({kind:result.kind,id:result.id,campaignId:result.campaignId}));}catch{/* armazenamento opcional */}
+     go('mestre');setHubSection('campanhas');
+     requestAnimationFrame(()=>window.dispatchEvent(new Event('herdeiros:global-search-focus')));
+     return;
+   }
+   if(result.kind==='regra'||result.kind==='bestiario'){
+     try{sessionStorage.setItem('herdeiros:global-search-target',JSON.stringify({kind:result.kind,id:result.id,title:result.title}));}catch{/* armazenamento opcional */}
+     go(result.kind==='regra'?'regras':'bestiario');
+     requestAnimationFrame(()=>window.dispatchEvent(new Event('herdeiros:global-search-focus')));
+     return;
+   }
+   if(result.kind==='pagina'){
+     const next=result.id;
+     if(next==='regras'||next==='bestiario'||next==='historia'||next==='linhagens'||next==='jogador'||next==='mesa')go(next);
+   }
+ }
  function go(next:Area) { setArea(next); setHubSection('sessao'); setMobileNav(false); const path=next==='inicio'?'/':next==='jogador'||next==='historia'||next==='guia'?`/?area=${next}`:`/${next}`; window.history.replaceState({},'',path); window.scrollTo({top:0,behavior:'smooth'}); }
  /** Toda rolagem do app aparece para a mesa: a janela de dados recebe este aviso e a envia a todos (nomes de NPCs ocultos viram genéricos para os jogadores). */
  function announceRoll(e:{expression:string;dice:number[];total:number;source?:string}) { if(typeof window==='undefined')return; const pub=(t:string)=>hideNpcNames(t,campaignNpcs); window.dispatchEvent(new CustomEvent('herdeiros:roll',{detail:{expression:e.expression,dice:e.dice,total:e.total,source:e.source??'Rolagem',publicExpression:pub(e.expression),publicSource:pub(e.source??'Rolagem')}})); }
@@ -171,7 +194,7 @@ export function GameApp({ combatOnly = false }: { combatOnly?: boolean } = {}) {
     </div>
   </main>;
   return <div className="app-shell"><KillCallFx campaigns={data.campaigns}/><TabletopDice campaignId={campaign?.id??null} userId={data.userId} name={myName} character={myChar} onApply={myChar?myApply:undefined} addRoll={addRoll} isMaster={isMaster}/>
-  <header className="topbar"><div className="topbar-inner"><Button variant="ghost" className="brand" onClick={()=>go('inicio')}><span className="brand-mark">✦</span><span>HERDEIROS<span className="brand-dot">.</span></span></Button><nav className={`main-nav ${mobileNav?'nav-open':''}`} aria-label="Navegação principal">{nav.map(item=><Button key={item.key} variant="ghost" className={`nav-item ${area===item.key||(item.key==='mesa'&&area==='mestre')?'nav-active':''}`} onClick={()=>go(item.key)}><item.icon size={15}/>{item.label}</Button>)}</nav><div className="topbar-actions"><NotificationsCenter userId={data.userId} onLogin={()=>setAuthOpen(true)} onNavigate={(destination,notificationCampaignId)=>{if(notificationCampaignId&&data.campaigns.some(c=>c.id===notificationCampaignId))setCampaignId(notificationCampaignId);if(destination==='campanhas'||destination==='biblioteca'){go('mestre');setHubSection('campanhas');return;}if(destination==='mestre'){go('mestre');return;}go('mesa');}}/><Button type="button" variant="outline" size="sm" className="hg-guide-trigger" aria-current={area==='guia'?'page':undefined} aria-label="Abrir Guia de Iniciantes" title="Guia de Iniciantes" onClick={()=>go('guia')}><BookOpen size={16}/><span className="hg-guide-trigger-label">Guia</span></Button><span className="live-indicator"><i/> MESA VIVA</span><Button variant="outline" size="sm" onClick={()=>setAuthOpen(true)} className="account-button">{data.userId?<><Users/> {data.profileName || 'Definir perfil'}</>:<><LogIn/> Entrar</>}</Button><Button variant="ghost" size="icon" className="mobile-menu" onClick={()=>setMobileNav(!mobileNav)} aria-label="Abrir menu">{mobileNav?<X/>:<Menu/>}</Button></div></div></header>
+  <header className="topbar"><div className="topbar-inner"><Button variant="ghost" className="brand" onClick={()=>go('inicio')}><span className="brand-mark">✦</span><span>HERDEIROS<span className="brand-dot">.</span></span></Button><nav className={`main-nav ${mobileNav?'nav-open':''}`} aria-label="Navegação principal">{nav.map(item=><Button key={item.key} variant="ghost" className={`nav-item ${area===item.key||(item.key==='mesa'&&area==='mestre')?'nav-active':''}`} onClick={()=>go(item.key)}><item.icon size={15}/>{item.label}</Button>)}</nav><div className="topbar-actions"><GlobalSearch userId={data.userId} characters={data.characters} partyCharacters={data.partyCharacters} npcs={data.npcs} campaigns={data.campaigns} memberships={data.memberships} onOpen={openSearchResult}/><NotificationsCenter userId={data.userId} onLogin={()=>setAuthOpen(true)} onNavigate={(destination,notificationCampaignId)=>{if(notificationCampaignId&&data.campaigns.some(c=>c.id===notificationCampaignId))setCampaignId(notificationCampaignId);if(destination==='campanhas'||destination==='biblioteca'){go('mestre');setHubSection('campanhas');return;}if(destination==='mestre'){go('mestre');return;}go('mesa');}}/><Button type="button" variant="outline" size="sm" className="hg-guide-trigger" aria-current={area==='guia'?'page':undefined} aria-label="Abrir Guia de Iniciantes" title="Guia de Iniciantes" onClick={()=>go('guia')}><BookOpen size={16}/><span className="hg-guide-trigger-label">Guia</span></Button><span className="live-indicator"><i/> MESA VIVA</span><Button variant="outline" size="sm" onClick={()=>setAuthOpen(true)} className="account-button">{data.userId?<><Users/> {data.profileName || 'Definir perfil'}</>:<><LogIn/> Entrar</>}</Button><Button variant="ghost" size="icon" className="mobile-menu" onClick={()=>setMobileNav(!mobileNav)} aria-label="Abrir menu">{mobileNav?<X/>:<Menu/>}</Button></div></div></header>
   <main className="main-wrap">
    {area==='guia'&&<BeginnerGuide userId={data.userId} hasCharacter={data.characters.length>0} hasCampaign={data.campaigns.length>0} onLogin={()=>setAuthOpen(true)} onNavigate={(destination:GuideDestination,action?:GuideAction)=>{go(destination);if(action==='create'){setWizardLineage('Humano');setWizardOpen(true);}if(action==='npcs')setMasterTab('NPCs e inimigos');if(action==='combate')setMasterTab('Combate');if(action==='exploracao')setMasterTab('Exploração');if(action==='campanhas')setHubSection('campanhas');}}/>}
 
